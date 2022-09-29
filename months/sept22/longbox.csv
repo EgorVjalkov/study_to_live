@@ -1,0 +1,18 @@
+name;mod;price
+E: diplomas;long_box;100
+E: accred L;long_box;100
+E: accred2 L;long_box;100
+E: study_to_live ;long_box;100
+E: do not shout;long_box;100
+L: stoma;long_box;100
+E: bath;long_box;100
+E: NDFL-3;long_box;100
+E: Forma_9;long_box;100
+Encouragies;fine/enc;50
+bad words;fine/enc;-50
+massacre;fine/enc;-100
+cup on table;fine/enc;-100
+hair in sink;fine/enc;-100
+socks;fine/enc;-100
+regret;fine/enc;-100
+covered in oil;fine/enc;-100
