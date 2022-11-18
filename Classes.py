@@ -1,5 +1,4 @@
 import csv
-from programm import table_reader
 
 
 def price_reader():
