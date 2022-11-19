@@ -4,7 +4,7 @@ Lera_category = ['A', 'L']
 Egr_category = ['E']
 Family_category = ['Z', 'F']
 
-modificators = ['date', 'DAY', 'mod', 'weak', 'duty']
+modificators = ['DATE', 'DAY', 'MOD', 'WEAK', 'DUTY']
 # def duty_check(row):
 
 
@@ -35,8 +35,19 @@ def long_box_read():
 
 # long_box_read()
 
+def complex_condition(result, condition_for_price):
+    if ':' in condition_for_price:
+        condition_for_price = dict([i.split(': ') for i in condition_for_price .split(', ')])
+        # print(condition_for_price[result])
+        price_of_day = int(condition_for_price[result])
+    elif '*' in condition_for_price:
+        price_of_day = int(condition_for_price.replace('*', '')) * int(result)
+    return price_of_day
 
-with open('months/sept22/price.csv', 'r') as f:
+# print(int_or_complex_condition('', '50'))
+
+
+with open('months/oct22/price.csv', 'r') as f:
     read = csv.DictReader(f, delimiter=';')
     prices = {}
     for row in read:
@@ -49,6 +60,10 @@ class CategoryInDay:
     def __init__(self, name_of_category, result_of_day, prices):
         self.name = name_of_category
         self.result = result_of_day
+        if self.result == 'T':
+            self.result = True
+        if not self.result:
+            self.result = False
         self.price = prices[self.name]
 
     {'date': '01.09.2022', 'DAY': '4', 'mod': 'KG', 'weak': '', 'duty': '24'}
@@ -59,22 +74,29 @@ class CategoryInDay:
      'Z: sleep': {'duty_24': '>0, 50; >1, 100', 'duty_8': '>0, 37; >1, 75', 'duty_False': '0', 'True': '>1, 50', 'False': '-50', 'func': 'comp', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '0.5', 'KGD': '0.75', 'M': '1'},
      'Z: teeth': {'duty_24': '50', 'duty_8': '50', 'duty_False': '0', 'True': '50', 'False': '-50', 'func': '', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '0.5', 'KGD': '0.75', 'M': '1'}, 'Z: tele': {'duty_24': '300', 'duty_8': '225', 'duty_False': '0', 'True': '50', 'False': '-50', 'func': '', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '0.5', 'KGD': '0.75', 'M': '0,5'}, 'F: wash': {'duty_24': '50', 'duty_8': '37,5', 'duty_False': '0', 'True': '0', 'False': '-50', 'func': '', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '0.5', 'KGD': '0.75', 'M': '1'}, 'F: no pleasure': {'duty_24': '100', 'duty_8': '100', 'duty_False': '0', 'True': '100', 'False': '0', 'func': '', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '0.5', 'KGD': '0.75', 'M': '1'}, 'E: hygine': {'duty_24': '0', 'duty_8': '0', 'duty_False': '-50', 'True': '50', 'False': '0', 'func': '', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '0.5', 'KGD': '0.75', 'M': '0'}, 'E: py': {'duty_24': '50', 'duty_8': '50', 'duty_False': '-50', 'True': '50', 'False': '0', 'func': '', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '0.5', 'KGD': '0.75', 'M': '0'}, 'E: vim': {'duty_24': '50', 'duty_8': '50', 'duty_False': '-50', 'True': '50', 'False': '0', 'func': '', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '0.5', 'KGD': '0.75', 'M': '0'}, 'E: plan': {'duty_24': '100', 'duty_8': '100', 'duty_False': '0', 'True': '100', 'False': '0', 'func': '', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '0.5', 'KGD': '0.75', 'M': '0'}, 'E: diet': {'duty_24': '0', 'duty_8': '0', 'duty_False': '-50', 'True': '50', 'False': '0', 'func': '', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '0.5', 'KGD': '0.75', 'M': '0'}, 'E: meals': {'duty_24': '10*num', 'duty_8': '10*num', 'duty_False': '0', 'True': '10*num', 'False': '0', 'func': 'num', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '1', 'KGD': '1', 'M': '1'}, 'L: teeth': {'duty_24': '50', 'duty_8': '50', 'duty_False': '0', 'True': '50', 'False': '-50', 'func': '', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '0.5', 'KGD': '0.75', 'M': '1'}, 'L: diet': {'duty_24': '50', 'duty_8': '50', 'duty_False': '0', 'True': '50', 'False': '-50', 'func': '', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '0.5', 'KGD': '0.75', 'M': '1'}, 'L: meals': {'duty_24': '30*num', 'duty_8': '30*num', 'duty_False': '0', 'True': '20*num', 'False': '0', 'func': 'num', 'WEAK1': '1.25', 'WEAK2': '1.5', 'KG': '1', 'KGD': '1', 'M': '1.5'}}
 
-    def find_a_price(self, mods, price):
-        cell_price = {True: prices['True'], False: prices['False']}
-        if mods['duty'] == 24:
-            cell_price[True] = prices['duty_24']
+    def find_a_price(self, mods):
+        cell_price = {True: self.price['True'], False: self.price['False']}
+        if mods['DUTY']:
+            cell_price[False] = self.price['duty_False']
+            if mods['DUTY'] == '24':
+                cell_price[True] = self.price['duty_24']
+        print('\n', cell_price)
+
+        if type(self.result) == bool:
+            cell_price = int(cell_price[self.result])
+        else:
+            cell_price = complex_condition(self.result, cell_price[True])
+        return cell_price
 
 
-        if mods['mod'] == 8:
-            pass
-        mods = {k: mods[k] for k in mods if mods[k]}
+        # mods = {k: mods[k] for k in mods if mods[k]}
 
 
        # карочи мы имеем категорию со значением в этой феккции попытаемся определить ее цену в зависимости от модика и цен
 
 
 # reformat in dict
-with open('months/sept22/vedomost.csv', 'r') as f:
+with open('months/oct22/vedomost.csv', 'r') as f:
     calendary = csv.DictReader(f, delimiter=';')
     for row in calendary:
         mods = {k: row[k] for k in row if k in modificators}
@@ -82,8 +104,8 @@ with open('months/sept22/vedomost.csv', 'r') as f:
         print(category)
         for i in category:
             i = CategoryInDay(i, category[i], prices)
-            print(i.name, i.result, i.price)
-            break
+            print(i.name, i.result, i.find_a_price(mods))
+
         break
 #           нада подумать кателок поварить как лаконичнее через классы вывести цену дня
 # сделай мини программу класс которая работает с подобного типа данными. Слей 2 словаря в один
