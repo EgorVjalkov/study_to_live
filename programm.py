@@ -1,7 +1,8 @@
 import csv
 
 
-modificators = ['DATE', 'DAY', 'MOD', 'WEAK', 'DUTY']
+modificators = ['MOD', 'WEAK', 'DUTY']
+date = ['DATE', 'DAY']
 # def duty_check(row):
 
 
@@ -64,21 +65,31 @@ class CategoryInDay:
             self.result = False
         self.price = prices[self.name]
 
-    {'date': '01.09.2022', 'DAY': '4', 'mod': 'KG', 'weak': '', 'duty': '24'}
+    {'mod': 'KG', 'weak': '', 'duty': '24'}
 
     def find_a_price(self, mods):
         cell_price = {True: self.price['True'], False: self.price['False']}
+        print(mods)
+
         if mods['DUTY']:
             cell_price[False] = self.price['duty_False']
-            if mods['DUTY'] == '24':
-                cell_price[True] = self.price['duty_24']
-        # print('\n', cell_price)
+            cell_price[True] = self.price['duty_24']
 
         if type(self.result) == bool:
             cell_price = int(cell_price[self.result])
         else:
             cell_price = complex_condition(self.result, cell_price[True])
-        return cell_price
+
+        modification = 1
+        if mods['DUTY'] == '8':
+            modification *= float(self.price['duty_8'])
+        if mods['MOD']:
+            modification *= float(self.price[mods['MOD']])
+        if mods['WEAK']:
+            modification *= float(self.price['WEAK'])
+        print(modification)
+
+        return cell_price * modification
 
     def who_gets_how_match(self, found_price):
         recipients = {'Egr': 0, 'Lera': 0}
@@ -98,11 +109,12 @@ with open('months/oct22/vedomost.csv', 'r') as f:
     for row in calendary:
         mods = {k: row[k] for k in row if k in modificators}
         category = {k: row[k] for k in row if k not in modificators}
+        category = {k: category[k] for k in category if k not in date}
         print(category)
         for i in category:
             i = CategoryInDay(i, category[i], prices)
             print(i.name, i.result, i.find_a_price(mods))
-            print(i.who_gets_how_match(i.find_a_price(mods)))
+            # print(i.who_gets_how_match(i.find_a_price(mods)))
 
         break
 #           нада подумать кателок поварить как лаконичнее через классы вывести цену дня
