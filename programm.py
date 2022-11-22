@@ -54,8 +54,9 @@ with open('months/oct22/price.csv', 'r') as f:
         prices[name] = row
     # print(prices)
 
+
 class CategoryInDay:
-    def __init__(self, name_of_category, result_of_day, prices):
+    def __init__(self, name_of_category, result_of_day, prices, mods):
         self.name = name_of_category
         self.identificator = self.name[0]
         self.result = result_of_day
@@ -64,42 +65,57 @@ class CategoryInDay:
         if not self.result:
             self.result = False
         self.price = prices[self.name]
+        self.on_duty = True if mods['DUTY'] else False
+        self.duty_day = True if mods['DUTY'] == '8' else False
+        self.weak_child = mods['WEAK']
+        self.zlata_mod = mods['MOD']
 
-    {'mod': 'KG', 'weak': '', 'duty': '24'}
-
-    def find_a_price(self, mods):
+    def find_a_price(self):
         cell_price = {True: self.price['True'], False: self.price['False']}
-        print(mods)
-
-        if mods['DUTY']:
+        if self.on_duty:
             cell_price[False] = self.price['duty_False']
             cell_price[True] = self.price['duty_24']
+        print(cell_price)
 
         if type(self.result) == bool:
             cell_price = int(cell_price[self.result])
         else:
             cell_price = complex_condition(self.result, cell_price[True])
 
-        modification = 1
-        if mods['DUTY'] == '8':
-            modification *= float(self.price['duty_8'])
-        if mods['MOD']:
-            modification *= float(self.price[mods['MOD']])
-        if mods['WEAK']:
-            modification *= float(self.price['WEAK'])
-        print(modification)
 
-        return cell_price * modification
+        return cell_price
 
-    def who_gets_how_match(self, found_price):
+    def modification(self, cell_price):
+        if cell_price > 0:
+
+            modification = 1
+            if self.duty_day:
+                modification *= float(self.price['duty_8'].replace(',', '.'))
+                print(modification)
+            if self.zlata_mod:
+                modification *= float(self.price[self.zlata_mod].replace(',', '.'))
+                print(modification)
+            if self.weak_child:
+                weak_key = 'WEAK' + self.weak_child
+                modification *= float(self.price[weak_key].replace(',', '.'))
+            print(modification)
+
+        return modification
+
+    #запили мадификацию кудато
+    def find_a_recipients(self, cell_price):
+
         recipients = {'Egr': 0, 'Lera': 0}
-        positions = {'Lera': ['A', 'L'], 'Egr': ['E'], 'All': ['Z', 'F']}
+        if self.on_duty and not self.duty_day:
+            positions = {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']}
+        else:
+            positions = {'Lera': ['A', 'L'], 'Egr': ['E'], 'All': ['Z', 'F']}
         for k in positions:
             if self.identificator in positions[k]:
                 if k == 'All':
-                    recipients = {k: found_price for k in recipients}
+                    recipients = {k: cell_price for k in recipients}
                 else:
-                    recipients[k] = found_price
+                    recipients[k] = cell_price
         return recipients
 # остановилисть на внедрении в расчет дежурств
 
@@ -110,13 +126,14 @@ with open('months/oct22/vedomost.csv', 'r') as f:
         mods = {k: row[k] for k in row if k in modificators}
         category = {k: row[k] for k in row if k not in modificators}
         category = {k: category[k] for k in category if k not in date}
-        print(category)
+        print(mods)
+        print('\n')
         for i in category:
-            i = CategoryInDay(i, category[i], prices)
-            print(i.name, i.result, i.find_a_price(mods))
-            # print(i.who_gets_how_match(i.find_a_price(mods)))
+            i = CategoryInDay(i, category[i], prices, mods)
+            print(i.zlata_mod, i.on_duty, i.duty_day, i.weak_child)
+            print(i.name, i.result, i.find_a_recipients(i.find_a_price()))
+            print('\n')
 
-        break
 #           нада подумать кателок поварить как лаконичнее через классы вывести цену дня
 # сделай мини программу класс которая работает с подобного типа данными. Слей 2 словаря в один
 # там и будет логика и поведение
