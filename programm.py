@@ -2,36 +2,34 @@ import csv
 
 
 modificators = ['MOD', 'WEAK', 'DUTY']
-date = ['DATE', 'DAY']
-# def duty_check(row):
+date_keys = ['DATE', 'DAY']
 
+EGR = 0
+LERA = 0
+
+MONTH = 'months/oct22/'
 
 def long_box_read():
-    lera = 0
-    egr = 0
-    with open('months/sept22/longbox.csv', 'r') as f:
+    recipients = {'EGR': 0, 'LERA': 0}
+    with open(f'{MONTH}longbox.csv', 'r') as f:
         reader = csv.DictReader(f, delimiter=';')
         for row in reader:
             name = row['name']
             if row['mod'] == 'long_box':
                 if input(f'"{name}" is done? ') == 'y':
                     if name[0] == 'E':
-                        egr += int(row['price'])
-                        print(f'Egr has {egr}')
+                        recipients['EGR'] += int(row['price'])
                     if name[0] == 'L':
-                        lera += int(row['price'])
-                        print(f'Lera has {lera}')
+                        recipients['LERA'] += int(row['price'])
+                print(recipients)
             if row['mod'] == 'fine/enc':
                 egr_count = int(input(f'How match "{name}" Egr does? '))
-                egr += (egr_count * int(row['price']))
-                print(egr)
+                recipients['EGR'] += (egr_count * int(row['price']))
                 lera_count = int(input(f'How match "{name}" Lera does? '))
-                lera += (lera_count * int(row['price']))
-                print(lera)
-        print(egr, lera)
+                recipients['LERA'] += (lera_count * int(row['price']))
+                print(recipients)
+        return recipients
 
-
-# long_box_read()
 
 def complex_condition(result, condition_for_price):
     if ':' in condition_for_price:
@@ -45,13 +43,13 @@ def complex_condition(result, condition_for_price):
 # print(int_or_complex_condition('', '50'))
 
 
-with open('months/oct22/price.csv', 'r') as f:
+with open(f'{MONTH}price.csv', 'r') as f:
     read = csv.DictReader(f, delimiter=';')
     prices = {}
-    for row in read:
-        name = row['category']
-        del row['category']
-        prices[name] = row
+    for day in read:
+        name = day['category']
+        del day['category']
+        prices[name] = day
     # print(prices)
 
 
@@ -86,9 +84,8 @@ class CategoryInDay:
         return cell_price
 
     def modification(self, cell_price):
+        modification = 1
         if cell_price > 0:
-
-            modification = 1
             if self.duty_day:
                 modification *= float(self.price['duty_8'].replace(',', '.'))
                 print(modification)
@@ -99,12 +96,10 @@ class CategoryInDay:
                 weak_key = 'WEAK' + self.weak_child
                 modification *= float(self.price[weak_key].replace(',', '.'))
             print(modification)
-
         return modification
 
     #запили мадификацию кудато
     def find_a_recipients(self, cell_price):
-
         recipients = {'Egr': 0, 'Lera': 0}
         if self.on_duty and not self.duty_day:
             positions = {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']}
@@ -116,29 +111,27 @@ class CategoryInDay:
                     recipients = {k: cell_price for k in recipients}
                 else:
                     recipients[k] = cell_price
+        if self.on_duty and not self.duty_day:
+            recipients['Lera'] *= self.modification(cell_price)
+        else:
+            recipients = {k: recipients[k] * self.modification(cell_price) for k in recipients}
         return recipients
-# остановилисть на внедрении в расчет дежурств
 
 
-with open('months/oct22/vedomost.csv', 'r') as f:
+with open(f'{MONTH}vedomost.csv', 'r') as f:
     calendary = csv.DictReader(f, delimiter=';')
-    for row in calendary:
-        mods = {k: row[k] for k in row if k in modificators}
-        category = {k: row[k] for k in row if k not in modificators}
-        category = {k: category[k] for k in category if k not in date}
+    for day in calendary:
+        mods = {k: day[k] for k in day if k in modificators}
+        category = {k: day[k] for k in day if k not in modificators}
+        category = {k: category[k] for k in category if k not in date_keys}
         print(mods)
         print('\n')
         for i in category:
             i = CategoryInDay(i, category[i], prices, mods)
             print(i.zlata_mod, i.on_duty, i.duty_day, i.weak_child)
             print(i.name, i.result, i.find_a_recipients(i.find_a_price()))
+
+
             print('\n')
 
-#           нада подумать кателок поварить как лаконичнее через классы вывести цену дня
-# сделай мини программу класс которая работает с подобного типа данными. Слей 2 словаря в один
-# там и будет логика и поведение
-        # if row['duty']:
-        #     if row['duty'] == '24':
-        #         Lera_category.extend(Family_category)
-
-
+# long_box_read()
