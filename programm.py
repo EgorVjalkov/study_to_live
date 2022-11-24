@@ -58,6 +58,7 @@ with open(f'{MONTH}price.csv', 'r') as f:
 class CategoryInDay:
     def __init__(self, name_of_category, result_of_day, prices, mods):
         self.name = name_of_category
+        self.meals = True if 'MEALS'in self.name else False
         self.identificator = self.name[0]
         self.result = result_of_day
         if self.result == 'T':
@@ -112,20 +113,21 @@ class CategoryInDay:
                 if k == 'All':
                     recipients = {k: cell_price for k in recipients}
                 else:
-                    if 'MEALS' in self.name:
-                        meals[k] = cell_price
+                    if self.meals:
+                        meals[k] = cell_price if self.meals else 0
                     else:
                         recipients[k] = cell_price
         print(recipients, meals)
+# пересмотри эту функцию!!!!
+
+        mod_f = self.modification
         if self.on_duty and not self.duty_day:
-            recipients['Lera'] *= self.modification(cell_price)
-            meals['Lera'] *= self.modification(cell_price) if self.meals else cell_price!!!!!!!!!!!!!!!!!!!! додумай
+            recipients['Lera'] *= mod_f(cell_price)
+            meals['Lera'] *= mod_f(cell_price) if self.meals else cell_price
         else:
-            if 'MEALS' in self.name:
-                meals = {k: meals[k] * self.modification(cell_price) for k in meals}
-            else:
-            recipients = {k: recipients[k] * self.modification(cell_price) for k in recipients}
-            print(meals)
+            meals = {k: meals[k] * mod_f(cell_price) for k in meals} if self.meals else meals
+            recipients = {k: recipients[k] * mod_f(cell_price) for k in recipients} if not self.meals else recipients
+            print(recipients, meals)
         result = dict([('recipients', recipients), ('meals', meals)])
         return result
 
