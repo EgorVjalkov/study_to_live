@@ -6,6 +6,8 @@ date_keys = ['DATE', 'DAY']
 
 EGR = 0
 LERA = 0
+EGR_meals = 0
+LERA_meals = 0
 
 MONTH = 'months/oct22/'
 
@@ -88,19 +90,19 @@ class CategoryInDay:
         if cell_price > 0:
             if self.duty_day:
                 modification *= float(self.price['duty_8'].replace(',', '.'))
-                print(modification)
+                print('8', modification)
             if self.zlata_mod:
                 modification *= float(self.price[self.zlata_mod].replace(',', '.'))
-                print(modification)
+                print('Z', modification)
             if self.weak_child:
                 weak_key = 'WEAK' + self.weak_child
                 modification *= float(self.price[weak_key].replace(',', '.'))
-            print(modification)
+                print('W', modification)
         return modification
 
-    #запили мадификацию кудато
     def find_a_recipients(self, cell_price):
         recipients = {'Egr': 0, 'Lera': 0}
+        meals = {'Egr': 0, 'Lera': 0}
         if self.on_duty and not self.duty_day:
             positions = {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']}
         else:
@@ -110,12 +112,22 @@ class CategoryInDay:
                 if k == 'All':
                     recipients = {k: cell_price for k in recipients}
                 else:
-                    recipients[k] = cell_price
+                    if 'MEALS' in self.name:
+                        meals[k] = cell_price
+                    else:
+                        recipients[k] = cell_price
+        print(recipients, meals)
         if self.on_duty and not self.duty_day:
             recipients['Lera'] *= self.modification(cell_price)
+            meals['Lera'] *= self.modification(cell_price) if self.meals else cell_price!!!!!!!!!!!!!!!!!!!! додумай
         else:
+            if 'MEALS' in self.name:
+                meals = {k: meals[k] * self.modification(cell_price) for k in meals}
+            else:
             recipients = {k: recipients[k] * self.modification(cell_price) for k in recipients}
-        return recipients
+            print(meals)
+        result = dict([('recipients', recipients), ('meals', meals)])
+        return result
 
 
 with open(f'{MONTH}vedomost.csv', 'r') as f:
@@ -123,15 +135,23 @@ with open(f'{MONTH}vedomost.csv', 'r') as f:
     for day in calendary:
         mods = {k: day[k] for k in day if k in modificators}
         category = {k: day[k] for k in day if k not in modificators}
+        date = {k: day[k] for k in day if k in date_keys}
         category = {k: category[k] for k in category if k not in date_keys}
-        print(mods)
+        print(mods, date)
         print('\n')
         for i in category:
             i = CategoryInDay(i, category[i], prices, mods)
-            print(i.zlata_mod, i.on_duty, i.duty_day, i.weak_child)
-            print(i.name, i.result, i.find_a_recipients(i.find_a_price()))
+            print('Z', i.zlata_mod, 'D', i.on_duty, '8', i.duty_day, 'W', i.weak_child)
+            pay_a_day = i.find_a_recipients(i.find_a_price())
+            meals_a_day = pay_a_day.pop('meals')
+            pay_a_day = pay_a_day.pop('recipients')
+            print(i.name, i.result, pay_a_day)
+            EGR += pay_a_day['Egr']
+            EGR_meals += meals_a_day['Egr']
+            LERA += pay_a_day['Lera']
+            LERA_meals += meals_a_day['Lera']
 
-
+            print(EGR, EGR_meals, LERA, LERA_meals)
             print('\n')
 
 # long_box_read()
