@@ -66,10 +66,21 @@ class CategoryInDay:
         if not self.result:
             self.result = False
         self.price = prices[self.name]
+
         self.on_duty = True if mods['DUTY'] else False
         self.duty_day = True if mods['DUTY'] == '8' else False
         self.weak_child = mods['WEAK']
         self.zlata_mod = mods['MOD']
+
+        if self.on_duty and not self.duty_day:
+            self.positions = {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']}
+            self.only_lera_mod = True
+        else:
+            self.positions = {'Lera': ['A', 'L'], 'Egr': ['E'], 'All': ['Z', 'F']}
+            self.only_lera_mod = False
+        for k in self.positions:
+            if self.identificator in self.positions[k]:
+                self.recipient = k
 
     def find_a_price(self):
         cell_price = {True: self.price['True'], False: self.price['False']}
@@ -104,20 +115,13 @@ class CategoryInDay:
     def find_a_recipients(self, cell_price):
         recipients = {'Egr': 0, 'Lera': 0}
         meals = {'Egr': 0, 'Lera': 0}
-        if self.on_duty and not self.duty_day:
-            positions = {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']}
+        if self.recipient == 'All' and not self.only_lera_mod:
+            recipients = {k: cell_price * self.modification(cell_price) for k in recipients}
         else:
-            positions = {'Lera': ['A', 'L'], 'Egr': ['E'], 'All': ['Z', 'F']}
-        for k in positions:
-            if self.identificator in positions[k]:
-                if k == 'All':
-                    recipients = {k: cell_price for k in recipients}
-                else:
-                    if self.meals:
-                        meals[k] = cell_price if self.meals else 0
-                    else:
-                        recipients[k] = cell_price
+            if self.meals:
+                meals[self.recipient] = cell_price
         print(recipients, meals)
+
 # пересмотри эту функцию!!!!
 
         mod_f = self.modification
