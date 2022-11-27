@@ -73,6 +73,7 @@ class CategoryInDay:
         self.weak_child_mod = mods['WEAK']
         self.zlata_mod = mods['MOD']
         self.mother_mod = True if self.zlata_mod == 'M' else False
+        self.coefficient = self.modification()
 
         if self.duty24:
             self.positions = {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']}
@@ -98,19 +99,18 @@ class CategoryInDay:
 
         return cell_price
 
-    def modification(self, cell_price):
+    def modification(self):
         modification = 1
-        if cell_price > 0:
-            if self.duty_day:
-                modification *= float(self.price['duty_8'].replace(',', '.'))
-                print('8', modification)
-            if self.zlata_mod:
-                modification *= float(self.price[self.zlata_mod].replace(',', '.'))
-                print('Z', modification)
-            if self.weak_child_mod:
-                weak_key = 'WEAK' + self.weak_child_mod
-                modification *= float(self.price[weak_key].replace(',', '.'))
-                print('W', modification)
+        if self.duty_day:
+            modification *= float(self.price['duty_8'].replace(',', '.'))
+            # print('8', modification)
+        if self.zlata_mod:
+            modification *= float(self.price[self.zlata_mod].replace(',', '.'))
+            # print('Z', modification)
+        if self.weak_child_mod:
+            weak_key = 'WEAK' + self.weak_child_mod
+            modification *= float(self.price[weak_key].replace(',', '.'))
+            # print('W', modification)
         return modification
 
     def find_a_recipients(self, cell_price):
@@ -123,9 +123,9 @@ class CategoryInDay:
 
         if self.only_lera_mod:
             if 'Lera' in container:
-                container['Lera'] *= self.modification(cell_price)
+                container['Lera'] *= self.coefficient сделай коэффициент!
         else:
-            container = {k: container[k] * self.modification(cell_price) for k in container}
+            container = {k: container[k] * self.coefficient for k in container}
 
         return container
 
@@ -141,7 +141,8 @@ with open(f'{MONTH}vedomost.csv', 'r') as f:
         print('')
         for i in category:
             i = CategoryInDay(i, category[i], prices, mods)
-            print(i.name, i.result, 'Z', i.zlata_mod, ', D', i.on_duty, ', 8', i.duty_day, ', W', i.weak_child_mod)
+            print(i.name, i.result)
+            print('Z', i.zlata_mod, ', D', i.on_duty, ', 8', i.duty_day, ', W', i.weak_child_mod, i.coefficient)
             pay_a_day = i.find_a_recipients(i.find_a_price())
             print('postmod', pay_a_day)
 
