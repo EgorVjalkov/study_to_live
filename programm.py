@@ -59,7 +59,7 @@ class CategoryInDay:
     def __init__(self, name_of_category, result_of_day, prices, mods):
         self.name = name_of_category
         self.meals = True if 'MEALS'in self.name else False
-        self.identificator = self.name[0]
+        self.first_char = self.name[0]
         self.result = result_of_day
         if self.result == 'T':
             self.result = True
@@ -68,18 +68,20 @@ class CategoryInDay:
         self.price = prices[self.name]
 
         self.on_duty = True if mods['DUTY'] else False
+        self.duty24 = True if mods['DUTY'] == '24' else False
         self.duty_day = True if mods['DUTY'] == '8' else False
-        self.weak_child = mods['WEAK']
+        self.weak_child_mod = mods['WEAK']
         self.zlata_mod = mods['MOD']
+        self.mother_mod = True if self.zlata_mod == 'M' else False
 
-        if self.on_duty and not self.duty_day:
+        if self.duty24:
             self.positions = {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']}
             self.only_lera_mod = True
         else:
             self.positions = {'Lera': ['A', 'L'], 'Egr': ['E'], 'All': ['Z', 'F']}
-            self.only_lera_mod = False
+            self.only_lera_mod = True if self.mother_mod else False
         for k in self.positions:
-            if self.identificator in self.positions[k]:
+            if self.first_char in self.positions[k]:
                 self.recipient = k
 
     def find_a_price(self):
@@ -87,13 +89,12 @@ class CategoryInDay:
         if self.on_duty:
             cell_price[False] = self.price['duty_False']
             cell_price[True] = self.price['duty_24']
-        print(cell_price)
+        print('cellprice', cell_price)
 
         if type(self.result) == bool:
             cell_price = int(cell_price[self.result])
         else:
             cell_price = complex_condition(self.result, cell_price[True])
-
 
         return cell_price
 
@@ -106,34 +107,27 @@ class CategoryInDay:
             if self.zlata_mod:
                 modification *= float(self.price[self.zlata_mod].replace(',', '.'))
                 print('Z', modification)
-            if self.weak_child:
-                weak_key = 'WEAK' + self.weak_child
+            if self.weak_child_mod:
+                weak_key = 'WEAK' + self.weak_child_mod
                 modification *= float(self.price[weak_key].replace(',', '.'))
                 print('W', modification)
         return modification
 
     def find_a_recipients(self, cell_price):
-        recipients = {'Egr': 0, 'Lera': 0}
-        meals = {'Egr': 0, 'Lera': 0}
-        if self.recipient == 'All' and not self.only_lera_mod:
-            recipients = {k: cell_price * self.modification(cell_price) for k in recipients}
+        container = {'Egr': 0, 'Lera': 0}
+        if self.recipient == 'All':
+            container = {k: cell_price for k in container}
         else:
-            if self.meals:
-                meals[self.recipient] = cell_price
-        print(recipients, meals)
+            container[self.recipient] = cell_price
+        print('premod', container)
 
-# пересмотри эту функцию!!!!
-
-        mod_f = self.modification
-        if self.on_duty and not self.duty_day:
-            recipients['Lera'] *= mod_f(cell_price)
-            meals['Lera'] *= mod_f(cell_price) if self.meals else cell_price
+        if self.only_lera_mod:
+            if 'Lera' in container:
+                container['Lera'] *= self.modification(cell_price)
         else:
-            meals = {k: meals[k] * mod_f(cell_price) for k in meals} if self.meals else meals
-            recipients = {k: recipients[k] * mod_f(cell_price) for k in recipients} if not self.meals else recipients
-            print(recipients, meals)
-        result = dict([('recipients', recipients), ('meals', meals)])
-        return result
+            container = {k: container[k] * self.modification(cell_price) for k in container}
+
+        return container
 
 
 with open(f'{MONTH}vedomost.csv', 'r') as f:
@@ -143,19 +137,20 @@ with open(f'{MONTH}vedomost.csv', 'r') as f:
         category = {k: day[k] for k in day if k not in modificators}
         date = {k: day[k] for k in day if k in date_keys}
         category = {k: category[k] for k in category if k not in date_keys}
-        print(mods, date)
-        print('\n')
+        print(date, mods)
+        print('')
         for i in category:
             i = CategoryInDay(i, category[i], prices, mods)
-            print('Z', i.zlata_mod, 'D', i.on_duty, '8', i.duty_day, 'W', i.weak_child)
+            print(i.name, i.result, 'Z', i.zlata_mod, ', D', i.on_duty, ', 8', i.duty_day, ', W', i.weak_child_mod)
             pay_a_day = i.find_a_recipients(i.find_a_price())
-            meals_a_day = pay_a_day.pop('meals')
-            pay_a_day = pay_a_day.pop('recipients')
-            print(i.name, i.result, pay_a_day)
-            EGR += pay_a_day['Egr']
-            EGR_meals += meals_a_day['Egr']
-            LERA += pay_a_day['Lera']
-            LERA_meals += meals_a_day['Lera']
+            print('postmod', pay_a_day)
+
+            if i.meals:
+                EGR_meals += pay_a_day['Egr']
+                LERA_meals += pay_a_day['Lera']
+            else:
+                EGR += pay_a_day['Egr']
+                LERA += pay_a_day['Lera']
 
             print(EGR, EGR_meals, LERA, LERA_meals)
             print('\n')
