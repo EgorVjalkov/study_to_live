@@ -12,23 +12,30 @@ LERA_meals = 0
 MONTH = 'months/oct22/'
 
 def long_box_read():
-    recipients = {'EGR': 0, 'LERA': 0}
+    recipients = {'Egr': 0, 'Lera': 0}
     with open(f'{MONTH}longbox.csv', 'r') as f:
         reader = csv.DictReader(f, delimiter=';')
         for row in reader:
             name = row['name']
+            # print(name)
             if row['mod'] == 'long_box':
                 if input(f'"{name}" is done? ') == 'y':
                     if name[0] == 'E':
-                        recipients['EGR'] += int(row['price'])
-                    if name[0] == 'L':
-                        recipients['LERA'] += int(row['price'])
+                        recipients['Egr'] += int(row['price'])
+                    elif name[0] == 'L':
+                        recipients['Lera'] += int(row['price'])
+                    else:
+                        recipients['Egr'] += int(row['price']) / 2
+                        recipients['Lera'] += int(row['price']) / 2
                 print(recipients)
+
             if row['mod'] == 'fine/enc':
-                egr_count = int(input(f'How match "{name}" Egr does? '))
-                recipients['EGR'] += (egr_count * int(row['price']))
-                lera_count = int(input(f'How match "{name}" Lera does? '))
-                recipients['LERA'] += (lera_count * int(row['price']))
+                egr_count = input(f'How match "{name}" Egr does? ')
+                if egr_count:
+                    recipients['Egr'] += int(egr_count) * int(row['price'])
+                lera_count = input(f'How match "{name}" Lera does? ')
+                if lera_count:
+                    recipients['Lera'] += int(lera_count) * int(row['price'])
                 print(recipients)
         return recipients
 
@@ -121,11 +128,14 @@ class CategoryInDay:
             container[self.recipient] = cell_price
         print('premod', container)
 
-        if self.only_lera_mod:
-            if 'Lera' in container:
-                container['Lera'] *= self.coefficient сделай коэффициент!
+        if cell_price <= 0:
+            self.coefficient = 0
         else:
-            container = {k: container[k] * self.coefficient for k in container}
+            if self.only_lera_mod:
+                if 'Lera' in container:
+                    container['Lera'] *= self.coefficient
+            else:
+                container = {k: container[k] * self.coefficient for k in container}
 
         return container
 
@@ -152,8 +162,14 @@ with open(f'{MONTH}vedomost.csv', 'r') as f:
             else:
                 EGR += pay_a_day['Egr']
                 LERA += pay_a_day['Lera']
-
             print(EGR, EGR_meals, LERA, LERA_meals)
-            print('\n')
+            print('')
 
-# long_box_read()
+    counted = {'Egr': EGR, 'Egr_meals': EGR_meals, 'Lera': LERA, 'Lera_meals': LERA_meals}
+    counted = {k: round(counted[k], 2) for k in counted}
+    print(counted)
+    long_box_dict = long_box_read()
+    for k in counted:
+        if k in long_box_dict:
+            counted[k] += long_box_dict[k]
+    print(counted)

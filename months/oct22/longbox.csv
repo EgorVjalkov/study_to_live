@@ -6,6 +6,7 @@ E:FINE TABLE;long_box;100
 E:MOB BUIES;long_box;100
 L:STOMA;long_box;100
 E:KNEE;long_box;100
+A:VACC;long_box;100
 ENCOURAGE;fine/enc;50
 SOCKS;fine/enc;-100
 FORGET;fine/enc;-100
