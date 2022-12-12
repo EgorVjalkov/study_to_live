@@ -174,3 +174,4 @@ with open(f'{MONTH}vedomost.csv', 'r') as f:
         if k in long_box_dict:
             counted[k] += long_box_dict[k]
     print(counted)
+
