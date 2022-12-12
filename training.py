@@ -1,5 +1,10 @@
 from random import choice
 
+class Lesson:
+    def __init__(self, count, consist, difficulty):
+
+
+
 
 ABC = list('qwertyuiopasdfghjklzxcvbnm')
 special = list('()[]{}\'"\?:;-_=+!@#$%^&*/|')
@@ -19,4 +24,4 @@ def new_test(num):
     else:
         print('mistakes')
 
-new_test(2)
+new_test(250)

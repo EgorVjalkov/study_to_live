@@ -9,7 +9,8 @@ LERA = 0
 EGR_meals = 0
 LERA_meals = 0
 
-MONTH = 'months/oct22/'
+MONTH = 'months/nov22/'
+
 
 def long_box_read():
     recipients = {'Egr': 0, 'Lera': 0}
@@ -17,26 +18,26 @@ def long_box_read():
         reader = csv.DictReader(f, delimiter=';')
         for row in reader:
             name = row['name']
-            # print(name)
-            if row['mod'] == 'long_box':
-                if input(f'"{name}" is done? ') == 'y':
-                    if name[0] == 'E':
-                        recipients['Egr'] += int(row['price'])
-                    elif name[0] == 'L':
-                        recipients['Lera'] += int(row['price'])
-                    else:
-                        recipients['Egr'] += int(row['price']) / 2
-                        recipients['Lera'] += int(row['price']) / 2
-                print(recipients)
+            if name and name != '0':
+                if row['mod'] == 'long_box':
+                    if input(f'"{name}" is done? ') == 'y':
+                        if name[0] == 'E':
+                            recipients['Egr'] += int(row['price'])
+                        elif name[0] == 'L':
+                            recipients['Lera'] += int(row['price'])
+                        else:
+                            recipients['Egr'] += int(row['price']) / 2
+                            recipients['Lera'] += int(row['price']) / 2
+                    print(recipients)
 
-            if row['mod'] == 'fine/enc':
-                egr_count = input(f'How match "{name}" Egr does? ')
-                if egr_count:
-                    recipients['Egr'] += int(egr_count) * int(row['price'])
-                lera_count = input(f'How match "{name}" Lera does? ')
-                if lera_count:
-                    recipients['Lera'] += int(lera_count) * int(row['price'])
-                print(recipients)
+                if row['mod'] == 'fine/enc':
+                    egr_count = input(f'How match "{name}" Egr does? ')
+                    if egr_count:
+                        recipients['Egr'] += int(egr_count) * int(row['price'])
+                    lera_count = input(f'How match "{name}" Lera does? ')
+                    if lera_count:
+                        recipients['Lera'] += int(lera_count) * int(row['price'])
+                    print(recipients)
         return recipients
 
 
@@ -73,8 +74,8 @@ class CategoryInDay:
         if not self.result:
             self.result = False
         self.price = prices[self.name]
-
-        self.on_duty = True if mods['DUTY'] else False
+# сделана 1/2 на All разбоки с нулем
+        self.on_duty = True if mods['DUTY'] and mods['DUTY'] != '0' else False
         self.duty24 = True if mods['DUTY'] == '24' else False
         self.duty_day = True if mods['DUTY'] == '8' else False
         self.weak_child_mod = mods['WEAK']
