@@ -1,35 +1,21 @@
-import csv
+import pandas as pd
 
+class CombinationOfMods:
+    def __init__(self, path_to_test, path_to_price=''):
+        test = pd.read_csv(path_to_test, delimiter=';')
+        # pd.DataFrame(test, index=None, columns=1)
+        # est = list(pd.DataFrame.columns)
 
-def price_reader():
-    with open('months/sept22/price.csv', 'r') as f:
-        reader = csv.DictReader(f, delimiter=';')
-        for row in reader:
-            print(row)
-
-
-price_reader()
-
+        print(test['MOD'])
 
 
 
 
 
 
+                # answer_list.append(s)
+        # for dict in answer_list:
+        #     k
 
 
-
-
-class ObjectPrice:
-
-    def __init__(self, name, price):
-        self.name = name
-        self.price = price
-
-    def sum_of_price(self, num):
-        return num + self.price
-
-
-x, y = ObjectPrice('jopa', 50), ObjectPrice('gabber', 100)
-print(x.sum_of_price(50), y.sum_of_price(50))
-
+test = CombinationOfMods('months/dec22test/FOR_TEST.csv')
