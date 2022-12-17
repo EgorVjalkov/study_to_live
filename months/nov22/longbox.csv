@@ -1,0 +1,27 @@
+name;mod;price
+E:OOP;long_box;100
+E:TO PYTHON;long_box;100
+L:STOMA;long_box;100
+E:GLASS;long_box;100
+E:CLEAN;long_box;100
+E:JUMP;long_box;50
+E:CHAIR;long_box;50
+F:ROAD;long_box;100
+0;fine/enc;0
+0;fine/enc;0
+0;fine/enc;0
+0;fine/enc;0
+0;fine/enc;0
+0;fine/enc;0
+ENCOURAGE;fine/enc;50
+0;fine/enc;0
+0;fine/enc;0
+0;fine/enc;0
+SOCKS;fine/enc;-100
+FORGET;fine/enc;-100
+BADWORDS;fine/enc;-50
+MASSACRE;fine/enc;-100
+CUP;fine/enc;-100
+HAIR;fine/enc;-100
+REGRET;fine/enc;-100
+COVRD IN OIL;fine/enc;-100
