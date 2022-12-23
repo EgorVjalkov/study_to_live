@@ -3,19 +3,33 @@ import pandas as pd
 class CombinationOfMods:
     def __init__(self, path_to_test, path_to_price=''):
         df = pd.read_csv(path_to_test, delimiter=';')
-        test = df.iloc[0:6] # срезы
-        # test[test['MOD']  True]
-        print(test['MOD'].fillna(False)) # замена НаН на false
-        # pd.DataFrame(test, index=None, columns=1)
-        head = test.columns.to_list() # конвертация в list
-        # head = [i for i in list(test.head(0)) if 'Unnamed' not in i]
+        limit = len([i for i in df['ANSWER'].fillna(0) if i > 0])
+        df = df[0:limit]
+        head = [i for i in df.columns.to_list() if 'Unnamed' not in i]
+        variants = df[head]
+        variants_dict = {}
+        for key in variants:
+            print(key)
+            variants[key] = [i for i in variants[key].fillna(0)]
+
+        # variants = {i: df[i] for i in head}
+
+
+
+
+
+
+
+        print(variants)
+
+
+
 
         # self.c = test['ANSWER'].unique()
-        print(head)
-        self.mod = [i for i in test['MOD'].to_list() if i]
+        # self.mod = [i for i in test['MOD'].to_list() if i]
 
-        print(self.mod)
-        variants = {i: list(test[i]) for i in head}
+        # print(test['MOD'].fillna(0)) # замена НаН на false
+        # variants = {i: list(test[i]) for i in head}
         # for i in variants:
         #     print(type(i))
         #     for e in i:
@@ -23,7 +37,6 @@ class CombinationOfMods:
 
         # self.weak = 0
 
-        print(variants)
 
 
 
