@@ -2,9 +2,11 @@ from random import choice
 
 class Lesson:
     def __init__(self, count, consist, difficulty):
+        pass
 
-
-
+values = [True, False, True, None, True]
+print(['yes' if v is True else 'no' if v is False else 'unknown' for v in values])
+# ['yes', 'no', 'yes', 'unknown', 'yes']
 
 ABC = list('qwertyuiopasdfghjklzxcvbnm')
 special = list('()[]{}\'"\?:;-_=+!@#$%^&*/|')
