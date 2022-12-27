@@ -73,7 +73,7 @@ class MonthData:
 
 class Day:
     def __init__(self, data_frame, price_frame):
-        day_df = data_frame.fillna(0).to_dict('list')
+        day_df = data_frame.fillna(0).to_dict('list') # records???
         day_df = {k: day_df[k][0] for k in day_df}
         day_df = {k: int(day_df[k]) if type(day_df[k]) == float else day_df[k] for k in day_df}
         self.data = {k: False if not day_df[k] else True if day_df[k] == 'T' else day_df[k] for k in day_df} # можн оперевести все в str
