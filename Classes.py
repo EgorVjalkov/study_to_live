@@ -63,28 +63,44 @@ class ComplexCondition:
 
 # print(int_or_complex_condition('', '50'))
 
-class Vedomost:
+class MonthData:
     def __init__(self, path_to_vedomost, path_to_price):
         self.path_to_price = path_to_price
         self.vedomost = pd.read_csv(path_to_vedomost, delimiter=';')
         self.days = len(self.vedomost)
-        print(self.days)
-        self.prices = pd.read_csv(path_to_price)
+        self.prices = pd.read_csv(path_to_price, delimiter=';')
 
 
 class Day:
-    def __init__(self, data_in_list):
-        self.date = ''
-        self.coefficient = 1
-        self.categories = {}
+    def __init__(self, data_frame, price_frame):
+        day_df = data_frame.fillna(0).to_dict('list')
+        day_df = {k: day_df[k][0] for k in day_df}
+        day_df = {k: int(day_df[k]) if type(day_df[k]) == float else day_df[k] for k in day_df}
+        self.data = {k: False if not day_df[k] else True if day_df[k] == 'T' else day_df[k] for k in day_df} # можн оперевести все в str
 
-    def sort_and_filter(self):
-        pass
-        # stopped.
-df = Vedomost('months/nov22/vedomost.csv', 'months/nov22/price.csv')
+        self.prices = price_frame
+
+        date_keys = ['DATE', 'DAY']
+        self.date = {k: self.data.pop(k) for k in date_keys}
+        mods_keys = ['MOD', 'WEAK']
+        self.mods = {k: self.data.pop(k) for k in mods_keys}
+        self.duty = self.data.pop('DUTY')
+        self.categories = self.data
+
+        self.coefficient = 1
+
+    def count_a_coefficient(self):
+        print(self.prices)
+        # mod_frame = self.prices['MOD']
+
+
+df = MonthData('months/nov22/vedomost.csv', 'months/nov22/price.csv')
 # print(df.vedomost[0:df.limit])
 for d in range(df.days):
-    day_data = Day(df.vedomost[d:d+1])
+    day_data = Day(df.vedomost[d:d+1], df.prices)
+    print(day_data.date)
+    print(day_data.categories)
+    break
 
 # for i in df.vedomost:
 

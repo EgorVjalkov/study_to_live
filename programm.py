@@ -1,5 +1,5 @@
 import csv
-from Classes import Vedomost
+from Classes import MonthData
 
 modificators = ['MOD', 'WEAK', 'DUTY']
 date_keys = ['DATE', 'DAY']
@@ -61,7 +61,7 @@ with open(f'{MONTH}vedomost.csv', 'r') as f:
         print(date, mods)
         print('')
         for i in category:
-            i = Vedomost(i, category[i], prices, mods)
+            i = MonthData(i, category[i], prices, mods)
             print(i.name, i.result)
             print('Z', i.zlata_mod, ', D', i.on_duty, ', 8', i.duty_day, ', W', i.weak_child_mod, i.coefficient)
             pay_a_day = i.find_a_recipients(i.find_a_price())
