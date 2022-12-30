@@ -30,7 +30,7 @@ class TestingPrices:
             minutes = int(time.pop(1))
             minutes += randint(1, 60)
             time.append(str(minutes))
-            return ':'.join(time)
+            return ','.join(time)
 
         # if category_key:
         #     testing_cats = input(f'Choose a category')
@@ -46,117 +46,100 @@ class TestingPrices:
 
         return self.test
 
+def complex_condition(result, condition_for_price):
+    if len(result.split()) > 1:
+        time = ### закнчил на самом важном
 
-class ComplexCondition:
 
-    def __init__(self, cell_value):
-        self.value = cell_value
 
-    def complex_condition(result, condition_for_price):
-        if ':' in condition_for_price:
-            condition_for_price = dict([i.split(': ') for i in condition_for_price .split(', ')])
-            # print(condition_for_price[result])
-            price_of_day = int(condition_for_price[result])
-        elif '*' in condition_for_price:
-            price_of_day = int(condition_for_price.replace('*', '')) * int(result)
-        return price_of_day
 
-# print(int_or_complex_condition('', '50'))
+    if ':' in condition_for_price:
+        condition_for_price = dict([i.split(': ') for i in condition_for_price.split(', ')])
+        # print(condition_for_price[result])
+        price_of_day = int(condition_for_price[result])
+    elif '*' in condition_for_price:
+        price_of_day = int(condition_for_price.replace('*', '')) * int(result)
+    else:
+        return result
+    return price_of_day
+
+print(complex_condition('23,45', '<22: 3*, <23: 2*, >=23: 0'))
 
 class MonthData:
-    def __init__(self, path_to_vedomost, path_to_price):
+    def __init__(self, path_to_vedomost, path_to_price, delimiter):
         self.path_to_price = path_to_price
-        self.vedomost = pd.read_csv(path_to_vedomost, delimiter=';').fillna(0).to_dict('records')
+        self.vedomost = pd.read_csv(path_to_vedomost, delimiter=delimiter).fillna(0).to_dict('records') # read_exel, astype(type)
         self.days = len(self.vedomost)
         self.prices = pd.read_csv(path_to_price, delimiter=';')
 
 
 class Day:
-    def __init__(self, dict_data, price_frame):
+    def __init__(self, dict_data):
         dict_data = {k: int(dict_data[k]) if type(dict_data[k]) == float else dict_data[k] for k in dict_data}
         self.data = {k: False if not dict_data[k] else True if dict_data[k] == 'T' else dict_data[k] for k in dict_data} # можн оперевести все в str
 
-        self.prices = price_frame
-
         date_keys = ['DATE', 'DAY']
-        self.date = {k: self.data.pop(k) if date_keys[k] in self.data else date_keys[k] for k in date_keys}
+        self.date = {k: self.data.pop(k) if k in self.data else k for k in date_keys}
         mods_keys = ['MOD', 'WEAK']
         self.mods = {k: self.data.pop(k) for k in mods_keys}
         self.duty = self.data.pop('DUTY')
         self.categories = self.data
 
+
+class CategoryPrice:
+    def __init__(self, name, result, mods, duty , prices):
+        self.name = name
+        self.meals = True if 'MEALS'in self.name else False
+        self.first_char = self.name[0]
+        self.result = result
+        self.price = prices[self.name]
+        self.on_duty = True if mods['DUTY'] and mods['DUTY'] != '0' else False
+        self.duty24 = True if mods['DUTY'] == '24' else False
+        self.duty_day = True if mods['DUTY'] == '8' else False
+        self.weak_child_mod = mods['WEAK']
+        self.zlata_mod = mods['MOD']
+        self.mother_mod = True if self.zlata_mod == 'M' else False
+
+        self.cell_price = 0
         self.coefficient = 1
 
-    def count_a_coefficient(self):
-        print(self.prices)
-        # mod_frame = self.prices['MOD']
+        if self.duty24:
+            self.positions = {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']}
+            self.only_lera_mod = True
+        else:
+            self.positions = {'Lera': ['A', 'L'], 'Egr': ['E'], 'All': ['Z', 'F']}
+            self.only_lera_mod = True if self.mother_mod else False
+        for k in self.positions:
+            if self.first_char in self.positions[k]:
+                self.recipient = k
 
+    def find_a_price(self):
+        cell_price = {True: self.price['True'], False: self.price['False']}
+        if self.on_duty:
+            cell_price[False] = self.price['duty_False']
+            cell_price[True] = self.price['duty_24']
+        print('cellprice', cell_price)
 
-df = MonthData('months/nov22/vedomost.csv', 'months/nov22/price.csv')
-# print(df.vedomost)
-for day_list in df.vedomost:
-    day_data = Day(day_list, df.prices)
-    print(day_data.date)
-    print(day_data.categories)
-    break
+        if type(self.result) == bool:
+            cell_price = int(cell_price[self.result])
+        else:
+            cell_price = complex_condition(self.result, cell_price[True])
 
-# for i in df.vedomost:
+        return self.cell_price
 
-        # self.name = name_of_category
-        # self.meals = True if 'MEALS'in self.name else False
-        # self.first_char = self.name[0]
-        # self.result = result_of_day
-        # if self.result == 'T':
-        #     self.result = True
-        # if not self.result:
-        #     self.result = False
-        # self.price = prices[self.name]
-        # сделана 1/2 на All разбоки с нулем
-        # self.on_duty = True if mods['DUTY'] and mods['DUTY'] != '0' else False
-        # self.duty24 = True if mods['DUTY'] == '24' else False
-        # self.duty_day = True if mods['DUTY'] == '8' else False
-        # self.weak_child_mod = mods['WEAK']
-        # self.zlata_mod = mods['MOD']
-        # self.mother_mod = True if self.zlata_mod == 'M' else False
-        # self.coefficient = self.modification()
-        #
-        # if self.duty24:
-        #     self.positions = {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']}
-        #     self.only_lera_mod = True
-        # else:
-        #     self.positions = {'Lera': ['A', 'L'], 'Egr': ['E'], 'All': ['Z', 'F']}
-        #     self.only_lera_mod = True if self.mother_mod else False
-        # for k in self.positions:
-        #     if self.first_char in self.positions[k]:
-        #         self.recipient = k
-    #
-    # def find_a_price(self):
-    #     cell_price = {True: self.price['True'], False: self.price['False']}
-    #     if self.on_duty:
-    #         cell_price[False] = self.price['duty_False']
-    #         cell_price[True] = self.price['duty_24']
-    #     print('cellprice', cell_price)
-    #
-    #     if type(self.result) == bool:
-    #         cell_price = int(cell_price[self.result])
-    #     else:
-    #         cell_price = complex_condition(self.result, cell_price[True])
-    #
-    #     return cell_price
-    #
     # def modification(self):
     #     modification = 1
     #     if self.duty_day:
     #         modification *= float(self.price['duty_8'].replace(',', '.'))
     #         print('8', modification)
-        # if self.zlata_mod:
-        #     modification *= float(self.price[self.zlata_mod].replace(',', '.'))
-        #     print('Z', modification)
-        # if self.weak_child_mod:
-        #     weak_key = 'WEAK' + self.weak_child_mod
-        #     modification *= float(self.price[weak_key].replace(',', '.'))
-        #     print('W', modification)
-        # return modification
+    # if self.zlata_mod:
+    #     modification *= float(self.price[self.zlata_mod].replace(',', '.'))
+    #     print('Z', modification)
+    # if self.weak_child_mod:
+    #     weak_key = 'WEAK' + self.weak_child_mod
+    #     modification *= float(self.price[weak_key].replace(',', '.'))
+    #     print('W', modification)
+    # return modification
     #
     # def find_a_recipients(self, cell_price):
     #     container = {'Egr': 0, 'Lera': 0}
@@ -176,3 +159,30 @@ for day_list in df.vedomost:
     #             container = {k: container[k] * self.coefficient for k in container}
     #
     #     return container
+    def get_price(self):
+    def get_coefficient(self):
+
+
+
+
+
+
+    def get_a_price(self):
+        print(self.prices)
+
+    def count_a_coefficient(self):
+        print(self.prices)
+        # mod_frame = self.prices['MOD']
+
+
+month_data = MonthData('tests/new_test.csv', 'months/dec22test/price.csv', ',')
+# print(df.vedomost)
+for day in month_data.vedomost:
+    print(day)
+    day_data = Day(day)
+    print(day_data.duty)
+    print(month_data.prices)
+    break
+
+# for i in df.vedomost:
+
