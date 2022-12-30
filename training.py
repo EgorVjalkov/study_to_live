@@ -1,4 +1,19 @@
 from random import choice
+import pandas as pd
+
+
+df = pd.read_excel('months/dec22test/dec22.xlsx', sheet_name='FOR_TEST').fillna(0)
+print(df)
+df = df.select_dtypes(include=['float64']).astype('int')
+print(df)
+
+
+
+
+
+
+
+
 
 class Lesson:
     def __init__(self, count, consist, difficulty):

@@ -66,22 +66,20 @@ class ComplexCondition:
 class MonthData:
     def __init__(self, path_to_vedomost, path_to_price):
         self.path_to_price = path_to_price
-        self.vedomost = pd.read_csv(path_to_vedomost, delimiter=';')
+        self.vedomost = pd.read_csv(path_to_vedomost, delimiter=';').fillna(0).to_dict('records')
         self.days = len(self.vedomost)
         self.prices = pd.read_csv(path_to_price, delimiter=';')
 
 
 class Day:
-    def __init__(self, data_frame, price_frame):
-        day_df = data_frame.fillna(0).to_dict('list') # records???
-        day_df = {k: day_df[k][0] for k in day_df}
-        day_df = {k: int(day_df[k]) if type(day_df[k]) == float else day_df[k] for k in day_df}
-        self.data = {k: False if not day_df[k] else True if day_df[k] == 'T' else day_df[k] for k in day_df} # можн оперевести все в str
+    def __init__(self, dict_data, price_frame):
+        dict_data = {k: int(dict_data[k]) if type(dict_data[k]) == float else dict_data[k] for k in dict_data}
+        self.data = {k: False if not dict_data[k] else True if dict_data[k] == 'T' else dict_data[k] for k in dict_data} # можн оперевести все в str
 
         self.prices = price_frame
 
         date_keys = ['DATE', 'DAY']
-        self.date = {k: self.data.pop(k) for k in date_keys}
+        self.date = {k: self.data.pop(k) if date_keys[k] in self.data else date_keys[k] for k in date_keys}
         mods_keys = ['MOD', 'WEAK']
         self.mods = {k: self.data.pop(k) for k in mods_keys}
         self.duty = self.data.pop('DUTY')
@@ -95,9 +93,9 @@ class Day:
 
 
 df = MonthData('months/nov22/vedomost.csv', 'months/nov22/price.csv')
-# print(df.vedomost[0:df.limit])
-for d in range(df.days):
-    day_data = Day(df.vedomost[d:d+1], df.prices)
+# print(df.vedomost)
+for day_list in df.vedomost:
+    day_data = Day(day_list, df.prices)
     print(day_data.date)
     print(day_data.categories)
     break
