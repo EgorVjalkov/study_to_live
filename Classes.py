@@ -1,5 +1,6 @@
 import pandas as pd
 from random import choice, randint
+import datetime
 
 
 class TestingPrices:
@@ -28,7 +29,7 @@ class TestingPrices:
         def testtime(time_list):
             time = choice(time_list).split(':')
             minutes = int(time.pop(1))
-            minutes += randint(1, 60)
+            minutes += randint(1, 59)
             time.append(str(minutes))
             return ','.join(time)
 
@@ -46,31 +47,89 @@ class TestingPrices:
 
         return self.test
 
-def complex_condition(result, condition_for_price):
-    if len(result.split()) > 1:
-        time = ### закнчил на самом важном
+class ComplexCondition:
+    def __init__(self, result, condition_for_price, date=''):
+        self.result = str(result)
+        self.type_result = type(result)
+        self.condition_for_price = condition_for_price
+        self.date = datetime.date.today() if date == 'DATE' or not date else date
+        self.comparison_dict = {'<': lambda r, y: r < y,
+                                '<=': lambda r, y: r <= y,
+                                '>=': lambda r, y: r >= y,
+                                '>': lambda r, y: r > y}
+        self.price = 0
+
+    def prepare_result(self):
+        if self.type_result == str:
+            if ',' in self.result:
+                time = [int(i) for i in self.result.split(',')]
+                time = datetime.time(*time)
+                if time.hour < 8:
+                    self.result = datetime.datetime.combine(self.date + datetime.timedelta(days=1), time)
+                self.result = datetime.datetime.combine(self.date, time)
 
 
+            elif self.result.isdigit():
+                self.result = int(self.result)
+
+        self.type_result = type(self.result)
+
+        return self.result, self.type_result
+
+    def prepare_condition_for_price(self):
+        if ':' in self.condition_for_price:
+            self.condition_for_price = dict([i.split(': ') for i in self.condition_for_price.split(', ')])
+        return self.condition_for_price
+
+    def get_price_if_datetime(self):
+        for k in self.condition_for_price:
+            if '.' in k:
+                inner_condition = k.split('.')
+                if inner_condition[0] in self.comparison_dict:
+                    comparison_operator = inner_condition[0]
+                    comparison_value = datetime.time(int(inner_condition[1]))
+                    comparison_value = datetime.datetime.combine(self.date, comparison_value)
+
+                    inner_condition = self.comparison_dict[comparison_operator](self.result, comparison_value)
+
+                    if inner_condition:
+                        if comparison_value > self.result:
+                            delta = (comparison_value - self.result).seconds / 60
+                        else:
+                            delta = (self.result - comparison_value).seconds / 60
+# подумай с дельтой!!!
+                        if '*' in self.condition_for_price[k]:
+                            divider = float(self.condition_for_price[k].replace('*', ''))
+                            self.price += delta * divider
+
+        return int(self.price)
+
+    def get_price(self):
+        self.prepare_result()
+        self.prepare_condition_for_price()
+        if self.type_result == datetime.datetime:
+            return self.get_price_if_datetime()
+        if '*' in self.condition_for_price:
+            divider = int(self.condition_for_price.replace('*', ''))
+            self.price = divider * self.result
+        else:
+            self.price = int(self.condition_for_price)
+
+        return self.price
+
+cc = ComplexCondition('20,09', '<.22: 3*, <.23: 2*, >=.23: 0')
+cc.prepare_result()
+cc.prepare_condition_for_price()
+print(cc.get_price_if_datetime())
 
 
-    if ':' in condition_for_price:
-        condition_for_price = dict([i.split(': ') for i in condition_for_price.split(', ')])
-        # print(condition_for_price[result])
-        price_of_day = int(condition_for_price[result])
-    elif '*' in condition_for_price:
-        price_of_day = int(condition_for_price.replace('*', '')) * int(result)
-    else:
-        return result
-    return price_of_day
-
-print(complex_condition('23,45', '<22: 3*, <23: 2*, >=23: 0'))
 
 class MonthData:
     def __init__(self, path_to_vedomost, path_to_price, delimiter):
         self.path_to_price = path_to_price
         self.vedomost = pd.read_csv(path_to_vedomost, delimiter=delimiter).fillna(0).to_dict('records') # read_exel, astype(type)
         self.days = len(self.vedomost)
-        self.prices = pd.read_csv(path_to_price, delimiter=';')
+        self.prices = pd.read_csv(path_to_price, delimiter=';').to_dict('records')
 
 
 class Day:
@@ -87,15 +146,15 @@ class Day:
 
 
 class CategoryPrice:
-    def __init__(self, name, result, mods, duty , prices):
+    def __init__(self, name, result, mods, duty, prices):
         self.name = name
-        self.meals = True if 'MEALS'in self.name else False
+        self.meals = True if 'MEALS' in self.name else False
         self.first_char = self.name[0]
         self.result = result
-        self.price = prices[self.name]
-        self.on_duty = True if mods['DUTY'] and mods['DUTY'] != '0' else False
-        self.duty24 = True if mods['DUTY'] == '24' else False
-        self.duty_day = True if mods['DUTY'] == '8' else False
+        self.price = [i for i in prices if self.name in i.values()][0]
+        self.on_duty = True if duty else False
+        self.duty24 = True if duty == '24' else False
+        self.duty_day = True if duty == '8' else False
         self.weak_child_mod = mods['WEAK']
         self.zlata_mod = mods['MOD']
         self.mother_mod = True if self.zlata_mod == 'M' else False
@@ -121,9 +180,10 @@ class CategoryPrice:
         print('cellprice', cell_price)
 
         if type(self.result) == bool:
-            cell_price = int(cell_price[self.result])
+            self.cell_price = int(cell_price[self.result])
         else:
-            cell_price = complex_condition(self.result, cell_price[True])
+            self.cell_price = ComplexCondition(self.result, cell_price[True]).get_price()
+            print(self.cell_price)
 
         return self.cell_price
 
@@ -159,8 +219,9 @@ class CategoryPrice:
     #             container = {k: container[k] * self.coefficient for k in container}
     #
     #     return container
-    def get_price(self):
-    def get_coefficient(self):
+    # def get_price(self):
+    #
+    # def get_coefficient(self):
 
 
 
@@ -176,13 +237,15 @@ class CategoryPrice:
 
 
 month_data = MonthData('tests/new_test.csv', 'months/dec22test/price.csv', ',')
-# print(df.vedomost)
+
+
 for day in month_data.vedomost:
-    print(day)
     day_data = Day(day)
-    print(day_data.duty)
-    print(month_data.prices)
-    break
+    for i in day_data.categories:
+        price = CategoryPrice(i, day_data.categories[i], day_data.mods, day_data.duty, month_data.prices)
+        # print(i, day_data.date, price.result, price.find_a_price())
+
+
 
 # for i in df.vedomost:
 
