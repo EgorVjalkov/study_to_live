@@ -49,7 +49,7 @@ class TestingPrices:
 
 class ComplexCondition:
     def __init__(self, result, condition_for_price, date=''):
-        self.result = str(result)
+        self.result = result
         self.type_result = type(result)
         self.condition_for_price = condition_for_price
         self.date = datetime.date.today() if date == 'DATE' or not date else date
@@ -64,15 +64,16 @@ class ComplexCondition:
             if ',' in self.result:
                 time = [int(i) for i in self.result.split(',')]
                 time = datetime.time(*time)
-                if time.hour < 8:
-                    self.result = datetime.datetime.combine(self.date + datetime.timedelta(days=1), time)
                 self.result = datetime.datetime.combine(self.date, time)
+                if self.result.hour < 8:
+                    self.result += datetime.timedelta(days=1)
 
-
-            elif self.result.isdigit():
-                self.result = int(self.result)
+            # elif self.result.isdigit():
+            #     print(self.result)
+            #     self.result = int(self.result)
 
         self.type_result = type(self.result)
+        # print(self.type_result)
 
         return self.result, self.type_result
 
@@ -82,6 +83,7 @@ class ComplexCondition:
         return self.condition_for_price
 
     def get_price_if_datetime(self):
+        delta = 0
         for k in self.condition_for_price:
             if '.' in k:
                 inner_condition = k.split('.')
@@ -89,18 +91,25 @@ class ComplexCondition:
                     comparison_operator = inner_condition[0]
                     comparison_value = datetime.time(int(inner_condition[1]))
                     comparison_value = datetime.datetime.combine(self.date, comparison_value)
+                    if comparison_value.hour < 8:
+                        comparison_value += datetime.timedelta(days=1)
+                    # print(self.result, comparison_value)
 
                     inner_condition = self.comparison_dict[comparison_operator](self.result, comparison_value)
-
                     if inner_condition:
-                        if comparison_value > self.result:
-                            delta = (comparison_value - self.result).seconds / 60
-                        else:
-                            delta = (self.result - comparison_value).seconds / 60
-# подумай с дельтой!!!
                         if '*' in self.condition_for_price[k]:
+                            if not delta:
+                                if comparison_value > self.result:
+                                    delta = (comparison_value - self.result).seconds / 60
+                                else:
+                                    delta = (self.result - comparison_value).seconds / 60
+                            else:
+                                delta += 60
                             divider = float(self.condition_for_price[k].replace('*', ''))
                             self.price += delta * divider
+                        else:
+                            self.price += int(self.condition_for_price[k])
+                        print(k, self.condition_for_price[k], inner_condition, delta, self.price)
 
         return int(self.price)
 
@@ -117,10 +126,11 @@ class ComplexCondition:
 
         return self.price
 
-cc = ComplexCondition('20,09', '<.22: 3*, <.23: 2*, >=.23: 0')
+# cc = ComplexCondition('22,52', '<.23: 1*, >=.23: 0, >=.0: -1*')
+cc = ComplexCondition('4', '40*')
 cc.prepare_result()
 cc.prepare_condition_for_price()
-print(cc.get_price_if_datetime())
+print(cc.get_price())
 
 
 
@@ -177,13 +187,13 @@ class CategoryPrice:
         if self.on_duty:
             cell_price[False] = self.price['duty_False']
             cell_price[True] = self.price['duty_24']
-        print('cellprice', cell_price)
+        print(self.name, self.result, cell_price)
 
         if type(self.result) == bool:
             self.cell_price = int(cell_price[self.result])
         else:
             self.cell_price = ComplexCondition(self.result, cell_price[True]).get_price()
-            print(self.cell_price)
+            print('price', self.cell_price, '\n')
 
         return self.cell_price
 
@@ -243,7 +253,8 @@ for day in month_data.vedomost:
     day_data = Day(day)
     for i in day_data.categories:
         price = CategoryPrice(i, day_data.categories[i], day_data.mods, day_data.duty, month_data.prices)
-        # print(i, day_data.date, price.result, price.find_a_price())
+        print(i, price.result, price.find_a_price())
+
 
 
 
