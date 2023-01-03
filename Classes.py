@@ -1,7 +1,7 @@
 import pandas as pd
 from random import choice, randint
 import datetime
-
+import numpy as np
 
 class TestingPrices:
     def __init__(self, path_to_test, path_to_price=''):
@@ -127,11 +127,10 @@ class ComplexCondition:
         return self.price
 
 # cc = ComplexCondition('22,52', '<.23: 1*, >=.23: 0, >=.0: -1*')
-cc = ComplexCondition('4', '40*')
+cc = ComplexCondition(4, '40*')
 cc.prepare_result()
 cc.prepare_condition_for_price()
 print(cc.get_price())
-
 
 
 class MonthData:
@@ -140,6 +139,11 @@ class MonthData:
         self.vedomost = pd.read_csv(path_to_vedomost, delimiter=delimiter).fillna(0).to_dict('records') # read_exel, astype(type)
         self.days = len(self.vedomost)
         self.prices = pd.read_csv(path_to_price, delimiter=';').to_dict('records')
+
+        self.egr_count = 0
+        self.lera_count = 0
+        self.egr_meals = 0
+        self.lera_meals = 0
 
 
 class Day:
@@ -160,8 +164,9 @@ class CategoryPrice:
         self.name = name
         self.meals = True if 'MEALS' in self.name else False
         self.first_char = self.name[0]
+
         self.result = result
-        self.price = [i for i in prices if self.name in i.values()][0]
+
         self.on_duty = True if duty else False
         self.duty24 = True if duty == '24' else False
         self.duty_day = True if duty == '8' else False
@@ -169,8 +174,10 @@ class CategoryPrice:
         self.zlata_mod = mods['MOD']
         self.mother_mod = True if self.zlata_mod == 'M' else False
 
+        self.price = [i for i in prices if self.name in i.values()][0]
         self.cell_price = 0
-        self.coefficient = 1
+        self.coefficient_dict = {}
+        self.coefficient = 0
 
         if self.duty24:
             self.positions = {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']}
@@ -193,23 +200,31 @@ class CategoryPrice:
             self.cell_price = int(cell_price[self.result])
         else:
             self.cell_price = ComplexCondition(self.result, cell_price[True]).get_price()
-            print('price', self.cell_price, '\n')
+        print('price', self.cell_price)
 
         return self.cell_price
 
-    # def modification(self):
-    #     modification = 1
-    #     if self.duty_day:
-    #         modification *= float(self.price['duty_8'].replace(',', '.'))
-    #         print('8', modification)
-    # if self.zlata_mod:
-    #     modification *= float(self.price[self.zlata_mod].replace(',', '.'))
-    #     print('Z', modification)
-    # if self.weak_child_mod:
-    #     weak_key = 'WEAK' + self.weak_child_mod
-    #     modification *= float(self.price[weak_key].replace(',', '.'))
-    #     print('W', modification)
-    # return modification
+    def modification(self):
+        if self.duty_day:
+            mod = float(self.price['duty_8'].replace(',', '.'))
+            self.coefficient_dict['duty_8'] = mod
+        if self.zlata_mod:
+            mod = float(self.price[self.zlata_mod].replace(',', '.'))
+            self.coefficient_dict['zlata_mod'] = mod
+        if self.weak_child_mod:
+            weak_key = 'WEAK' + str(self.weak_child_mod)
+            mod = float(self.price[weak_key].replace(',', '.'))
+            self.coefficient_dict[weak_key] = mod
+        self.coefficient = np.array(list(self.coefficient_dict.values())).prod()
+        print('coef', self.coefficient_dict, self.coefficient)
+        return self.coefficient_dict, self.coefficient
+
+    def total_count(self):
+        self.find_a_price()
+        if self.cell_price > 0:
+            self.modification()
+            self.cell_price *= self.coefficient
+        return self.cell_price
     #
     # def find_a_recipients(self, cell_price):
     #     container = {'Egr': 0, 'Lera': 0}
@@ -234,13 +249,6 @@ class CategoryPrice:
     # def get_coefficient(self):
 
 
-
-
-
-
-    def get_a_price(self):
-        print(self.prices)
-
     def count_a_coefficient(self):
         print(self.prices)
         # mod_frame = self.prices['MOD']
@@ -253,7 +261,9 @@ for day in month_data.vedomost:
     day_data = Day(day)
     for i in day_data.categories:
         price = CategoryPrice(i, day_data.categories[i], day_data.mods, day_data.duty, month_data.prices)
-        print(i, price.result, price.find_a_price())
+#        price.find_a_price()
+#        price.modification()
+        print(i, price.result, price.total_count(), '\n')
 
 
 
