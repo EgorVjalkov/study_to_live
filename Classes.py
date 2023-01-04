@@ -104,12 +104,13 @@ class ComplexCondition:
                                 else:
                                     delta = (self.result - comparison_value).seconds / 60
                             else:
-                                delta += 60
+                                delta = 60
                             divider = float(self.condition_for_price[k].replace('*', ''))
                             self.price += delta * divider
+                            # print(delta)
                         else:
                             self.price += int(self.condition_for_price[k])
-                        print(k, self.condition_for_price[k], inner_condition, delta, self.price)
+                        # print(k, self.condition_for_price[k], inner_condition, self.price)
 
         return int(self.price)
 
@@ -126,24 +127,26 @@ class ComplexCondition:
 
         return self.price
 
-# cc = ComplexCondition('22,52', '<.23: 1*, >=.23: 0, >=.0: -1*')
-cc = ComplexCondition(4, '40*')
-cc.prepare_result()
-cc.prepare_condition_for_price()
-print(cc.get_price())
+# cc = ComplexCondition('20,31', '<.22: 3*, <.23: 2*, >=.23: 0')
+# #cc = ComplexCondition(4, '40*')
+# cc.prepare_result()
+# cc.prepare_condition_for_price()
+# print(cc.get_price())
 
 
 class MonthData:
-    def __init__(self, path_to_vedomost, path_to_price, delimiter):
-        self.path_to_price = path_to_price
-        self.vedomost = pd.read_csv(path_to_vedomost, delimiter=delimiter).fillna(0).to_dict('records') # read_exel, astype(type)
-        self.days = len(self.vedomost)
-        self.prices = pd.read_csv(path_to_price, delimiter=';').to_dict('records')
 
         self.egr_count = 0
         self.lera_count = 0
         self.egr_meals = 0
         self.lera_meals = 0
+
+    def collect_all_in_month(self, day_container):
+        self.egr_count += day_container['money']['Egr']
+        self.egr_meals += day_container['meals']['Egr']
+        self.lera_count += day_container['money']['Lera']
+        self.lera_meals += day_container['meals']['Lera']
+        return self.egr_count, self.egr_meals, self.lera_count, self.lera_meals
 
 
 class Day:
@@ -158,6 +161,30 @@ class Day:
         self.duty = self.data.pop('DUTY')
         self.categories = self.data
 
+        self.workday_result = {}
+        self.meals_result = {}
+        self.container = {}
+
+    def collect_all(self, bag, container):
+        del bag['code']
+        if not container:
+            container = bag.copy()
+        else:
+            container = {k: container[k] + bag[k] for k in container}
+        container = {k: round(container[k]) for k in container}
+        return container
+
+    def sort_to_containers(self, bag):
+        if 'meals' in bag.values():
+            self.meals_result = self.collect_all(bag, self.meals_result)
+            self.container['meals'] = self.meals_result
+        else:
+            self.workday_result = self.collect_all(bag, self.workday_result)
+            self.container['money'] = self.workday_result
+        return self.container
+
+
+
 
 class CategoryPrice:
     def __init__(self, name, result, mods, duty, prices):
@@ -167,24 +194,27 @@ class CategoryPrice:
 
         self.result = result
 
-        self.on_duty = True if duty else False
-        self.duty24 = True if duty == '24' else False
-        self.duty_day = True if duty == '8' else False
-        self.weak_child_mod = mods['WEAK']
         self.zlata_mod = mods['MOD']
-        self.mother_mod = True if self.zlata_mod == 'M' else False
+        self.weak_child_mod = mods['WEAK']
+
+        self.volkhov_alone_mod = True if self.zlata_mod == 'M' else False
+        self.on_duty = True if duty or self.volkhov_alone_mod else False
+        self.duty24 = True if duty == 24 or self.volkhov_alone_mod else False
+        self.duty_day = True if duty == 8 else False
 
         self.price = [i for i in prices if self.name in i.values()][0]
-        self.cell_price = 0
+        self.category_price = 0
         self.coefficient_dict = {}
         self.coefficient = 0
+
+        self.money_bag = {}
 
         if self.duty24:
             self.positions = {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']}
             self.only_lera_mod = True
         else:
-            self.positions = {'Lera': ['A', 'L'], 'Egr': ['E'], 'All': ['Z', 'F']}
-            self.only_lera_mod = True if self.mother_mod else False
+            self.positions = {'Lera': ['L'], 'Egr': ['E'], 'All': ['A', 'Z', 'F']}
+            self.only_lera_mod = False
         for k in self.positions:
             if self.first_char in self.positions[k]:
                 self.recipient = k
@@ -197,14 +227,14 @@ class CategoryPrice:
         print(self.name, self.result, cell_price)
 
         if type(self.result) == bool:
-            self.cell_price = int(cell_price[self.result])
+            self.category_price = int(cell_price[self.result])
         else:
-            self.cell_price = ComplexCondition(self.result, cell_price[True]).get_price()
-        print('price', self.cell_price)
+            self.category_price = ComplexCondition(self.result, cell_price[True]).get_price()
+        print('price', self.category_price)
 
-        return self.cell_price
+        return self.category_price
 
-    def modification(self):
+    def count_a_modification(self):
         if self.duty_day:
             mod = float(self.price['duty_8'].replace(',', '.'))
             self.coefficient_dict['duty_8'] = mod
@@ -219,39 +249,31 @@ class CategoryPrice:
         print('coef', self.coefficient_dict, self.coefficient)
         return self.coefficient_dict, self.coefficient
 
-    def total_count(self):
+    def total_count_and_save_in_dict(self):
         self.find_a_price()
-        if self.cell_price > 0:
-            self.modification()
-            self.cell_price *= self.coefficient
-        return self.cell_price
-    #
-    # def find_a_recipients(self, cell_price):
-    #     container = {'Egr': 0, 'Lera': 0}
-    #     if self.recipient == 'All':
-    #         container = {k: cell_price for k in container}
-    #     else:
-    #         container[self.recipient] = cell_price
-    #     print('premod', container)
-    #
-    #     if cell_price <= 0:
-    #         self.coefficient = 0
-    #     else:
-    #         if self.only_lera_mod:
-    #             if 'Lera' in container:
-    #                 container['Lera'] *= self.coefficient
-    #         else:
-    #             container = {k: container[k] * self.coefficient for k in container}
-    #
-    #     return container
-    # def get_price(self):
-    #
-    # def get_coefficient(self):
 
+        bag = {'Egr': 0, 'Lera': 0}
+        if self.recipient == 'All':
+            bag = {k: self.category_price for k in bag}
+        else:
+            bag[self.recipient] = self.category_price
 
-    def count_a_coefficient(self):
-        print(self.prices)
-        # mod_frame = self.prices['MOD']
+        if self.category_price > 0:
+            self.count_a_modification()
+
+            if self.only_lera_mod:
+                bag['Lera'] *= self.coefficient
+            else:
+                bag = {k: bag[k] * self.coefficient for k in bag}
+
+        self.money_bag = bag.copy()
+
+        if self.meals:
+            self.money_bag['code'] = 'meals'
+        else:
+            self.money_bag['code'] = 'money'
+
+        return self.money_bag
 
 
 month_data = MonthData('tests/new_test.csv', 'months/dec22test/price.csv', ',')
@@ -260,13 +282,17 @@ month_data = MonthData('tests/new_test.csv', 'months/dec22test/price.csv', ',')
 for day in month_data.vedomost:
     day_data = Day(day)
     for i in day_data.categories:
-        price = CategoryPrice(i, day_data.categories[i], day_data.mods, day_data.duty, month_data.prices)
-#        price.find_a_price()
-#        price.modification()
-        print(i, price.result, price.total_count(), '\n')
+        print('!!!!!!!', 'duty', day_data.duty, day_data.mods)
+        category = CategoryPrice(i, day_data.categories[i], day_data.mods, day_data.duty, month_data.prices)
+        bag = category.total_count_and_save_in_dict()
+        containers = day_data.sort_to_containers(bag)
+        # print(category.positions)
+        print(bag)
+        print(containers, '\n')
+    month_data.collect_all_in_month(containers)
+
+print(month_data.egr_count, month_data.egr_meals, month_data.lera_count, month_data.lera_meals)
 
 
 
-
-# for i in df.vedomost:
 
