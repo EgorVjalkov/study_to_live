@@ -133,8 +133,13 @@ class ComplexCondition:
 # cc.prepare_condition_for_price()
 # print(cc.get_price())
 
-
+# отфильтруй уннамед!!!
 class MonthData:
+    def __init__(self, path_to_vedomost, path_to_price, delimiter):
+        self.path_to_price = path_to_price
+        self.vedomost = pd.read_csv(path_to_vedomost, delimiter=delimiter).fillna(0).to_dict('records')  # read_exel, astype(type)
+        self.days = len(self.vedomost)
+        self.prices = pd.read_csv(path_to_price, delimiter=';').fillna(0).to_dict('records')
 
         self.egr_count = 0
         self.lera_count = 0
@@ -201,8 +206,10 @@ class CategoryPrice:
         self.on_duty = True if duty or self.volkhov_alone_mod else False
         self.duty24 = True if duty == 24 or self.volkhov_alone_mod else False
         self.duty_day = True if duty == 8 else False
+        print(self.name)
 
         self.price = [i for i in prices if self.name in i.values()][0]
+        print(self.price)
         self.category_price = 0
         self.coefficient_dict = {}
         self.coefficient = 0
@@ -276,13 +283,14 @@ class CategoryPrice:
         return self.money_bag
 
 
-month_data = MonthData('tests/new_test.csv', 'months/dec22test/price.csv', ',')
+month_data = MonthData('months/dec22/vedomost.csv', 'months/dec22/price.csv', ';')
 
 
 for day in month_data.vedomost:
     day_data = Day(day)
     for i in day_data.categories:
         print('!!!!!!!', 'duty', day_data.duty, day_data.mods)
+        print(day_data.date)
         category = CategoryPrice(i, day_data.categories[i], day_data.mods, day_data.duty, month_data.prices)
         bag = category.total_count_and_save_in_dict()
         containers = day_data.sort_to_containers(bag)
