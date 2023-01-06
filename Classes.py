@@ -133,12 +133,12 @@ class ComplexCondition:
 # cc.prepare_condition_for_price()
 # print(cc.get_price())
 
-# отфильтруй уннамед!!!
 class MonthData:
     def __init__(self, path_to_vedomost, path_to_price, delimiter):
         self.path_to_price = path_to_price
-        self.vedomost = pd.read_csv(path_to_vedomost, delimiter=delimiter).fillna(0).to_dict('records')  # read_exel, astype(type)
-        self.days = len(self.vedomost)
+        df = pd.read_csv(path_to_vedomost, delimiter=delimiter).fillna(0)  # read_exel, astype(type)
+        self.days = len([i for i in df['DATE'].to_list() if i])
+        self.vedomost = df[0:self.days].fillna(0).to_dict('records')  # read_exel, astype(type)
         self.prices = pd.read_csv(path_to_price, delimiter=';').fillna(0).to_dict('records')
 
         self.egr_count = 0
@@ -148,14 +148,20 @@ class MonthData:
 
     def collect_all_in_month(self, day_container):
         self.egr_count += day_container['money']['Egr']
-        self.egr_meals += day_container['meals']['Egr']
         self.lera_count += day_container['money']['Lera']
-        self.lera_meals += day_container['meals']['Lera']
+        if 'meals' in day_container:
+            self.egr_meals += day_container['meals']['Egr']
+            self.lera_meals += day_container['meals']['Lera']
         return self.egr_count, self.egr_meals, self.lera_count, self.lera_meals
+
+    def add_longbox_money(self,egr_box, lera_box):
+        self.egr_count += egr_box
+        self.lera_count += lera_box
+        return self.egr_count, self.lera_count
 
 
 class Day:
-    def __init__(self, dict_data):
+    def __init__(self, dict_data, category='all'):
         dict_data = {k: int(dict_data[k]) if type(dict_data[k]) == float else dict_data[k] for k in dict_data}
         self.data = {k: False if not dict_data[k] else True if dict_data[k] == 'T' else dict_data[k] for k in dict_data} # можн оперевести все в str
 
@@ -164,7 +170,10 @@ class Day:
         mods_keys = ['MOD', 'WEAK']
         self.mods = {k: self.data.pop(k) for k in mods_keys}
         self.duty = self.data.pop('DUTY')
-        self.categories = self.data
+        self.categories = {k: self.data[k] for k in self.data if 'Unnamed' not in k}
+        if category != 'all':
+            self.categories = {k: self.categories[k] for k in self.categories if k == category}
+        print(self.categories)
 
         self.workday_result = {}
         self.meals_result = {}
@@ -206,10 +215,8 @@ class CategoryPrice:
         self.on_duty = True if duty or self.volkhov_alone_mod else False
         self.duty24 = True if duty == 24 or self.volkhov_alone_mod else False
         self.duty_day = True if duty == 8 else False
-        print(self.name)
 
         self.price = [i for i in prices if self.name in i.values()][0]
-        print(self.price)
         self.category_price = 0
         self.coefficient_dict = {}
         self.coefficient = 0
@@ -285,19 +292,16 @@ class CategoryPrice:
 
 month_data = MonthData('months/dec22/vedomost.csv', 'months/dec22/price.csv', ';')
 
-
 for day in month_data.vedomost:
     day_data = Day(day)
     for i in day_data.categories:
-        print('!!!!!!!', 'duty', day_data.duty, day_data.mods)
-        print(day_data.date)
+        print('!!!!!!!', day_data.date, 'duty', day_data.duty, day_data.mods)
         category = CategoryPrice(i, day_data.categories[i], day_data.mods, day_data.duty, month_data.prices)
         bag = category.total_count_and_save_in_dict()
         containers = day_data.sort_to_containers(bag)
-        # print(category.positions)
-        print(bag)
         print(containers, '\n')
     month_data.collect_all_in_month(containers)
+month_data.add_longbox_money(600, 100)
 
 print(month_data.egr_count, month_data.egr_meals, month_data.lera_count, month_data.lera_meals)
 
