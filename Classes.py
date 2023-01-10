@@ -134,12 +134,11 @@ class ComplexCondition:
 # print(cc.get_price())
 
 class MonthData:
-    def __init__(self, path_to_vedomost, path_to_price, delimiter):
-        self.path_to_price = path_to_price
-        df = pd.read_csv(path_to_vedomost, delimiter=delimiter).fillna(0)  # read_exel, astype(type)
-        self.days = len([i for i in df['DATE'].to_list() if i])
-        self.vedomost = df[0:self.days].fillna(0).to_dict('records')  # read_exel, astype(type)
-        self.prices = pd.read_csv(path_to_price, delimiter=';').fillna(0).to_dict('records')
+    def __init__(self, path):
+        vedomost = pd.read_excel(path, sheet_name='vedomost').fillna(False)  # read_exel, astype(type)
+        self.days = len([i for i in vedomost['DATE'].to_list() if i])
+        self.vedomost = vedomost[0:self.days].fillna(0).to_dict('records')   #read_exel, astype(type)
+        self.prices = pd.read_excel(path, sheet_name='price').fillna(0).to_dict('records')
 
         self.egr_count = 0
         self.lera_count = 0
@@ -250,14 +249,14 @@ class CategoryPrice:
 
     def count_a_modification(self):
         if self.duty_day:
-            mod = float(self.price['duty_8'].replace(',', '.'))
+            mod = self.price['duty_8']
             self.coefficient_dict['duty_8'] = mod
         if self.zlata_mod:
-            mod = float(self.price[self.zlata_mod].replace(',', '.'))
+            mod = self.price[self.zlata_mod]
             self.coefficient_dict['zlata_mod'] = mod
         if self.weak_child_mod:
             weak_key = 'WEAK' + str(self.weak_child_mod)
-            mod = float(self.price[weak_key].replace(',', '.'))
+            mod = self.price[weak_key]
             self.coefficient_dict[weak_key] = mod
         self.coefficient = np.array(list(self.coefficient_dict.values())).prod()
         print('coef', self.coefficient_dict, self.coefficient)
@@ -290,8 +289,9 @@ class CategoryPrice:
         return self.money_bag
 
 
-month_data = MonthData('months/dec22/vedomost.csv', 'months/dec22/price.csv', ';')
-
+month_data = MonthData('months/dec22test/dec22.xlsx')
+# print(month_data.vedomost)
+# print(month_data.prices)
 for day in month_data.vedomost:
     day_data = Day(day)
     for i in day_data.categories:
