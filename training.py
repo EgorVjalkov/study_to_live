@@ -24,6 +24,13 @@ for i in new_data:
     if new_data[i].dtypes == 'float':
         print(i, True)
         new_data[i] = new_data[i].astype(int)
+print(month_data)
+date_series = month_data['DATE'].astype('str')
+duty_series = [str(i) if i else False for i in month_data['DUTY'].astype('int').to_list()]
+
+new_data = month_data[['DATE', 'DAY']]
+new_data = new_data.assign(DUTY=duty_series)
+# print(duty_series)
 print(new_data)
 
 # Setting the new value
