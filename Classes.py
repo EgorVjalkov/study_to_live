@@ -304,7 +304,3 @@ for day in month_data.vedomost:
 month_data.add_longbox_money(600, 100)
 
 print(month_data.egr_count, month_data.egr_meals, month_data.lera_count, month_data.lera_meals)
-
-
-
-
