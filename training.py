@@ -15,28 +15,23 @@ y = pd.DataFrame(y)
 
 month_data = pd.read_excel('months/dec22test/dec22.xlsx', sheet_name='vedomost').fillna(0)
 price_data = pd.read_excel('months/dec22test/dec22.xlsx', sheet_name='price').fillna(0)
-print(price_data)
-date_series = month_data['DATE'].astype('str')
-duty_series = [str(i) if i else False for i in month_data['DUTY'].astype('int').to_list()]
 
-new_data = month_data[['DATE', 'DAY', 'DUTY', 'MOD', 'WEAK']]
-for i in new_data:
-    if new_data[i].dtypes == 'float':
+accessory_keys = ['DATE', 'DAY', 'DUTY', 'MOD', 'WEAK']
+category_keys = [i for i in month_data if i not in accessory_keys]
+
+accessory_data = month_data[accessory_keys]
+for i in accessory_data:
+    if accessory_data[i].dtypes == 'float':
         print(i, True)
-        new_data[i] = new_data[i].astype(int)
-print(month_data)
-date_series = month_data['DATE'].astype('str')
-duty_series = [str(i) if i else False for i in month_data['DUTY'].astype('int').to_list()]
+        accessory_data[i] = accessory_data[i].astype(int)
+category_data = month_data[category_keys]
 
-new_data = month_data[['DATE', 'DAY']]
-new_data = new_data.assign(DUTY=duty_series)
-# print(duty_series)
-print(new_data)
+print(category_data)
+print(accessory_data)
+print(price_data)
 
-# Setting the new value
-# data.loc[data.bidder == 'parakeet2004', 'bidderrate'] = 100
-# Taking a look at the result
-# data[data.bidder == 'parakeet2004']['bidderrate']
+post_count_dataframe = accessory_data
+
 
 class Lesson:
     def __init__(self, count, consist, difficulty):
