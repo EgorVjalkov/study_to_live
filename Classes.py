@@ -135,10 +135,15 @@ class ComplexCondition:
 
 class MonthData:
     def __init__(self, path):
-        vedomost = pd.read_excel(path, sheet_name='vedomost').fillna(False)  # read_exel, astype(type)
+        vedomost = pd.read_excel(path, sheet_name='vedomost').fillna(False)
         self.days = len([i for i in vedomost['DATE'].to_list() if i])
-        self.vedomost = vedomost[0:self.days].fillna(0).to_dict('records')   #read_exel, astype(type)
-        self.prices = pd.read_excel(path, sheet_name='price').fillna(0).to_dict('records')
+        self.vedomost_like_df = vedomost[0:self.days].fillna(0)
+        self.prices_like_df = pd.read_excel(path, sheet_name='price').fillna(0)# .transpose() #!!!!!!!!!!!!!!!
+        self.accessory_keys = ['DATE', 'DAY', 'MOD', 'WEAK', 'DUTY']
+        self.category_keys = [i for i in self.vedomost_like_df if i not in self.accessory_keys]
+
+        self.vedomost = self.vedomost_like_df.to_dict('records')
+        self.prices = self.prices_like_df.to_dict('records')
 
         self.egr_count = 0
         self.lera_count = 0
@@ -289,18 +294,18 @@ class CategoryPrice:
         return self.money_bag
 
 
-month_data = MonthData('months/dec22test/dec22.xlsx')
-# print(month_data.vedomost)
-# print(month_data.prices)
-for day in month_data.vedomost:
-    day_data = Day(day)
-    for i in day_data.categories:
-        print('!!!!!!!', day_data.date, 'duty', day_data.duty, day_data.mods)
-        category = CategoryPrice(i, day_data.categories[i], day_data.mods, day_data.duty, month_data.prices)
-        bag = category.total_count_and_save_in_dict()
-        containers = day_data.sort_to_containers(bag)
-        print(containers, '\n')
-    month_data.collect_all_in_month(containers)
-month_data.add_longbox_money(600, 100)
-
-print(month_data.egr_count, month_data.egr_meals, month_data.lera_count, month_data.lera_meals)
+# month_data = MonthData('months/dec22test/dec22.xlsx')
+# # print(month_data.vedomost)
+# # print(month_data.prices)
+# for day in month_data.vedomost:
+#     day_data = Day(day)
+#     for i in day_data.categories:
+#         print('!!!!!!!', day_data.date, 'duty', day_data.duty, day_data.mods)
+#         category = CategoryPrice(i, day_data.categories[i], day_data.mods, day_data.duty, month_data.prices)
+#         bag = category.total_count_and_save_in_dict()
+#         containers = day_data.sort_to_containers(bag)
+#         print(containers, '\n')
+#     month_data.collect_all_in_month(containers)
+# month_data.add_longbox_money(600, 100)
+#
+# print(month_data.egr_count, month_data.egr_meals, month_data.lera_count, month_data.lera_meals)
