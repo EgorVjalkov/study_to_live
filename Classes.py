@@ -141,6 +141,11 @@ class MonthData:
         self.prices_like_df = pd.read_excel(path, sheet_name='price').fillna(0)# .transpose() #!!!!!!!!!!!!!!!
         self.accessory_keys = ['DATE', 'DAY', 'MOD', 'WEAK', 'DUTY']
         self.category_keys = [i for i in self.vedomost_like_df if i not in self.accessory_keys]
+# accessory names
+        self.date = ['DATE', 'DAY']
+        self.zlata_mod = 'MOD'
+        self.weak_child = 'WEAK'
+        self.duty = 'DUTY'
 
         self.vedomost = self.vedomost_like_df.to_dict('records')
         self.prices = self.prices_like_df.to_dict('records')
@@ -149,6 +154,12 @@ class MonthData:
         self.lera_count = 0
         self.egr_meals = 0
         self.lera_meals = 0
+
+    def add_coefficient_column(self, name, coef_list):
+        index = self.vedomost_like_df.columns.to_list().index(name) + 1
+        name += '_coef'
+        self.vedomost_like_df.insert(index, name, coef_list)
+        return self.vedomost_like_df
 
     def collect_all_in_month(self, day_container):
         self.egr_count += day_container['money']['Egr']
@@ -201,7 +212,18 @@ class Day:
             self.container['money'] = self.workday_result
         return self.container
 
+class CategoryData:
+    def __init__(self, dataframe, priceframe):
+        self.data = dataframe.to_list()
+        self.name = dataframe.name
+        self.meals = True if 'MEALS' in self.name else False
+        self.first_char = self.name[0]
 
+
+        self.volkhov_alone_mod = True if self.zlata_mod == 'M' else False
+        self.on_duty = True if duty or self.volkhov_alone_mod else False
+        self.duty24 = True if duty == 24 or self.volkhov_alone_mod else False
+        self.duty_day = True if duty == 8 else False
 
 
 class CategoryPrice:

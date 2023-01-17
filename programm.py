@@ -1,13 +1,16 @@
 from Classes import MonthData, Day, CategoryPrice
-
+import pandas as pd
 
 month_data = MonthData('months/dec22test/dec22.xlsx')
+print(month_data.vedomost_like_df)
+
+# month_data.add_coefficient_column('L:DIET', 4)
 category_df = month_data.vedomost_like_df[month_data.category_keys]
-print(month_data.prices_like_df)
+
 for i in category_df:
-    print(category_df)
-    category_df.insert()
-    # пробуй вставлять пустные колонны со значениями!!! нужно править и много!!!
+    # category = pd.Series(category_df[i].to_list(), index=month_data.vedomost_like_df['DATE'].astype('str'))
+    category = category_df[i]
+    print(category.to_list())
     # print(category_price)
 # print(month_data.prices)
 # for day in month_data.vedomost:
