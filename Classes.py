@@ -138,7 +138,7 @@ class MonthData:
         vedomost = pd.read_excel(path, sheet_name='vedomost').fillna(False)
         self.days = len([i for i in vedomost['DATE'].to_list() if i])
         self.vedomost_like_df = vedomost[0:self.days].fillna(0)
-        self.prices_like_df = pd.read_excel(path, sheet_name='price').fillna(0)# .transpose() #!!!!!!!!!!!!!!!
+        self.prices_like_df = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)# .transpose() #!!!!!!!!!!!!!!!
         self.accessory_keys = ['DATE', 'DAY', 'MOD', 'WEAK', 'DUTY']
         self.category_keys = [i for i in self.vedomost_like_df if i not in self.accessory_keys]
 # accessory names
@@ -213,17 +213,53 @@ class Day:
         return self.container
 
 class CategoryData:
-    def __init__(self, dataframe, priceframe):
-        self.data = dataframe.to_list()
+    def __init__(self, dataframe, accessory_frame, price_frame):
+        self.data = {k: True if dataframe.to_dict()[k] == 'T' else dataframe.to_dict()[k] for k in dataframe.to_dict()}
         self.name = dataframe.name
-        self.meals = True if 'MEALS' in self.name else False
+        self.accessory = accessory_frame
+        # self.meals = True if 'MEALS' in self.name else False
         self.first_char = self.name[0]
+        self.price = price_frame[self.name]
+
+        self.result = 0
+        self.volkhov_alone_mod = False
+        self.on_duty = False
+        self.duty24 = False
+        self.duty_day = False
+        self.category_price = 0
+
+    def get_mods(self, result_key):
+        mods_dict = {}
+        for i in self.accessory:
+            mods_dict[i] = self.accessory[i].to_dict()[result_key]
+
+        self.volkhov_alone_mod = True if mods_dict['MOD'] == 'M' else False
+        self.on_duty = True if mods_dict['DUTY'] or self.volkhov_alone_mod else False
+        self.duty24 = True if mods_dict['DUTY'] == 24 or self.volkhov_alone_mod else False
+        self.duty_day = True if mods_dict['DUTY'] == 8 else False
+        return self.volkhov_alone_mod, self.on_duty, self.duty24, self.duty_day
+
+    def find_a_price_and_save(self):
+        for k in self.data:
+            self.result = self.data[k]
+            print(self.get_mods(k))
+
+            cell_price = {True: self.price['True'], False: self.price['False']}
+            if self.on_duty:
+                cell_price[False] = self.price['duty_False']
+                cell_price[True] = self.price['duty_24']
+            print(self.name, self.result, cell_price)
+
+            if type(self.result) == bool:
+                self.category_price = int(cell_price[self.result])
+            else:
+                self.category_price = ComplexCondition(self.result, cell_price[True]).get_price()
+            print('price', self.category_price)
+
+        return self.category_price
 
 
-        self.volkhov_alone_mod = True if self.zlata_mod == 'M' else False
-        self.on_duty = True if duty or self.volkhov_alone_mod else False
-        self.duty24 = True if duty == 24 or self.volkhov_alone_mod else False
-        self.duty_day = True if duty == 8 else False
+
 
 
 class CategoryPrice:

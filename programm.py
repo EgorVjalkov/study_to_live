@@ -1,17 +1,24 @@
-from Classes import MonthData, Day, CategoryPrice
+from Classes import MonthData, Day, CategoryData
 import pandas as pd
 
 month_data = MonthData('months/dec22test/dec22.xlsx')
 print(month_data.vedomost_like_df)
 
-# month_data.add_coefficient_column('L:DIET', 4)
 category_df = month_data.vedomost_like_df[month_data.category_keys]
+accessory_df = month_data.vedomost_like_df[month_data.accessory_keys]
 
 for i in category_df:
+    category = CategoryData(category_df[i], accessory_df, month_data.prices_like_df)
+    #print(category.price)
+    category.find_a_price_and_save()
+
     # category = pd.Series(category_df[i].to_list(), index=month_data.vedomost_like_df['DATE'].astype('str'))
-    category = category_df[i]
-    print(category.to_list())
+
+    category_data = category_df[i]
+    category_data.to_list()
+
     # print(category_price)
+print(month_data.vedomost_like_df)
 # print(month_data.prices)
 # for day in month_data.vedomost:
 #     day_data = Day(day)
