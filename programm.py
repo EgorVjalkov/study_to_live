@@ -11,6 +11,7 @@ for i in category_df:
     category = CategoryData(category_df[i], accessory_df, month_data.prices_like_df)
     #print(category.price)
     category.find_a_price_and_save()
+    month_data.add_a_column(category.name, '_price', category.category_price)
 
     # category = pd.Series(category_df[i].to_list(), index=month_data.vedomost_like_df['DATE'].astype('str'))
 

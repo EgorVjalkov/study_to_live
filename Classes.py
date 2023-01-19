@@ -155,10 +155,10 @@ class MonthData:
         self.egr_meals = 0
         self.lera_meals = 0
 
-    def add_coefficient_column(self, name, coef_list):
+    def add_a_column(self, name, suffix, data):
         index = self.vedomost_like_df.columns.to_list().index(name) + 1
-        name += '_coef'
-        self.vedomost_like_df.insert(index, name, coef_list)
+        name += suffix
+        self.vedomost_like_df.insert(index, name, data)
         return self.vedomost_like_df
 
     def collect_all_in_month(self, day_container):
@@ -169,7 +169,7 @@ class MonthData:
             self.lera_meals += day_container['meals']['Lera']
         return self.egr_count, self.egr_meals, self.lera_count, self.lera_meals
 
-    def add_longbox_money(self,egr_box, lera_box):
+    def add_longbox_money(self, egr_box, lera_box):
         self.egr_count += egr_box
         self.lera_count += lera_box
         return self.egr_count, self.lera_count
@@ -219,48 +219,72 @@ class CategoryData:
         self.accessory = accessory_frame
         # self.meals = True if 'MEALS' in self.name else False
         self.first_char = self.name[0]
-        self.price = price_frame[self.name]
+        self.price_data = price_frame[self.name]
 
         self.result = 0
+        # mods
+        self.zlata_mod = False
+        self.weak_child_mod = False
         self.volkhov_alone_mod = False
         self.on_duty = False
         self.duty24 = False
         self.duty_day = False
-        self.category_price = 0
+        # collections
+        self.category_price = []
+        self.coefficients_dict = {}
 
     def get_mods(self, result_key):
         mods_dict = {}
         for i in self.accessory:
             mods_dict[i] = self.accessory[i].to_dict()[result_key]
 
+        self.zlata_mod = mods_dict['MOD']
+        self.weak_child_mod = mods_dict['WEAK']
         self.volkhov_alone_mod = True if mods_dict['MOD'] == 'M' else False
         self.on_duty = True if mods_dict['DUTY'] or self.volkhov_alone_mod else False
         self.duty24 = True if mods_dict['DUTY'] == 24 or self.volkhov_alone_mod else False
         self.duty_day = True if mods_dict['DUTY'] == 8 else False
-        return self.volkhov_alone_mod, self.on_duty, self.duty24, self.duty_day
+
+        return self.zlata_mod, self.weak_child_mod, self.volkhov_alone_mod, \
+            self.on_duty, self.duty24, self.duty_day
+
+    def count_a_modification(self):
+        coefficients_dict = {}
+        if self.duty_day:
+            mod = self.price_data['duty_8']
+            coefficients_dict['duty_8'] = mod
+        if self.zlata_mod:
+            mod = self.price_data[self.zlata_mod]
+            coefficients_dict['zlata_mod'] = mod
+        if self.weak_child_mod:
+            weak_key = 'weak' + str(self.weak_child_mod)
+            mod = self.price_data[weak_key]
+            coefficients_dict[weak_key] = mod
+        coefficients_dict["prod"] = np.array(list(coefficients_dict.values())).prod()
+        print('coef', coefficients_dict)
+       # остановился на коэффициенте!
+        return self.coefficients
 
     def find_a_price_and_save(self):
         for k in self.data:
             self.result = self.data[k]
             print(self.get_mods(k))
 
-            cell_price = {True: self.price['True'], False: self.price['False']}
+            cell_price = {True: self.price_data['True'], False: self.price_data['False']}
             if self.on_duty:
-                cell_price[False] = self.price['duty_False']
-                cell_price[True] = self.price['duty_24']
+                cell_price[False] = self.price_data['duty_False']
+                cell_price[True] = self.price_data['duty_24']
             print(self.name, self.result, cell_price)
 
             if type(self.result) == bool:
-                self.category_price = int(cell_price[self.result])
+                cell_price = int(cell_price[self.result])
             else:
-                self.category_price = ComplexCondition(self.result, cell_price[True]).get_price()
-            print('price', self.category_price)
+                cell_price = ComplexCondition(self.result, cell_price[True]).get_price()
+            print('price', cell_price)
+
+            self.category_price.append(cell_price)
 
         return self.category_price
-
-
-
-
 
 class CategoryPrice:
     def __init__(self, name, result, mods, duty, prices):
