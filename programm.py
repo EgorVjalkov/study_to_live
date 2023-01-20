@@ -1,6 +1,10 @@
 from Classes import MonthData, Day, CategoryData
 import pandas as pd
 
+
+pd.set_option('display.max.columns', None)
+
+
 month_data = MonthData('months/dec22test/dec22.xlsx')
 print(month_data.vedomost_like_df)
 
@@ -12,6 +16,7 @@ for i in category_df:
     #print(category.price)
     category.find_a_price_and_save()
     month_data.add_a_column(category.name, '_price', category.category_price)
+    month_data.add_a_column(category.name, '_coef', category.category_coefficients)
 
     # category = pd.Series(category_df[i].to_list(), index=month_data.vedomost_like_df['DATE'].astype('str'))
 
@@ -19,7 +24,8 @@ for i in category_df:
     category_data.to_list()
 
     # print(category_price)
-print(month_data.vedomost_like_df)
+columns = [i for i in month_data.vedomost_like_df if 'L:' in i]
+print(month_data.vedomost_like_df[columns])
 # print(month_data.prices)
 # for day in month_data.vedomost:
 #     day_data = Day(day)

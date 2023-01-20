@@ -231,10 +231,11 @@ class CategoryData:
         self.duty_day = False
         # collections
         self.category_price = []
-        self.coefficients_dict = {}
+        self.category_coefficients = []
 
-    def get_mods(self, result_key):
+    def get_mods_n_coefficients(self, result_key):
         mods_dict = {}
+        coefficients_dict = {}
         for i in self.accessory:
             mods_dict[i] = self.accessory[i].to_dict()[result_key]
 
@@ -245,11 +246,6 @@ class CategoryData:
         self.duty24 = True if mods_dict['DUTY'] == 24 or self.volkhov_alone_mod else False
         self.duty_day = True if mods_dict['DUTY'] == 8 else False
 
-        return self.zlata_mod, self.weak_child_mod, self.volkhov_alone_mod, \
-            self.on_duty, self.duty24, self.duty_day
-
-    def count_a_modification(self):
-        coefficients_dict = {}
         if self.duty_day:
             mod = self.price_data['duty_8']
             coefficients_dict['duty_8'] = mod
@@ -257,30 +253,32 @@ class CategoryData:
             mod = self.price_data[self.zlata_mod]
             coefficients_dict['zlata_mod'] = mod
         if self.weak_child_mod:
-            weak_key = 'weak' + str(self.weak_child_mod)
+            weak_key = 'WEAK' + str(int(self.weak_child_mod))
             mod = self.price_data[weak_key]
             coefficients_dict[weak_key] = mod
         coefficients_dict["prod"] = np.array(list(coefficients_dict.values())).prod()
-        print('coef', coefficients_dict)
-       # остановился на коэффициенте!
-        return self.coefficients
+        # print('coef', coefficients_dict)
+        self.category_coefficients.append(coefficients_dict)
+# запиши сюда и реципиентов, т. к. это необходимо для логики, также сделай чтоб это все считалось 1 раз для всех категорий
+        return self.zlata_mod, self.weak_child_mod, self.volkhov_alone_mod, \
+            self.on_duty, self.duty24, self.duty_day, self.category_coefficients
 
     def find_a_price_and_save(self):
         for k in self.data:
             self.result = self.data[k]
-            print(self.get_mods(k))
+            self.get_mods_n_coefficients(k)
 
             cell_price = {True: self.price_data['True'], False: self.price_data['False']}
             if self.on_duty:
                 cell_price[False] = self.price_data['duty_False']
                 cell_price[True] = self.price_data['duty_24']
-            print(self.name, self.result, cell_price)
+            # print(self.name, self.result, cell_price)
 
             if type(self.result) == bool:
                 cell_price = int(cell_price[self.result])
             else:
                 cell_price = ComplexCondition(self.result, cell_price[True]).get_price()
-            print('price', cell_price)
+            # print('price', cell_price)
 
             self.category_price.append(cell_price)
 
