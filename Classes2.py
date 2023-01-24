@@ -54,7 +54,7 @@ class CategoryData:
         self.name = cf.name
         if cf.dtypes == 'float':
             cf.astype('int')
-        self.cat_frame = pd.Series([True if i == 'T' else i for i in cf], name=self.name)
+        self.cat_frame = pd.DataFrame([True if i == 'T' else i for i in cf], columns=[self.name])
         self.position = self.name[0]
         self.price_frame = pf[self.name]
         self.mod_frame = mf
@@ -75,8 +75,8 @@ class CategoryData:
         return cell_price
     def add_price_column(self):
         print(self.cat_frame)
-        prices = list(map(self.find_a_price, self.mod_frame['duty'], self.cat_frame))
-        print(prices)
+        self.cat_frame['prices'] = list(map(self.find_a_price, self.mod_frame['duty'], self.cat_frame[self.name]))
+        print(self.cat_frame)
 
         # if self.duty24:
         #
