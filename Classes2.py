@@ -25,23 +25,27 @@ class AccessoryData:
         self.af = af
         self.mods_frame = {}
 
+    def recipient_mod(self, duty, zlata):
+        if duty == 'duty24' or zlata == 'M':
+            return ['Lera']
+        else:
+            return ['Egr', 'Lera']
+
     def get_mods_frame(self):
         self.mods_frame = pd.DataFrame(index=self.af.index)
         self.mods_frame['zlata_mod'] = self.af['MOD']
         self.mods_frame['weak_mod'] = ['WEAK' + str(int(i)) if i else i for i in self.af['WEAK']]
         self.mods_frame['duty_mod'] = ['duty' + str(int(i)) if i else i for i in self.af['DUTY']]
-        only_lera_mod_f = lambda i, e: i == 'duty24' or e == 'M'
         #print(self.mods_frame[['duty', 'zlata']].eq('duty24', 'M')) #!!!!!!!!!!
-        only_lera_mod = list(map(only_lera_mod_f, self.mods_frame['duty_mod'], self.mods_frame['zlata_mod']))
-        self.mods_frame['only_lera_coef'] = only_lera_mod
+        self.mods_frame['recipient_who_coef'] = list(map(self.recipient_mod, self.mods_frame['duty_mod'], self.mods_frame['zlata_mod']))
 
         posit_f = lambda i: i == 'duty24' or i == 'M'
         for_position_frame = self.mods_frame[['duty_mod', 'zlata_mod']].applymap(posit_f)
         for_position_frame = zip(for_position_frame['duty_mod'], for_position_frame['zlata_mod'])
         positions = {
-            (True, False): {'Lera': ['A', 'L', 'Z'], 'Egr': ['E']},
-            (True, True): {'Lera': ['A', 'L', 'Z'], 'Egr': ['E']},
-            (False, True): {'Lera': ['A', 'L', 'Z'], 'Egr': ['E', 'F']},
+            (True, False): {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']},
+            (True, True): {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']},
+            (False, True): {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E', 'F']},
             (False, False): {'Lera': ['A', 'Z', 'F', 'L'], 'Egr': ['A', 'Z', 'F', 'E']}
         }
         self.mods_frame['positions'] = [positions[i] for i in list(for_position_frame)]
@@ -82,6 +86,16 @@ class CategoryData:
 
         return coefficient_dict
 
+    def total_count(self, price, recipient_mod, coef, positions): # !!!! bugs SLEEPTIME!!!
+        if self.position not in positions or price <= 0:
+            return 0
+        else:
+            for recipient in self.recipients:
+                if recipient in recipient_mod:
+                    price *= coef
+                    break
+        return price
+
     def add_price_column(self, show_calculation=False):
         price_list = list(map(self.find_a_price, self.mod_frame['duty_mod'], self.cat_frame[self.name]))
         self.cat_frame['price'] = [i.pop('price') for i in price_list]
@@ -96,12 +110,19 @@ class CategoryData:
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
-        self.cat_frame['result'] = self.cat_frame['price'] * self.cat_frame['coef']
+        #self.cat_frame['result'] = self.cat_frame['price'] * self.cat_frame['coef']
         return self.price_frame
 
     def add_recipients_column(self, recipients=''):
-        pass
-
+        if not recipients:
+            for name in self.recipients:
+                self.cat_frame[name+'_positions'] = self.mod_frame['positions'].map(lambda e: e[name])
+                self.cat_frame[name+'_total'] = list(map(self.total_count,
+                                                         self.cat_frame['price'],
+                                                         self.mod_frame['recipient_who_coef'],
+                                                         self.cat_frame['coef'],
+                                                         self.cat_frame[name+'_positions']))
+        print(self.cat_frame)
 
 
         # if self.duty24:
@@ -137,6 +158,6 @@ ad = AccessoryData(dec22.accessory)
 ad.get_mods_frame()
 for cat in dec22.categories:
     cd = CategoryData(dec22.categories[cat], ad.mods_frame, dec22.prices)
-    cd.add_price_column(show_calculation=True)
-    cd.add_coef_column(show_calculation=True)
-    break
+    cd.add_price_column(show_calculation=False)
+    cd.add_coef_column(show_calculation=False)
+    cd.add_recipients_column()
