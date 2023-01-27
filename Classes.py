@@ -79,7 +79,7 @@ class ComplexCondition:
         return self.result, self.type_result
 
     def prepare_condition_for_price(self):
-        print(self.condition_for_price)
+        # print(self.condition_for_price)
         if ':' in self.condition_for_price:
             self.condition_for_price = dict([i.split(': ') for i in self.condition_for_price.split(', ')])
         return self.condition_for_price

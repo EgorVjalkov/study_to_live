@@ -18,6 +18,8 @@ class MonthData:
         self.date = self.vedomost.get(date_keys)
         category_keys = [i for i in self.vedomost if i not in (accessory_keys + date_keys)]
         self.categories = self.vedomost.get(category_keys)
+    def count_a_month_sum(self, cat_sum, recipient):
+        pass # stopped
 
 
 class AccessoryData:
@@ -43,9 +45,9 @@ class AccessoryData:
         for_position_frame = self.mods_frame[['duty_mod', 'zlata_mod']].applymap(posit_f)
         for_position_frame = zip(for_position_frame['duty_mod'], for_position_frame['zlata_mod'])
         positions = {
-            (True, False): {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']},
-            (True, True): {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E']},
-            (False, True): {'Lera': ['A', 'L', 'Z', 'F'], 'Egr': ['E', 'F']},
+            (True, False): {'Lera': ['A', 'Z', 'F', 'L'], 'Egr': ['E']},
+            (True, True): {'Lera': ['A', 'Z', 'F', 'L'], 'Egr': ['E']},
+            (False, True): {'Lera': ['A', 'Z', 'L'], 'Egr': ['E', 'F']},
             (False, False): {'Lera': ['A', 'Z', 'F', 'L'], 'Egr': ['A', 'Z', 'F', 'E']}
         }
         self.mods_frame['positions'] = [positions[i] for i in list(for_position_frame)]
@@ -86,9 +88,12 @@ class CategoryData:
 
         return coefficient_dict
 
-    def total_count(self, price, recipient_mod, coef, positions): # !!!! bugs SLEEPTIME!!!
-        if self.position not in positions or price <= 0:
+    def total_count(self, price, recipient_mod, coef, positions):
+        # print(self.position, positions)
+        if self.position not in positions:
             return 0
+        elif self.position in positions and price <= 0:
+            return price
         else:
             for recipient in self.recipients:
                 if recipient in recipient_mod:
@@ -113,51 +118,30 @@ class CategoryData:
         #self.cat_frame['result'] = self.cat_frame['price'] * self.cat_frame['coef']
         return self.price_frame
 
-    def add_recipients_column(self, recipients=''):
+    def add_recipients_column(self, recipients=(), show_calculation=False):
         if not recipients:
-            for name in self.recipients:
-                self.cat_frame[name+'_positions'] = self.mod_frame['positions'].map(lambda e: e[name])
-                self.cat_frame[name+'_total'] = list(map(self.total_count,
-                                                         self.cat_frame['price'],
-                                                         self.mod_frame['recipient_who_coef'],
-                                                         self.cat_frame['coef'],
-                                                         self.cat_frame[name+'_positions']))
-        print(self.cat_frame)
+            recipients = self.recipients
+        for name in recipients:
+            self.cat_frame[name+'_positions'] = self.mod_frame['positions'].map(lambda e: e[name])
+            self.cat_frame[name+'_total'] = list(map(self.total_count,
+                                                     self.cat_frame['price'],
+                                                     self.mod_frame['recipient_who_coef'],
+                                                     self.cat_frame['coef'],
+                                                     self.cat_frame[name+'_positions']))
+            if not show_calculation:
+                del self.cat_frame[name+'_positions']
+            return self.cat_frame
 
 
-        # if self.duty24:
-        #
-        #     self.only_lera_mod = True
-        # else:
-        #     self.positions = {'Lera': ['L'], 'Egr': ['E'], 'All': ['A', 'Z', 'F']}
-        #     self.only_lera_mod = False
-        # for k in self.positions:
-        #     if self.first_char in self.positions[k]:
-        #         self.recipient = k
-        #
-        # return self.mods_frame
-
-
-
-
-
-        # for i in self.af:
-        #     mods_dict[i] = self.accessory[i].to_dict()[result_key]
-        #
-        # self.zlata_mod = mods_dict['MOD']
-        # self.weak_child_mod = mods_dict['WEAK']
-        # self.volkhov_alone_mod = True if mods_dict['MOD'] == 'M' else False
-        # self.on_duty = True if mods_dict['DUTY'] or self.volkhov_alone_mod else False
-        # self.duty24 = True if mods_dict['DUTY'] == 24 or self.volkhov_alone_mod else False
-        # self.duty_day = True if mods_dict['DUTY'] == 8 else False
-        # collections
 dec22 = MonthData('months/dec22test/dec22.xlsx')
 ad = AccessoryData(dec22.accessory)
 # print(dec22.categories)
 # print(dec22.accessory)
 ad.get_mods_frame()
 for cat in dec22.categories:
+# cat = 'L:DIET'
     cd = CategoryData(dec22.categories[cat], ad.mods_frame, dec22.prices)
     cd.add_price_column(show_calculation=False)
     cd.add_coef_column(show_calculation=False)
-    cd.add_recipients_column()
+    cd.add_recipients_column(show_calculation=True)
+    print(cd.cat_frame['Lera_total'].sum())
