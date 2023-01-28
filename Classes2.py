@@ -18,8 +18,11 @@ class MonthData:
         self.date = self.vedomost.get(date_keys)
         category_keys = [i for i in self.vedomost if i not in (accessory_keys + date_keys)]
         self.categories = self.vedomost.get(category_keys)
-    def count_a_month_sum(self, cat_sum, recipient):
-        pass # stopped
+        self.month_sum_frame = self.date
+
+    def add_cat_sum_frame(self, sum_frame):
+        self.month_sum_frame = self.month_sum_frame.join(sum_frame)
+        return self.month_sum_frame
 
 
 class AccessoryData:
@@ -65,7 +68,7 @@ class CategoryData:
         self.price_frame = pf[self.name]
         self.mod_frame = mf
         self.recipients = ['Egr', 'Lera']
-        #self.date_frame = date_frame
+        self.sum_frame = pd.DataFrame()
 
     def find_a_price(self, duty, result):
         price_calc = {True: self.price_frame['True'], False: self.price_frame['False']}
@@ -123,14 +126,21 @@ class CategoryData:
             recipients = self.recipients
         for name in recipients:
             self.cat_frame[name+'_positions'] = self.mod_frame['positions'].map(lambda e: e[name])
-            self.cat_frame[name+'_total'] = list(map(self.total_count,
+            self.cat_frame[name] = list(map(self.total_count,
                                                      self.cat_frame['price'],
                                                      self.mod_frame['recipient_who_coef'],
                                                      self.cat_frame['coef'],
                                                      self.cat_frame[name+'_positions']))
             if not show_calculation:
                 del self.cat_frame[name+'_positions']
-            return self.cat_frame
+        if show_calculation:
+            print(self.cat_frame)
+        return self.cat_frame
+
+    def get_a_sum_frame(self):
+        self.sum_frame[self.name] = self.cat_frame[self.recipients].to_dict('records')
+        #self.sum_frame = self.cat_frame[self.recipients]
+        return self.sum_frame
 
 
 dec22 = MonthData('months/dec22test/dec22.xlsx')
@@ -143,5 +153,6 @@ for cat in dec22.categories:
     cd = CategoryData(dec22.categories[cat], ad.mods_frame, dec22.prices)
     cd.add_price_column(show_calculation=False)
     cd.add_coef_column(show_calculation=False)
-    cd.add_recipients_column(show_calculation=True)
-    print(cd.cat_frame['Lera_total'].sum())
+    cd.add_recipients_column(show_calculation=True) # add print()
+    dec22.add_cat_sum_frame(cd.get_a_sum_frame())
+print(dec22.month_sum_frame)
