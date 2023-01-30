@@ -18,11 +18,25 @@ class MonthData:
         self.date = self.vedomost.get(date_keys)
         category_keys = [i for i in self.vedomost if i not in (accessory_keys + date_keys)]
         self.categories = self.vedomost.get(category_keys)
-        self.month_sum_frame = self.date
+        self.recipients = {'Egr': self.date, 'Lera': self.date}
 
-    def add_cat_sum_frame(self, sum_frame):
-        self.month_sum_frame = self.month_sum_frame.join(sum_frame)
-        return self.month_sum_frame
+    def add_cat_sum_frame(self, dict_of_result_frame): # problem there
+        # del empty dict
+        self.recipients = \
+            {rec_key: self.recipients[rec_key].join(dict_of_result_frame[rec_key]) for rec_key in self.recipients}
+#        self.recipients = \
+#            {rec_key: self.recipients[rec_key].rename(columns={rec_key: dict_of_result_frame['category']})
+#             for rec_key in self.recipients}
+        return self.recipients
+
+    def get_month_sum(self, how='category', recipients=(), category=''):
+        if not recipients:
+            recipients = self.recipients
+        for recipient in recipients:
+
+            recipients[recipient] = 0
+
+
 
 
 class AccessoryData:
@@ -67,8 +81,7 @@ class CategoryData:
         self.position = self.name[0]
         self.price_frame = pf[self.name]
         self.mod_frame = mf
-        self.recipients = ['Egr', 'Lera']
-        self.sum_frame = pd.DataFrame()
+        self.recipients = {'Egr': pd.DataFrame(), 'Lera': pd.DataFrame()}
 
     def find_a_price(self, duty, result):
         price_calc = {True: self.price_frame['True'], False: self.price_frame['False']}
@@ -123,7 +136,7 @@ class CategoryData:
 
     def add_recipients_column(self, recipients=(), show_calculation=False):
         if not recipients:
-            recipients = self.recipients
+            recipients = list(self.recipients.keys())
         for name in recipients:
             self.cat_frame[name+'_positions'] = self.mod_frame['positions'].map(lambda e: e[name])
             self.cat_frame[name] = list(map(self.total_count,
@@ -137,10 +150,12 @@ class CategoryData:
             print(self.cat_frame)
         return self.cat_frame
 
-    def get_a_sum_frame(self):
-        self.sum_frame[self.name] = self.cat_frame[self.recipients].to_dict('records')
-        #self.sum_frame = self.cat_frame[self.recipients]
-        return self.sum_frame
+    def get_a_result_column_in_dict(self):
+        self.recipients = {rec_key: self.cat_frame[rec_key] for rec_key in self.recipients}
+        self.recipients = \
+            {rec_key: self.recipients[rec_key].rename(self.name) for rec_key in self.recipients}
+        print(self.recipients)
+        return self.recipients
 
 
 dec22 = MonthData('months/dec22test/dec22.xlsx')
@@ -153,6 +168,7 @@ for cat in dec22.categories:
     cd = CategoryData(dec22.categories[cat], ad.mods_frame, dec22.prices)
     cd.add_price_column(show_calculation=False)
     cd.add_coef_column(show_calculation=False)
-    cd.add_recipients_column(show_calculation=True) # add print()
-    dec22.add_cat_sum_frame(cd.get_a_sum_frame())
-print(dec22.month_sum_frame)
+    cd.add_recipients_column(show_calculation=False) # add print()
+    cd.get_a_result_column_in_dict()
+    dec22.add_cat_sum_frame(cd.recipients)
+print(dec22.recipients['Egr'])
