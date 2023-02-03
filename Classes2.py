@@ -12,12 +12,10 @@ class MonthData:
         self.days = len([i for i in vedomost['DATE'].to_list() if i])
         self.vedomost = vedomost[0:self.days].fillna(0)
         self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
-        accessory_keys = ['MOD', 'WEAK', 'DUTY']
         date_keys = ['DATE', 'DAY']
-        self.accessory = self.vedomost.get(accessory_keys)
+        self.accessory = self.vedomost.get([i for i in self.vedomost if i == i.upper() and i not in date_keys])
         self.date = self.vedomost.get(date_keys)
-        category_keys = [i for i in self.vedomost if i not in (accessory_keys + date_keys)]
-        self.categories = self.vedomost.get(category_keys)
+        self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
         self.recipients = {'Egr': self.date, 'Lera': self.date}
 
     def add_cat_sum_frame(self, dict_of_result_frame): # problem there
@@ -55,17 +53,18 @@ class AccessoryData:
         self.mods_frame['zlata_mod'] = self.af['MOD']
         self.mods_frame['weak_mod'] = ['WEAK' + str(int(i)) if i else i for i in self.af['WEAK']]
         self.mods_frame['duty_mod'] = ['duty' + str(int(i)) if i else i for i in self.af['DUTY']]
+        self.mods_frame['duty_coef'] = self.af['DIF_DUTY']
         #print(self.mods_frame[['duty', 'zlata']].eq('duty24', 'M')) #!!!!!!!!!!
         self.mods_frame['recipient_who_coef'] = list(map(self.recipient_mod, self.mods_frame['duty_mod'], self.mods_frame['zlata_mod']))
 
-        posit_f = lambda i: i == 'duty24' or i == 'M'
-        for_position_frame = self.mods_frame[['duty_mod', 'zlata_mod']].applymap(posit_f)
+        positons_f = lambda i: i == 'duty24' or i == 'M'
+        for_position_frame = self.mods_frame[['duty_mod', 'zlata_mod']].applymap(positons_f)
         for_position_frame = zip(for_position_frame['duty_mod'], for_position_frame['zlata_mod'])
         positions = {
-            (True, False): {'Lera': ['A', 'Z', 'F', 'L'], 'Egr': ['E']},
-            (True, True): {'Lera': ['A', 'Z', 'F', 'L'], 'Egr': ['E']},
-            (False, True): {'Lera': ['A', 'Z', 'L'], 'Egr': ['E', 'F']},
-            (False, False): {'Lera': ['A', 'Z', 'F', 'L'], 'Egr': ['A', 'Z', 'F', 'E']}
+            (True, False): {'Lera': ['A', 'Z', 'H', 'L'], 'Egr': ['E']},
+            (True, True): {'Lera': ['A', 'Z', 'H', 'L'], 'Egr': ['E']},
+            (False, True): {'Lera': ['A', 'Z', 'L'], 'Egr': ['E', 'H']},
+            (False, False): {'Lera': ['A', 'Z', 'H', 'L'], 'Egr': ['A', 'Z', 'H', 'E']}
         }
         self.mods_frame['positions'] = [positions[i] for i in list(for_position_frame)]
 
@@ -140,10 +139,10 @@ class CategoryData:
         for name in recipients:
             self.cat_frame[name+'_positions'] = self.mod_frame['positions'].map(lambda e: e[name])
             self.cat_frame[name] = list(map(self.total_count,
-                                                     self.cat_frame['price'],
-                                                     self.mod_frame['recipient_who_coef'],
-                                                     self.cat_frame['coef'],
-                                                     self.cat_frame[name+'_positions']))
+                                            self.cat_frame['price'],
+                                            self.mod_frame['recipient_who_coef'],
+                                            self.cat_frame['coef'],
+                                            self.cat_frame[name+'_positions']))
             if not show_calculation:
                 del self.cat_frame[name+'_positions']
         if show_calculation:
@@ -158,17 +157,17 @@ class CategoryData:
         return self.recipients
 
 
-dec22 = MonthData('months/dec22test/dec22.xlsx')
-ad = AccessoryData(dec22.accessory)
-# print(dec22.categories)
-# print(dec22.accessory)
-ad.get_mods_frame()
-for cat in dec22.categories:
-# cat = 'L:DIET'
-    cd = CategoryData(dec22.categories[cat], ad.mods_frame, dec22.prices)
-    cd.add_price_column(show_calculation=False)
-    cd.add_coef_column(show_calculation=False)
-    cd.add_recipients_column(show_calculation=False) # add print()
-    cd.get_a_result_column_in_dict()
-    dec22.add_cat_sum_frame(cd.recipients)
-print(dec22.recipients['Egr'])
+
+jan23 = MonthData('months/jan23/jan22.xlsx')
+print(jan23.accessory)
+ad = AccessoryData(jan23.accessory)
+print(ad.get_mods_frame())
+#for cat in jan23.categories:
+## cat = 'L:DIET'
+#    cd = CategoryData(jan23.categories[cat], ad.mods_frame, jan23.prices)
+#    cd.add_price_column(show_calculation=False)
+#    cd.add_coef_column(show_calculation=False)
+#    cd.add_recipients_column(show_calculation=False) # add print()
+#    cd.get_a_result_column_in_dict()
+#    jan23.add_cat_sum_frame(cd.recipients)
+#print(jan23.recipients['Egr'])
