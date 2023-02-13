@@ -42,8 +42,8 @@ class AccessoryData:
         self.af = af
         self.mods_frame = {}
 
-    def recipient_mod(self, duty, zlata):
-        if duty == 'duty24' or zlata == 'M':
+    def recipient_mod(self, duty, zlata): # наверное здесь нужно исправлять
+        if zlata == 'M' or duty == 'duty24':
             return ['Lera']
         else:
             return ['Egr', 'Lera']
@@ -53,9 +53,10 @@ class AccessoryData:
         self.mods_frame['zlata_mod'] = self.af['MOD']
         self.mods_frame['weak_mod'] = ['WEAK' + str(int(i)) if i else i for i in self.af['WEAK']]
         self.mods_frame['duty_mod'] = ['duty' + str(int(i)) if i else i for i in self.af['DUTY']]
-        self.mods_frame['duty_coef'] = self.af['DIF_DUTY']
+        self.mods_frame['DIF_DUTY_mod'] = ['DIF_DUTY: ' + str(int(i)) if i else i for i in self.af['DIF_DUTY']]
         #print(self.mods_frame[['duty', 'zlata']].eq('duty24', 'M')) #!!!!!!!!!!
-        self.mods_frame['recipient_who_coef'] = list(map(self.recipient_mod, self.mods_frame['duty_mod'], self.mods_frame['zlata_mod']))
+        self.mods_frame['recipient_who_coef'] = list(map(
+            self.recipient_mod, self.mods_frame['duty_mod'], self.mods_frame['zlata_mod']))
 
         positons_f = lambda i: i == 'duty24' or i == 'M'
         for_position_frame = self.mods_frame[['duty_mod', 'zlata_mod']].applymap(positons_f)
@@ -77,10 +78,11 @@ class CategoryData:
         if cf.dtypes == 'float':
             cf.astype('int')
         self.cat_frame = pd.DataFrame([True if i == 'T' else i for i in cf], columns=[self.name])
-        self.position = self.name[0]
+        self.position = self.name[0].upper()
         self.price_frame = pf[self.name]
         self.mod_frame = mf
         self.recipients = {'Egr': pd.DataFrame(), 'Lera': pd.DataFrame()}
+        self.named_coefficients = {'Egr': 'DIF_DUTY'}
 
     def find_a_price(self, duty, result):
         price_calc = {True: self.price_frame['True'], False: self.price_frame['False']}
@@ -92,15 +94,25 @@ class CategoryData:
         if type(result) == bool:
             price = int(price_calc[result])
         else:
-            price = ComplexCondition(result, price_calc[True]).get_price()
+            print('complex')
+            price = ComplexCondition(price_calc[True], result).get_price()
 
         return {'price': price, 'price_calc': price_calc}
 
     def count_a_modification(self, *args):
         mods = [i for i in args if i]
+        dict_mods = {}
+        for i in mods:
+            if ':' in i:
+                item = mods.pop(mods.index(i)).split(': ')
+                dict_mods[item[0]] = float(ComplexCondition(self.price_frame[item[0]]).prepare_condition()[item[1]])
+                dict_mods = {k: dict_mods[self.named_coefficients[k]] for k in self.named_coefficients}
+
         coefficient_dict = {k: self.price_frame[k] for k in mods if k in self.price_frame}
         coefficient_dict['coef'] = np.array(list(coefficient_dict.values())).prod()
-
+        coefficient_dict.update(dict_mods)
+        print(coefficient_dict)
+#  сделай именованную модификацию
         return coefficient_dict
 
     def total_count(self, price, recipient_mod, coef, positions):
@@ -153,21 +165,26 @@ class CategoryData:
         self.recipients = {rec_key: self.cat_frame[rec_key] for rec_key in self.recipients}
         self.recipients = \
             {rec_key: self.recipients[rec_key].rename(self.name) for rec_key in self.recipients}
-        print(self.recipients)
+        #print(self.recipients)
         return self.recipients
 
 
 
-jan23 = MonthData('months/jan23/jan22.xlsx')
-print(jan23.accessory)
+jan23 = MonthData('months/jan23/jan23.xlsx')
+#print(jan23.accessory)
 ad = AccessoryData(jan23.accessory)
-print(ad.get_mods_frame())
+ad.get_mods_frame()
+#print(ad.get_mods_frame())
 #for cat in jan23.categories:
-## cat = 'L:DIET'
-#    cd = CategoryData(jan23.categories[cat], ad.mods_frame, jan23.prices)
-#    cd.add_price_column(show_calculation=False)
-#    cd.add_coef_column(show_calculation=False)
-#    cd.add_recipients_column(show_calculation=False) # add print()
-#    cd.get_a_result_column_in_dict()
-#    jan23.add_cat_sum_frame(cd.recipients)
-#print(jan23.recipients['Egr'])
+print(jan23.categories.columns)
+print(ad.mods_frame)
+cat = 'e:diet'
+cd = CategoryData(jan23.categories[cat], ad.mods_frame, jan23.prices)
+cd.add_price_column(show_calculation=False)
+cd.add_coef_column(show_calculation=False)
+cd.add_recipients_column(show_calculation=True) # add print()
+print(cd.cat_frame)
+cd.get_a_result_column_in_dict()
+jan23.add_cat_sum_frame(cd.recipients)
+print(jan23.recipients['Egr'][cat].sum())
+print(jan23.recipients['Lera'][cat].sum())
