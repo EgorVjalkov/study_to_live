@@ -171,7 +171,7 @@ class CategoryData:
 
 
 jan23 = MonthData('months/jan23/jan23.xlsx')
-#print(jan23.accessory)
+print(jan23.categories)
 ad = AccessoryData(jan23.accessory)
 ad.get_mods_frame()
 #print(ad.get_mods_frame())
