@@ -99,21 +99,41 @@ class CategoryData:
 
         return {'price': price, 'price_calc': price_calc}
 
+    def add_price_column(self, show_calculation=False):
+        price_list = list(map(self.find_a_price, self.mod_frame['duty_mod'], self.cat_frame[self.name]))
+        self.cat_frame['price'] = [i.pop('price') for i in price_list]
+        if show_calculation:
+            price_list = [list(i.values())[0] for i in price_list]
+            self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'price_calc', price_list)
+        return self.cat_frame
+
     def count_a_modification(self, *args):
         mods = [i for i in args if i]
         dict_mods = {}
         for i in mods:
             if ':' in i:
                 item = mods.pop(mods.index(i)).split(': ')
-                dict_mods[item[0]] = float(ComplexCondition(self.price_frame[item[0]]).prepare_condition()[item[1]])
-                dict_mods = {k: dict_mods[self.named_coefficients[k]] for k in self.named_coefficients}
-
+                key, value = item[0], item[1]
+                if type(self.price_frame[key]) == str:
+                    dict_mods[key] = float(ComplexCondition(self.price_frame[key]).prepare_condition()[value])
+                    dict_mods = {k: dict_mods[self.named_coefficients[k]] for k in self.named_coefficients}
+# подумай как сделать тут, чтобы остались именованные коэффициенты
         coefficient_dict = {k: self.price_frame[k] for k in mods if k in self.price_frame}
         coefficient_dict['coef'] = np.array(list(coefficient_dict.values())).prod()
         coefficient_dict.update(dict_mods)
-        print(coefficient_dict)
-#  сделай именованную модификацию
         return coefficient_dict
+
+    def add_coef_column(self, show_calculation=False):
+        mods = [self.mod_frame.to_dict('list')[i] for i in self.mod_frame.to_dict('list') if 'mod' in i]
+        coefs_list = list(map(self.count_a_modification, *mods))
+        self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
+        for name in self.named_coefficients.keys():
+            self.cat_frame[name + '_coef'] = [i[name] if name in i else 1.0 for i in coefs_list]
+        if show_calculation:
+            self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
+            print(self.cat_frame)
+        #self.cat_frame['result'] = self.cat_frame['price'] * self.cat_frame['coef']
+        return self.price_frame
 
     def total_count(self, price, recipient_mod, coef, positions):
         # print(self.position, positions)
@@ -127,23 +147,6 @@ class CategoryData:
                     price *= coef
                     break
         return price
-
-    def add_price_column(self, show_calculation=False):
-        price_list = list(map(self.find_a_price, self.mod_frame['duty_mod'], self.cat_frame[self.name]))
-        self.cat_frame['price'] = [i.pop('price') for i in price_list]
-        if show_calculation:
-            price_list = [list(i.values())[0] for i in price_list]
-            self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'price_calc', price_list)
-        return self.cat_frame
-
-    def add_coef_column(self, show_calculation=False):
-        mods = [self.mod_frame.to_dict('list')[i] for i in self.mod_frame.to_dict('list') if 'mod' in i]
-        coefs_list = list(map(self.count_a_modification, *mods))
-        self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
-        if show_calculation:
-            self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
-        #self.cat_frame['result'] = self.cat_frame['price'] * self.cat_frame['coef']
-        return self.price_frame
 
     def add_recipients_column(self, recipients=(), show_calculation=False):
         if not recipients:
@@ -181,10 +184,9 @@ print(ad.mods_frame)
 cat = 'e:diet'
 cd = CategoryData(jan23.categories[cat], ad.mods_frame, jan23.prices)
 cd.add_price_column(show_calculation=False)
-cd.add_coef_column(show_calculation=False)
-cd.add_recipients_column(show_calculation=True) # add print()
-print(cd.cat_frame)
+cd.add_coef_column(show_calculation=True)
+cd.add_recipients_column(show_calculation=False) # add print()
 cd.get_a_result_column_in_dict()
 jan23.add_cat_sum_frame(cd.recipients)
-print(jan23.recipients['Egr'][cat].sum())
-print(jan23.recipients['Lera'][cat].sum())
+#print(jan23.recipients['Egr'][cat].sum())
+#print(jan23.recipients['Lera'][cat].sum())
