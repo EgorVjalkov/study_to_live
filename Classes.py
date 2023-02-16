@@ -69,6 +69,9 @@ class ComplexCondition:
                 if self.result.hour < 8:
                     self.result += datetime.timedelta(days=1)
 
+            elif self.result[0].isupper():
+                self.result = {'key': self.result[1], 'value': self.result[0]}
+
             # elif self.result.isdigit():
             #     print(self.result)
             #     self.result = int(self.result)
@@ -79,10 +82,13 @@ class ComplexCondition:
         return self.result, self.type_result
 
     def prepare_condition(self):
-        # print(self.condition_for_price)
         if '{' in self.condition_for_price:
             self.condition_for_price = self.condition_for_price.replace('{', '').replace('}', '')
             self.condition_for_price = dict([i.split(': ') for i in self.condition_for_price.split(', ')])
+            for k in self.condition_for_price:
+                if ' ' in self.condition_for_price[k]:
+                    self.condition_for_price[k] = dict(zip(self.condition_for_price[k].split(' ')[::2],
+                                                           self.condition_for_price[k].split(' ')[1::2]))
         return self.condition_for_price
 
     def get_price_if_datetime(self):
@@ -113,17 +119,25 @@ class ComplexCondition:
                             #print(delta)
                         else:
                             self.price += int(self.condition_for_price[k])
-                        print(k, self.condition_for_price[k], inner_condition, self.price)
+                        #print(k, self.condition_for_price[k], inner_condition, self.price)
 # limiting
                     self.price = 200 if self.price > 200 else self.price
         return int(self.price)
 
+    def get_price_if_result_is_dict(self):
+        #print(self.condition_for_price)
+        d = self.condition_for_price[self.result['key']]
+        self.price = [d[i] for i in d if self.result['value'] in i][0]
+        return int(self.price)
+
     def get_price(self):
-        print(self.prepare_result())
-        print(self.prepare_condition())
+        self.prepare_result()
+        self.prepare_condition()
+
         if self.type_result == datetime.datetime:
             return self.get_price_if_datetime()
-
+        elif self.type_result == dict:
+            return self.get_price_if_result_is_dict()
         elif type(self.condition_for_price) == dict:
             self.price = int(self.condition_for_price[str(self.result)])
             return self.price
@@ -136,11 +150,13 @@ class ComplexCondition:
 
         return self.price
 
-# cc = ComplexCondition('20,31', '{<.22: 3*, <.23: 2*, >=.23: 0}')
+
+cc = ComplexCondition('{+: {CDIF 50 P 0}, -: {CDIF 0 P -50}}', 'P+')
+#cc = ComplexCondition('{<.22: 3*, <.23: 2*, >.23: 0}', '23,00')
 #cc = ComplexCondition(4, '40*')
-# cc.prepare_result()
-# cc.prepare_condition_for_price()
-# print(cc.get_price())
+#cc.prepare_result()
+#cc.prepare_condition_for_price()
+#print(cc.get_price())
 
 class MonthData:
     def __init__(self, path):

@@ -9,33 +9,24 @@ pd.set_option('display.max.columns', None)
 class MonthData:
     def __init__(self, path):
         vedomost = pd.read_excel(path, sheet_name='vedomost').fillna(False)
-        self.days = len([i for i in vedomost['DATE'].to_list() if i])
-        self.vedomost = vedomost[0:self.days].fillna(0)
+        self.limit = len([i for i in vedomost['DATE'].to_list() if i])
+        self.vedomost = vedomost[0:self.limit].fillna(0)
         self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
         date_keys = ['DATE', 'DAY']
         self.accessory = self.vedomost.get([i for i in self.vedomost if i == i.upper() and i not in date_keys])
         self.date = self.vedomost.get(date_keys)
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
         self.recipients = {'Egr': self.date, 'Lera': self.date}
+        #self.recipients = {name: self.recipients[name].set_index('DATE') for name in self.recipients}
+        for name in self.recipients:
+            self.recipients[name].loc[self.limit] = ['total count', '']
 
-    def add_cat_sum_frame(self, dict_of_result_frame): # problem there
-        # del empty dict
-        self.recipients = \
-            {rec_key: self.recipients[rec_key].join(dict_of_result_frame[rec_key]) for rec_key in self.recipients}
-#        self.recipients = \
-#            {rec_key: self.recipients[rec_key].rename(columns={rec_key: dict_of_result_frame['category']})
-#             for rec_key in self.recipients}
+
+    def add_cat_sum_frame(self, dict_of_result_frame):
+        for name in dict_of_result_frame:
+            dict_of_result_frame[name][self.limit] = dict_of_result_frame[name].sum()
+            self.recipients[name] = self.recipients[name].join(dict_of_result_frame[name])
         return self.recipients
-
-    def get_month_sum(self, how='category', recipients=(), category=''):
-        if not recipients:
-            recipients = self.recipients
-        for recipient in recipients:
-
-            recipients[recipient] = 0
-
-
-
 
 class AccessoryData:
     def __init__(self, af):
@@ -92,9 +83,13 @@ class CategoryData:
             price_calc[True] = self.price_frame['dutyTrue']
 
         if type(result) == bool:
-            price = int(price_calc[result])
+            if type(price_calc[result]) != str:
+                price = int(price_calc[result])
+            else:
+                print('complex')
+                print(price_calc, result)
+                price = ComplexCondition(price_calc[result]).get_price()
         else:
-            print('complex')
             price = ComplexCondition(price_calc[True], result).get_price()
 
         return {'price': price, 'price_calc': price_calc}
@@ -135,17 +130,19 @@ class CategoryData:
         #self.cat_frame['result'] = self.cat_frame['price'] * self.cat_frame['coef']
         return self.price_frame
 
-    def total_count(self, price, recipient_mod, coef, positions):
-        # print(self.position, positions)
+    def total_count(self, price, recipient_who_coef, coef, named_coef, positions):
+        # есть мысль, что здесь можно сильно упростить все
         if self.position not in positions:
             return 0
         elif self.position in positions and price <= 0:
             return price
         else:
             for recipient in self.recipients:
-                if recipient in recipient_mod:
-                    price *= coef
-                    break
+                if recipient in recipient_who_coef:
+                    price *= (coef * named_coef)
+                else:
+                    price *= named_coef
+                break
         return price
 
     def add_recipients_column(self, recipients=(), show_calculation=False):
@@ -153,10 +150,13 @@ class CategoryData:
             recipients = list(self.recipients.keys())
         for name in recipients:
             self.cat_frame[name+'_positions'] = self.mod_frame['positions'].map(lambda e: e[name])
+            if name+'_coef' not in self.cat_frame.columns:
+                self.cat_frame[name+'_coef'] = 1.00
             self.cat_frame[name] = list(map(self.total_count,
                                             self.cat_frame['price'],
                                             self.mod_frame['recipient_who_coef'],
                                             self.cat_frame['coef'],
+                                            self.cat_frame[name+'_coef'],# !!!!!! СДЕЛАЙ РЕФАКТОР С ФУНКЦИЕЙ КОТОРАЯ СРАЗУ ОПРЕДЕЛЯЕТ ИМЕНОВАННЫЙ КОЭФФИЦИЕНТ
                                             self.cat_frame[name+'_positions']))
             if not show_calculation:
                 del self.cat_frame[name+'_positions']
@@ -174,19 +174,25 @@ class CategoryData:
 
 
 jan23 = MonthData('months/jan23/jan23.xlsx')
-print(jan23.categories)
+#print(jan23.categories)
+#print(jan23.prices)
 ad = AccessoryData(jan23.accessory)
 ad.get_mods_frame()
 #print(ad.get_mods_frame())
-#for cat in jan23.categories:
-print(jan23.categories.columns)
-print(ad.mods_frame)
-cat = 'e:diet'
-cd = CategoryData(jan23.categories[cat], ad.mods_frame, jan23.prices)
-cd.add_price_column(show_calculation=False)
-cd.add_coef_column(show_calculation=True)
-cd.add_recipients_column(show_calculation=False) # add print()
-cd.get_a_result_column_in_dict()
-jan23.add_cat_sum_frame(cd.recipients)
-#print(jan23.recipients['Egr'][cat].sum())
+for cat in jan23.categories:
+#print(jan23.categories.columns)
+#print(ad.mods_frame)
+    #cat = 'l:siesta'
+    show_calc = False
+    cd = CategoryData(jan23.categories[cat], ad.mods_frame, jan23.prices)
+    cd.add_price_column(show_calculation=show_calc)
+    cd.add_coef_column(show_calculation=show_calc)
+    cd.add_recipients_column(show_calculation=show_calc)
+    cd.cat_frame = jan23.date.join(cd.cat_frame)
+    cd.cat_frame.set_index('DATE')
+    cd.cat_frame.to_excel('months/jan23/jan23_results.xlsx', sheet_name=cat.replace(':', '_'))
+    jan23.add_cat_sum_frame(cd.get_a_result_column_in_dict())
+#for name in jan23.recipients: сделай чтоб писало все
+jan23.recipients['Egr'].to_excel('months/jan23/jan23_results.xlsx', sheet_name='Egr'+'_total')
+print(jan23.recipients['Egr'])
 #print(jan23.recipients['Lera'][cat].sum())
