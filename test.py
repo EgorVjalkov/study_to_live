@@ -1,4 +1,4 @@
-from Classes import TestingPrices
+from ComplexCondition import TestingPrices
 
 
 test = TestingPrices('months/dec22test/FOR_TEST.csv', 'months/dec22test/price.csv')

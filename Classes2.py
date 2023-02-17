@@ -1,7 +1,5 @@
 import pandas as pd
-from Classes import ComplexCondition
-from random import choice, randint
-import datetime
+from ComplexCondition import ComplexCondition
 import numpy as np
 
 pd.set_option('display.max.columns', None)
@@ -26,6 +24,7 @@ class MonthData:
         for name in dict_of_result_frame:
             dict_of_result_frame[name][self.limit] = dict_of_result_frame[name].sum()
             self.recipients[name] = self.recipients[name].join(dict_of_result_frame[name])
+            print(self.recipients)
         return self.recipients
 
 class AccessoryData:
@@ -132,6 +131,7 @@ class CategoryData:
 
     def total_count(self, price, recipient_who_coef, coef, named_coef, positions):
         # есть мысль, что здесь можно сильно упростить все
+        print(price, recipient_who_coef, coef, named_coef, positions)
         if self.position not in positions:
             return 0
         elif self.position in positions and price <= 0:
@@ -139,7 +139,9 @@ class CategoryData:
         else:
             for recipient in self.recipients:
                 if recipient in recipient_who_coef:
+                    print(price, coef, named_coef)
                     price *= (coef * named_coef)
+                    print(price)
                 else:
                     price *= named_coef
                 break
@@ -182,17 +184,18 @@ ad.get_mods_frame()
 for cat in jan23.categories:
 #print(jan23.categories.columns)
 #print(ad.mods_frame)
-    #cat = 'l:siesta'
-    show_calc = False
+    cat = 'l:siesta'
+    show_calc = True
     cd = CategoryData(jan23.categories[cat], ad.mods_frame, jan23.prices)
-    cd.add_price_column(show_calculation=show_calc)
-    cd.add_coef_column(show_calculation=show_calc)
+    cd.add_price_column()
+    cd.add_coef_column()
     cd.add_recipients_column(show_calculation=show_calc)
     cd.cat_frame = jan23.date.join(cd.cat_frame)
     cd.cat_frame.set_index('DATE')
     cd.cat_frame.to_excel('months/jan23/jan23_results.xlsx', sheet_name=cat.replace(':', '_'))
     jan23.add_cat_sum_frame(cd.get_a_result_column_in_dict())
+    break
 #for name in jan23.recipients: сделай чтоб писало все
-jan23.recipients['Egr'].to_excel('months/jan23/jan23_results.xlsx', sheet_name='Egr'+'_total')
-print(jan23.recipients['Egr'])
+#jan23.recipients['Egr'].to_excel('months/jan23/jan23_results.xlsx', sheet_name='Egr'+'_total')
+#print(jan23.recipients['Egr'])
 #print(jan23.recipients['Lera'][cat].sum())
