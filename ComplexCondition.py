@@ -35,7 +35,8 @@ class ComplexCondition:
 
     def prepare_condition(self):
         if type(self.condition_for_price) == str:
-            self.condition_for_price = eval(self.condition_for_price)
+            if '{' in self.condition_for_price:
+                self.condition_for_price = eval(self.condition_for_price)
             #print(self.condition_for_price)
         return self.condition_for_price
 
@@ -54,7 +55,9 @@ class ComplexCondition:
 
                     inner_condition = self.comparison_dict[comparison_operator](self.result, comparison_value)
                     if inner_condition:
-                        if '*' in self.condition_for_price[k]:
+                        if type(self.condition_for_price[k]) == int:
+                            self.price = self.condition_for_price[k]
+                        else:
                             if not delta:
                                 if comparison_value > self.result:
                                     delta = (comparison_value - self.result).seconds / 60
@@ -65,12 +68,10 @@ class ComplexCondition:
                             divider = float(self.condition_for_price[k].replace('*', ''))
                             self.price += delta * divider
                             #print(delta)
-                        else:
-                            self.price += int(self.condition_for_price[k])
                         #print(k, self.condition_for_price[k], inner_condition, self.price)
 # limiting
                     self.price = 200 if self.price > 200 else self.price
-        return int(self.price)
+        return self.price
 
     def get_price_if_result_is_dict(self):
         #print(self.condition_for_price)
@@ -81,6 +82,7 @@ class ComplexCondition:
     def get_price(self):
         self.prepare_result()
         self.prepare_condition()
+        #print(self.type_result)
 
         if self.type_result == datetime.datetime:
             return self.get_price_if_datetime()

@@ -24,7 +24,7 @@ class MonthData:
         for name in dict_of_result_frame:
             dict_of_result_frame[name][self.limit] = dict_of_result_frame[name].sum()
             self.recipients[name] = self.recipients[name].join(dict_of_result_frame[name])
-            print(self.recipients)
+            #print(self.recipients)
         return self.recipients
 
 class AccessoryData:
@@ -85,8 +85,6 @@ class CategoryData:
             if type(price_calc[result]) != str:
                 price = int(price_calc[result])
             else:
-                print('complex')
-                print(price_calc, result)
                 price = ComplexCondition(price_calc[result]).get_price()
         else:
             price = ComplexCondition(price_calc[True], result).get_price()
@@ -99,6 +97,7 @@ class CategoryData:
         if show_calculation:
             price_list = [list(i.values())[0] for i in price_list]
             self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'price_calc', price_list)
+            print(self.cat_frame)
         return self.cat_frame
 
     def count_a_modification(self, *args):
@@ -129,22 +128,17 @@ class CategoryData:
         #self.cat_frame['result'] = self.cat_frame['price'] * self.cat_frame['coef']
         return self.price_frame
 
-    def total_count(self, price, recipient_who_coef, coef, named_coef, positions):
+    def total_count(self, recipient, price, recipient_who_coef, coef, named_coef, positions):
         # есть мысль, что здесь можно сильно упростить все
-        print(price, recipient_who_coef, coef, named_coef, positions)
         if self.position not in positions:
             return 0
         elif self.position in positions and price <= 0:
             return price
         else:
-            for recipient in self.recipients:
-                if recipient in recipient_who_coef:
-                    print(price, coef, named_coef)
-                    price *= (coef * named_coef)
-                    print(price)
-                else:
-                    price *= named_coef
-                break
+            if recipient in recipient_who_coef:
+                price *= coef * named_coef
+            else:
+                price *= named_coef
         return price
 
     def add_recipients_column(self, recipients=(), show_calculation=False):
@@ -155,6 +149,7 @@ class CategoryData:
             if name+'_coef' not in self.cat_frame.columns:
                 self.cat_frame[name+'_coef'] = 1.00
             self.cat_frame[name] = list(map(self.total_count,
+                                            pd.Series(name, index=self.cat_frame.index),
                                             self.cat_frame['price'],
                                             self.mod_frame['recipient_who_coef'],
                                             self.cat_frame['coef'],
@@ -184,18 +179,18 @@ ad.get_mods_frame()
 for cat in jan23.categories:
 #print(jan23.categories.columns)
 #print(ad.mods_frame)
-    cat = 'l:siesta'
-    show_calc = True
+    #cat = 'z:sleeptime'
+    show_calc = False
     cd = CategoryData(jan23.categories[cat], ad.mods_frame, jan23.prices)
-    cd.add_price_column()
-    cd.add_coef_column()
-    cd.add_recipients_column(show_calculation=show_calc)
+    cd.add_price_column(show_calc)
+    cd.add_coef_column(show_calc)
+    cd.add_recipients_column(show_calc)
     cd.cat_frame = jan23.date.join(cd.cat_frame)
     cd.cat_frame.set_index('DATE')
-    cd.cat_frame.to_excel('months/jan23/jan23_results.xlsx', sheet_name=cat.replace(':', '_'))
+    #cd.cat_frame.to_excel('months/jan23/jan23_results.xlsx', sheet_name=cat.replace(':', '_'))
     jan23.add_cat_sum_frame(cd.get_a_result_column_in_dict())
-    break
-#for name in jan23.recipients: сделай чтоб писало все
-#jan23.recipients['Egr'].to_excel('months/jan23/jan23_results.xlsx', sheet_name='Egr'+'_total')
+    #break
+for name in jan23.recipients: #сделай чтоб писало все
+    jan23.recipients[name].to_excel('months/jan23/jan23_results.xlsx', sheet_name=name+'_total')
 #print(jan23.recipients['Egr'])
 #print(jan23.recipients['Lera'][cat].sum())
