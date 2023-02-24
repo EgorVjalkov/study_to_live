@@ -31,12 +31,13 @@ class AccessoryData:
     def __init__(self, af):
         self.af = af
         self.mods_frame = {}
-
-    def recipient_mod(self, duty, zlata): # наверное здесь нужно исправлять
-        if zlata == 'M' or duty == 'duty24':
-            return ['Lera']
-        else:
-            return ['Egr', 'Lera']
+        self.positions_logic = {
+            'duty24': {'Lera': ['A', 'Z', 'H', 'L'], 'Egr': ['E']},
+            'duty24, M': {'Lera': ['A', 'Z', 'L'], 'Egr': ['E']},
+            'V': {'Lera': ['A', 'Z', 'L'], 'Egr': ['A', 'Z', 'E']},
+            'M': {'Lera': ['A', 'Z', 'L'], 'Egr': ['E', 'H']},
+            '': {'Lera': ['A', 'Z', 'H', 'L'], 'Egr': ['A', 'Z', 'H', 'E']}
+        }
 
     def get_mods_frame(self):
         self.mods_frame = pd.DataFrame(index=self.af.index)
@@ -45,23 +46,26 @@ class AccessoryData:
         self.mods_frame['duty_mod'] = ['duty' + str(int(i)) if i else i for i in self.af['DUTY']]
         self.mods_frame['DIF_DUTY_mod'] = ['DIF_DUTY: ' + str(int(i)) if i else i for i in self.af['DIF_DUTY']]
         #print(self.mods_frame[['duty', 'zlata']].eq('duty24', 'M')) #!!!!!!!!!!
-        self.mods_frame['recipient_who_coef'] = list(map(
-            self.recipient_mod, self.mods_frame['duty_mod'], self.mods_frame['zlata_mod']))
 
-        positons_f = lambda i: i == 'duty24' or i == 'M'
-        for_position_frame = self.mods_frame[['duty_mod', 'zlata_mod']].applymap(positons_f)
-        for_position_frame = zip(for_position_frame['duty_mod'], for_position_frame['zlata_mod'])
-        positions = {
-            (True, False): {'Lera': ['A', 'Z', 'H', 'L'], 'Egr': ['E']},
-            (True, True): {'Lera': ['A', 'Z', 'H', 'L'], 'Egr': ['E']},
-            (False, True): {'Lera': ['A', 'Z', 'L'], 'Egr': ['E', 'H']},
-            (False, False): {'Lera': ['A', 'Z', 'H', 'L'], 'Egr': ['A', 'Z', 'H', 'E']}
-        }
-        self.mods_frame['positions'] = [positions[i] for i in list(for_position_frame)]
+        def f_recipient_mod(duty, zlata):
+            if zlata == 'M' or duty == 'duty24':
+                return ['Lera']
+            else:
+                return ['Egr', 'Lera']
+        self.mods_frame['recipient_who_coef'] = list(map(f_recipient_mod,
+                                                         self.mods_frame['duty_mod'],
+                                                         self.mods_frame['zlata_mod']))
 
-        return self.mods_frame
+        def f_for_positions(*mods):
+            mods_key = ', '.join([i for i in mods if i])
+            if mods_key not in self.positions_logic:
+                mods_key = ''
+            return self.positions_logic[mods_key]
+        self.mods_frame['positions'] = list(map(f_for_positions,
+                                                self.mods_frame['duty_mod'],
+                                                self.mods_frame['zlata_mod']))
 
-
+# проблема в том что нужно сделать все, а потом проийтмсь коротким циклом по реципиентам и у каждого модится свой фрейм
 class CategoryData:
     def __init__(self, cf, mf, pf, date_frame=''):
         self.name = cf.name
@@ -71,7 +75,10 @@ class CategoryData:
         self.position = self.name[0].upper()
         self.price_frame = pf[self.name]
         self.mod_frame = mf
-        self.recipients = {'Egr': pd.DataFrame(), 'Lera': pd.DataFrame()}
+        self.recipients_frame_dict = {'Egr': pd.DataFrame(), 'Lera': pd.DataFrame()} # здесь можно сразу определить позиции и не делать лишнюю работу
+        self.recipients_key = \
+            {k[0]: self.recipients_frame_dict[k] for k in self.recipients_frame_dict.keys()} # не помню нах это нужно было...
+        print(self.recipients_key)
         self.named_coefficients = {'Egr': 'DIF_DUTY'}
 
     def find_a_price(self, duty, result):
@@ -143,7 +150,7 @@ class CategoryData:
 
     def add_recipients_column(self, recipients=(), show_calculation=False):
         if not recipients:
-            recipients = list(self.recipients.keys())
+            recipients = list(self.recipients_frame_dict.keys())
         for name in recipients:
             self.cat_frame[name+'_positions'] = self.mod_frame['positions'].map(lambda e: e[name])
             if name+'_coef' not in self.cat_frame.columns:
@@ -162,11 +169,11 @@ class CategoryData:
         return self.cat_frame
 
     def get_a_result_column_in_dict(self):
-        self.recipients = {rec_key: self.cat_frame[rec_key] for rec_key in self.recipients}
-        self.recipients = \
-            {rec_key: self.recipients[rec_key].rename(self.name) for rec_key in self.recipients}
+        self.recipients_frame_dict = {rec_key: self.cat_frame[rec_key] for rec_key in self.recipients_frame_dict}
+        self.recipients_frame_dict = \
+            {rec_key: self.recipients_frame_dict[rec_key].rename(self.name) for rec_key in self.recipients_frame_dict}
         #print(self.recipients)
-        return self.recipients
+        return self.recipients_frame_dict
 
 
 
@@ -175,10 +182,7 @@ jan23 = MonthData('months/jan23/jan23.xlsx')
 #print(jan23.prices)
 ad = AccessoryData(jan23.accessory)
 ad.get_mods_frame()
-#print(ad.get_mods_frame())
 for cat in jan23.categories:
-#print(jan23.categories.columns)
-#print(ad.mods_frame)
     #cat = 'z:sleeptime'
     show_calc = False
     cd = CategoryData(jan23.categories[cat], ad.mods_frame, jan23.prices)
@@ -189,7 +193,7 @@ for cat in jan23.categories:
     cd.cat_frame.set_index('DATE')
     #cd.cat_frame.to_excel('months/jan23/jan23_results.xlsx', sheet_name=cat.replace(':', '_'))
     jan23.add_cat_sum_frame(cd.get_a_result_column_in_dict())
-    #break
+    break
 for name in jan23.recipients: #сделай чтоб писало все
     jan23.recipients[name].to_excel('months/jan23/jan23_results.xlsx', sheet_name=name+'_total')
 #print(jan23.recipients['Egr'])
