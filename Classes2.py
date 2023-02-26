@@ -14,6 +14,8 @@ class MonthData:
         self.accessory = self.vedomost.get([i for i in self.vedomost if i == i.upper() and i not in date_keys])
         self.date = self.vedomost.get(date_keys)
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
+        self.meals_columns = [i for i in self.categories.columns if 'meals' in i]
+        self.NOT_meals_columns = [i for i in self.categories.columns if 'meals' not in i]
         self.recipients = {'Egr': self.date, 'Lera': self.date}
         #self.recipients = {name: self.recipients[name].set_index('DATE') for name in self.recipients}
         for name in self.recipients:
@@ -78,7 +80,7 @@ class CategoryData:
         self.recipients_frame_dict = {'Egr': pd.DataFrame(), 'Lera': pd.DataFrame()} # здесь можно сразу определить позиции и не делать лишнюю работу
         self.recipients_key = \
             {k[0]: self.recipients_frame_dict[k] for k in self.recipients_frame_dict.keys()} # не помню нах это нужно было...
-        print(self.recipients_key)
+        #print(self.recipients_key)
         self.named_coefficients = {'Egr': 'DIF_DUTY'}
 
     def find_a_price(self, duty, result):
@@ -193,8 +195,10 @@ for cat in jan23.categories:
     cd.cat_frame.set_index('DATE')
     #cd.cat_frame.to_excel('months/jan23/jan23_results.xlsx', sheet_name=cat.replace(':', '_'))
     jan23.add_cat_sum_frame(cd.get_a_result_column_in_dict())
-    break
+    #break
 for name in jan23.recipients: #сделай чтоб писало все
     jan23.recipients[name].to_excel('months/jan23/jan23_results.xlsx', sheet_name=name+'_total')
-#print(jan23.recipients['Egr'])
-#print(jan23.recipients['Lera'][cat].sum())
+    total_count = jan23.recipients[name][jan23.NOT_meals_columns].tail(1).sum(1)
+    meals_count = jan23.recipients[name][jan23.meals_columns].tail(1).sum(1)
+    print(name, total_count, meals_count)
+#print(jan23.recipients['Lera'])
