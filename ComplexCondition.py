@@ -1,9 +1,8 @@
 import datetime
 
 class ComplexCondition:
-    def __init__(self,  condition_for_price, result=0, date=''):
+    def __init__(self,  condition_for_price='', result=0, date=''):
         self.result = result
-        self.type_result = type(result)
         self.condition_for_price = condition_for_price
         self.date = datetime.date.today() if date == 'DATE' or not date else date
         self.comparison_dict = {'<': lambda r, y: r < y,
@@ -13,25 +12,17 @@ class ComplexCondition:
         self.price = 0
 
     def prepare_result(self):
-        if self.type_result == str:
-            if ',' in self.result:
-                time = [int(i) for i in self.result.split(',')]
+        if type(self.result) == str:
+            if ':' in self.result:
+                time = [int(i) for i in self.result.split(':')]
                 time = datetime.time(*time)
                 self.result = datetime.datetime.combine(self.date, time)
                 if self.result.hour < 8:
                     self.result += datetime.timedelta(days=1)
+            else: #self.result[0].isupper(): незабудь про запятую и индекс аут оф ранге
+                self.result = {'key': self.result[0], 'value': self.result[1] if self.result[1] else True}
 
-            elif self.result[0].isupper():
-                self.result = {'key': self.result[1], 'value': self.result[0]}
-
-            # elif self.result.isdigit():
-            #     print(self.result)
-            #     self.result = int(self.result)
-
-        self.type_result = type(self.result)
-        # print(self.type_result)
-
-        return self.result, self.type_result
+        return self.result
 
     def prepare_condition(self):
         if type(self.condition_for_price) == str:
@@ -74,7 +65,7 @@ class ComplexCondition:
         return self.price
 
     def get_price_if_result_is_dict(self):
-        #print(self.condition_for_price)
+        print(self.condition_for_price)
         d = self.condition_for_price[self.result['key']]
         self.price = [d[i] for i in d if self.result['value'] in i][0]
         return int(self.price)
@@ -84,9 +75,9 @@ class ComplexCondition:
         self.prepare_condition()
         #print(self.type_result)
 
-        if self.type_result == datetime.datetime:
+        if type(self.result) == datetime.datetime:
             return self.get_price_if_datetime()
-        elif self.type_result == dict:
+        elif type(self.result) == dict:
             return self.get_price_if_result_is_dict()
         elif type(self.condition_for_price) == dict:
             self.price = int(self.condition_for_price[str(self.result)])
@@ -101,7 +92,7 @@ class ComplexCondition:
         return self.price
 
 
-cc = ComplexCondition('{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}', 'F+')
+cc = ComplexCondition('{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}', '+F')
 #cc = ComplexCondition('{<.22: 3*, <.23: 2*, >.23: 0}', '23,00')
 #cc = ComplexCondition(4, '40*')
 #cc.prepare_result()

@@ -3,9 +3,8 @@ from ComplexCondition import ComplexCondition
 import numpy as np
 
 pd.set_option('display.max.columns', None)
-
 class MonthData:
-    def __init__(self, path):
+    def __init__(self, path, recipients):
         vedomost = pd.read_excel(path, sheet_name='vedomost').fillna(False)
         self.limit = len([i for i in vedomost['DATE'].to_list() if i])
         self.vedomost = vedomost[0:self.limit].fillna(0)
@@ -16,11 +15,21 @@ class MonthData:
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
         self.meals_columns = [i for i in self.categories.columns if 'meals' in i]
         self.NOT_meals_columns = [i for i in self.categories.columns if 'meals' not in i]
-        self.recipients = {'Egr': self.date, 'Lera': self.date}
-        #self.recipients = {name: self.recipients[name].set_index('DATE') for name in self.recipients}
-        for name in self.recipients:
-            self.recipients[name].loc[self.limit] = ['total count', '']
+        #self.date.loc[self.limit] = ['total count', '']
+        self.recipients = {k: self.date for k in recipients}
 
+    def get_named_vedomost(self, name):
+        for col in self.categories:
+            if [i for i in self.categories[col] if type(i) == str and name[0] in i]:
+                print(2)
+                for i in self.categories[col]:
+                    i = ComplexCondition(result=i).prepare_result()
+                    # stopped!!!!! нужно подогнать кондишн, и сделать именовнные фреймы
+                #print(named)
+            else:
+                self.recipients[name] = self.recipients[name].join(self.categories[col])
+        #print(self.recipients)
+        return self.recipients
 
     def add_cat_sum_frame(self, dict_of_result_frame):
         for name in dict_of_result_frame:
@@ -73,7 +82,10 @@ class CategoryData:
         self.name = cf.name
         if cf.dtypes == 'float':
             cf.astype('int')
-        self.cat_frame = pd.DataFrame([True if i == 'T' else i for i in cf], columns=[self.name])
+        if 'time' in self.name:
+            self.cat_frame = pd.DataFrame([i.replace(',', ':') if i else i for i in cf], columns=[self.name])
+        else:
+            self.cat_frame = pd.DataFrame([True if i == 'T' else i for i in cf], columns=[self.name])
         self.position = self.name[0].upper()
         self.price_frame = pf[self.name]
         self.mod_frame = mf
@@ -178,27 +190,31 @@ class CategoryData:
         return self.recipients_frame_dict
 
 
+recipients = ['Egr', 'Lera']
 
-jan23 = MonthData('months/jan23/jan23.xlsx')
-#print(jan23.categories)
-#print(jan23.prices)
-ad = AccessoryData(jan23.accessory)
-ad.get_mods_frame()
-for cat in jan23.categories:
-    #cat = 'z:sleeptime'
-    show_calc = False
-    cd = CategoryData(jan23.categories[cat], ad.mods_frame, jan23.prices)
-    cd.add_price_column(show_calc)
-    cd.add_coef_column(show_calc)
-    cd.add_recipients_column(show_calc)
-    cd.cat_frame = jan23.date.join(cd.cat_frame)
-    cd.cat_frame.set_index('DATE')
-    #cd.cat_frame.to_excel('months/jan23/jan23_results.xlsx', sheet_name=cat.replace(':', '_'))
-    jan23.add_cat_sum_frame(cd.get_a_result_column_in_dict())
-    #break
-for name in jan23.recipients: #сделай чтоб писало все
-    jan23.recipients[name].to_excel('months/jan23/jan23_results.xlsx', sheet_name=name+'_total')
-    total_count = jan23.recipients[name][jan23.NOT_meals_columns].tail(1).sum(1)
-    meals_count = jan23.recipients[name][jan23.meals_columns].tail(1).sum(1)
-    print(name, total_count, meals_count)
+jan23 = MonthData('months/jan23/jan23.xlsx', recipients)
+for name in jan23.recipients:
+    jan23.get_named_vedomost(name)
+##print(jan23.categories)
+##print(jan23.prices)
+#ad = AccessoryData(jan23.accessory)
+#ad.get_mods_frame()
+#for cat in jan23.categories:
+#    cat = 'z:stroll'
+#    show_calc = False
+#    cd = CategoryData(jan23.categories[cat], ad.mods_frame, jan23.prices)
+#    print(cd.cat_frame)
+#    cd.add_price_column(show_calc)
+#    cd.add_coef_column(show_calc)
+#    cd.add_recipients_column(show_calc)
+#    cd.cat_frame = jan23.date.join(cd.cat_frame)
+#    cd.cat_frame.set_index('DATE')
+#    #cd.cat_frame.to_excel('months/jan23/jan23_results.xlsx', sheet_name=cat.replace(':', '_'))
+#    jan23.add_cat_sum_frame(cd.get_a_result_column_in_dict())
+#    #break
+#for name in jan23.recipients: #сделай чтоб писало все
+#    jan23.recipients[name].to_excel('months/jan23/jan23_results.xlsx', sheet_name=name+'_total')
+#    total_count = jan23.recipients[name][jan23.NOT_meals_columns].tail(1).sum(1)
+#    meals_count = jan23.recipients[name][jan23.meals_columns].tail(1).sum(1)
+#    print(name, total_count, meals_count)
 #print(jan23.recipients['Lera'])
