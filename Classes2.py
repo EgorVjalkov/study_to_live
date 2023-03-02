@@ -10,31 +10,34 @@ class MonthData:
         self.vedomost = vedomost[0:self.limit].fillna(0)
         self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
         date_keys = ['DATE', 'DAY']
-        self.accessory = self.vedomost.get([i for i in self.vedomost if i == i.upper() and i not in date_keys])
+        print(self.vedomost.columns)
+        df = [print(i) for i in self.vedomost]
+        self.accessory = self.vedomost.get([i for i in self.vedomost.columns if i == i.upper() and i not in date_keys])
         self.date = self.vedomost.get(date_keys)
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
         self.meals_columns = [i for i in self.categories.columns if 'meals' in i]
         self.NOT_meals_columns = [i for i in self.categories.columns if 'meals' not in i]
-        #self.date.loc[self.limit] = ['total count', '']
         self.recipients = {k: self.date for k in recipients}
 
     def get_named_vedomost(self, name):
-        for col in self.categories:
-            if [i for i in self.categories[col] if type(i) == str and name[0] in i]:
-                print(2)
-                for i in self.categories[col]:
-                    i = ComplexCondition(result=i).prepare_result()
-                    # stopped!!!!! нужно подогнать кондишн, и сделать именовнные фреймы
-                #print(named)
+        named_positions = [i[0] for i in self.recipients]
+        for column in self.categories:
+            position = column[0].upper()
+            if [i for i in self.categories[column] if type(i) == str and name[0] in i]:
+                column_list = [ComplexCondition(result=i).prepare_result() for i in self.categories[column]]
+                name_in_dict_flag = lambda i: type(i) == dict and name[0] in i.keys()
+                column_list = [i[name[0]] if name_in_dict_flag(i) else False for i in column_list]
+                self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column))
             else:
-                self.recipients[name] = self.recipients[name].join(self.categories[col])
-        #print(self.recipients)
+                if name[0] == position or position not in named_positions:
+                    self.recipients[name] = self.recipients[name].join(self.categories[column])
+        #print(self.recipients[name])
         return self.recipients
 
     def add_cat_sum_frame(self, dict_of_result_frame):
         for name in dict_of_result_frame:
             dict_of_result_frame[name][self.limit] = dict_of_result_frame[name].sum()
-            self.recipients[name] = self.recipients[name].join(dict_of_result_frame[name])
+            self.recipients[name] = self.recipients[name].join(dict_of_result_frame[name]) #  ьожет быть проблема с джойном
             #print(self.recipients)
         return self.recipients
 
@@ -192,7 +195,7 @@ class CategoryData:
 
 recipients = ['Egr', 'Lera']
 
-jan23 = MonthData('months/jan23/jan23.xlsx', recipients)
+jan23 = MonthData('months/fb23/fb23.xlsx', recipients)
 for name in jan23.recipients:
     jan23.get_named_vedomost(name)
 ##print(jan23.categories)

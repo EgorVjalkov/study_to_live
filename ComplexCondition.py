@@ -1,8 +1,9 @@
 import datetime
 
 class ComplexCondition:
-    def __init__(self,  condition_for_price='', result=0, date=''):
+    def __init__(self, result='', condition_for_price='', date=''):
         self.result = result
+        #print(result)
         self.condition_for_price = condition_for_price
         self.date = datetime.date.today() if date == 'DATE' or not date else date
         self.comparison_dict = {'<': lambda r, y: r < y,
@@ -19,9 +20,10 @@ class ComplexCondition:
                 self.result = datetime.datetime.combine(self.date, time)
                 if self.result.hour < 8:
                     self.result += datetime.timedelta(days=1)
-            else: #self.result[0].isupper(): незабудь про запятую и индекс аут оф ранге
-                self.result = {'key': self.result[0], 'value': self.result[1] if self.result[1] else True}
-
+            else:
+                one_char_flag = lambda str_: len(str_) == 1
+                self.result = {i[0]: True if one_char_flag(i) else i[1] for i in self.result.split(',')}
+        #print(self.result)
         return self.result
 
     def prepare_condition(self):
@@ -66,6 +68,8 @@ class ComplexCondition:
 
     def get_price_if_result_is_dict(self):
         print(self.condition_for_price)
+        key_extraction = list(self.result)[0]
+        self.result = {'key': key_extraction, 'value': self.result[key_extraction]}
         d = self.condition_for_price[self.result['key']]
         self.price = [d[i] for i in d if self.result['value'] in i][0]
         return int(self.price)
@@ -92,10 +96,10 @@ class ComplexCondition:
         return self.price
 
 
-cc = ComplexCondition('{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}', '+F')
+#cc = ComplexCondition('{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}', '+F')
 #cc = ComplexCondition('{<.22: 3*, <.23: 2*, >.23: 0}', '23,00')
-#cc = ComplexCondition(4, '40*')
-#cc.prepare_result()
+cc = ComplexCondition(result=True)
+cc.prepare_result()
 #cc.prepare_condition_for_price()
-print(cc.get_price())
+#print(cc.get_price())
 
