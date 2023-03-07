@@ -3,6 +3,7 @@ from ComplexCondition import ComplexCondition
 import numpy as np
 
 pd.set_option('display.max.columns', None)
+SHOW_COEF_CALC = False
 class MonthData:
     def __init__(self, path, recipients):
         vedomost = pd.read_excel(path, sheet_name='vedomost').fillna(False)
@@ -10,11 +11,17 @@ class MonthData:
         self.vedomost = vedomost[0:self.limit].fillna(0)
         self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
         date_keys = ['DATE', 'DAY']
-        print(self.vedomost.columns)
-        df = [print(i) for i in self.vedomost]
         self.accessory = self.vedomost.get([i for i in self.vedomost.columns if i == i.upper() and i not in date_keys])
         self.date = self.vedomost.get(date_keys)
+
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
+        #for cat in self.categories:
+        #    print(self.categories[cat])
+        #    if self.categories[cat].dtype() == object:
+        #        self.categories[cat].fillna(False)
+        #    else:
+        #        self.categories[cat].fillna(0)
+        #print(self.categories)
         self.meals_columns = [i for i in self.categories.columns if 'meals' in i]
         self.NOT_meals_columns = [i for i in self.categories.columns if 'meals' not in i]
         self.recipients = {k: self.date for k in recipients}
@@ -27,6 +34,7 @@ class MonthData:
                 column_list = [ComplexCondition(result=i).prepare_result() for i in self.categories[column]]
                 name_in_dict_flag = lambda i: type(i) == dict and name[0] in i.keys()
                 column_list = [i[name[0]] if name_in_dict_flag(i) else False for i in column_list]
+                # заеб с типом данных. СС дает строку а нужно число!!!
                 self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column))
             else:
                 if name[0] == position or position not in named_positions:
@@ -58,7 +66,7 @@ class AccessoryData:
         self.mods_frame['zlata_mod'] = self.af['MOD']
         self.mods_frame['weak_mod'] = ['WEAK' + str(int(i)) if i else i for i in self.af['WEAK']]
         self.mods_frame['duty_mod'] = ['duty' + str(int(i)) if i else i for i in self.af['DUTY']]
-        self.mods_frame['DIF_DUTY_mod'] = ['DIF_DUTY: ' + str(int(i)) if i else i for i in self.af['DIF_DUTY']]
+        self.mods_frame['DIF_DUTY'] = [{'DIF_DUTY': str(int(i))} if i else i for i in self.af['DIF_DUTY']]
         #print(self.mods_frame[['duty', 'zlata']].eq('duty24', 'M')) #!!!!!!!!!!
 
         def f_recipient_mod(duty, zlata):
@@ -83,8 +91,9 @@ class AccessoryData:
 class CategoryData:
     def __init__(self, cf, mf, pf, date_frame=''):
         self.name = cf.name
-        if cf.dtypes == 'float':
-            cf.astype('int')
+        #print(cf.dtypes)
+        #if cf.dtypes == 'float':
+        #    cf.astype('int')
         if 'time' in self.name:
             self.cat_frame = pd.DataFrame([i.replace(',', ':') if i else i for i in cf], columns=[self.name])
         else:
@@ -109,9 +118,9 @@ class CategoryData:
             if type(price_calc[result]) != str:
                 price = int(price_calc[result])
             else:
-                price = ComplexCondition(price_calc[result]).get_price()
+                price = ComplexCondition(condition=price_calc[result]).get_price()
         else:
-            price = ComplexCondition(price_calc[True], result).get_price()
+            price = ComplexCondition(result, price_calc[True]).get_price()
 
         return {'price': price, 'price_calc': price_calc}
 
@@ -126,26 +135,27 @@ class CategoryData:
 
     def count_a_modification(self, *args):
         mods = [i for i in args if i]
-        dict_mods = {}
+        #print(mods)
+        coefficient_dict = {}
         for i in mods:
-            if ':' in i:
-                item = mods.pop(mods.index(i)).split(': ')
-                key, value = item[0], item[1]
-                if type(self.price_frame[key]) == str:
-                    dict_mods[key] = float(ComplexCondition(self.price_frame[key]).prepare_condition()[value])
-                    dict_mods = {k: dict_mods[self.named_coefficients[k]] for k in self.named_coefficients}
-# подумай как сделать тут, чтобы остались именованные коэффициенты
-        coefficient_dict = {k: self.price_frame[k] for k in mods if k in self.price_frame}
+            if type(i) == dict:
+                key, value = list(i)[0], i[list(i)[0]]
+                i = eval(self.price_frame[key])[value] if type(self.price_frame[key]) == str else self.price_frame[key]
+                coefficient_dict[key] = i
+            else:
+                coefficient_dict[i] = self.price_frame[i] if i in self.price_frame else 1
+        if not SHOW_COEF_CALC:
+            coefficient_dict = {k: coefficient_dict[k] for k in coefficient_dict if coefficient_dict[k] != 1}
         coefficient_dict['coef'] = np.array(list(coefficient_dict.values())).prod()
-        coefficient_dict.update(dict_mods)
+        print(coefficient_dict)
         return coefficient_dict
 
-    def add_coef_column(self, show_calculation=False):
+    def add_coef_column(self, name, show_calculation=False):
         mods = [self.mod_frame.to_dict('list')[i] for i in self.mod_frame.to_dict('list') if 'mod' in i]
+        if name in self.named_coefficients:
+            mods.append(self.mod_frame[self.named_coefficients[name]].to_list())
         coefs_list = list(map(self.count_a_modification, *mods))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
-        for name in self.named_coefficients.keys():
-            self.cat_frame[name + '_coef'] = [i[name] if name in i else 1.0 for i in coefs_list]
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
             print(self.cat_frame)
@@ -196,28 +206,30 @@ class CategoryData:
 recipients = ['Egr', 'Lera']
 
 jan23 = MonthData('months/fb23/fb23.xlsx', recipients)
+ad = AccessoryData(jan23.accessory)
+ad.get_mods_frame()
 for name in jan23.recipients:
     jan23.get_named_vedomost(name)
-##print(jan23.categories)
-##print(jan23.prices)
-#ad = AccessoryData(jan23.accessory)
-#ad.get_mods_frame()
-#for cat in jan23.categories:
-#    cat = 'z:stroll'
-#    show_calc = False
-#    cd = CategoryData(jan23.categories[cat], ad.mods_frame, jan23.prices)
-#    print(cd.cat_frame)
-#    cd.add_price_column(show_calc)
-#    cd.add_coef_column(show_calc)
-#    cd.add_recipients_column(show_calc)
-#    cd.cat_frame = jan23.date.join(cd.cat_frame)
-#    cd.cat_frame.set_index('DATE')
-#    #cd.cat_frame.to_excel('months/jan23/jan23_results.xlsx', sheet_name=cat.replace(':', '_'))
-#    jan23.add_cat_sum_frame(cd.get_a_result_column_in_dict())
-#    #break
-#for name in jan23.recipients: #сделай чтоб писало все
-#    jan23.recipients[name].to_excel('months/jan23/jan23_results.xlsx', sheet_name=name+'_total')
-#    total_count = jan23.recipients[name][jan23.NOT_meals_columns].tail(1).sum(1)
-#    meals_count = jan23.recipients[name][jan23.meals_columns].tail(1).sum(1)
-#    print(name, total_count, meals_count)
-#print(jan23.recipients['Lera'])
+    result_dict = {}
+    for cat in jan23.recipients[name]:
+        if cat.islower():
+            cat = 'z:stroll'
+            show_calc = True
+            cd = CategoryData(jan23.recipients[name][cat], ad.mods_frame, jan23.prices)
+            #print(cd.cat_frame)
+            cd.add_price_column()
+            cd.add_coef_column(name, show_calculation=show_calc)
+            #result_dict[cat] = cd.cat_frame['price'].sum()
+        #    cd.add_recipients_column(show_calc)
+            #cd.cat_frame = jan23.date.join(cd.cat_frame)
+            #cd.cat_frame.set_index('DATE')
+        #    #cd.cat_frame.to_excel('months/jan23/jan23_results.xlsx', sheet_name=cat.replace(':', '_'))
+            #jan23.add_cat_sum_frame(cd.get_a_result_column_in_dict())
+            break
+        #for name in jan23.recipients: #сделай чтоб писало все
+        #    jan23.recipients[name].to_excel('months/jan23/jan23_results.xlsx', sheet_name=name+'_total')
+        #    total_count = jan23.recipients[name][jan23.NOT_meals_columns].tail(1).sum(1)
+        #    meals_count = jan23.recipients[name][jan23.meals_columns].tail(1).sum(1)
+        #    print(name, total_count, meals_count)
+        #print(jan23.recipients['Lera'])
+    print(pd.Series(result_dict), pd.Series(result_dict).sum())
