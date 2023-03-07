@@ -8,3 +8,4 @@ print({'key': list(dict)[0], 1: dict[list(dict)[0]]})
 type(True)
 
 print('1'.isdigit())
+type(True)

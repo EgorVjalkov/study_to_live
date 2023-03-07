@@ -34,7 +34,6 @@ class MonthData:
                 column_list = [ComplexCondition(result=i).prepare_result() for i in self.categories[column]]
                 name_in_dict_flag = lambda i: type(i) == dict and name[0] in i.keys()
                 column_list = [i[name[0]] if name_in_dict_flag(i) else False for i in column_list]
-                # заеб с типом данных. СС дает строку а нужно число!!!
                 self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column))
             else:
                 if name[0] == position or position not in named_positions:

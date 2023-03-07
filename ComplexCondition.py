@@ -36,7 +36,6 @@ class ComplexCondition:
                         self.result[i] = True
                     else:
                         self.result[i[0]] = int(i[1:]) if i[1:].isdigit() else i[1:]
-        #print(self.result, type(self.result), self.condition_for_price)
         return self.result
 
     def prepare_condition(self):
@@ -81,6 +80,7 @@ class ComplexCondition:
 
     def get_price_if_result_is_dict(self):
         #print(self.condition_for_price)
+        print(self.condition_for_price)
         key_extraction = list(self.result)[0]
         self.result = {'key': key_extraction, 'value': self.result[key_extraction]}
         d = self.condition_for_price[self.result['key']]
@@ -114,6 +114,11 @@ results = ['2', 1.0, 1, True, 'L1']
 for i in results:
     cc = ComplexCondition(result=i, condition=choice(['{50}', '50*']))
     cc.prepare_result()
+
+#cc = ComplexCondition('{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}', '+F')
+#cc = ComplexCondition('{<.22: 3*, <.23: 2*, >.23: 0}', '23,00')
+cc = ComplexCondition(result=True)
+cc.prepare_result()
 #cc.prepare_condition_for_price()
 #print(cc.get_price())
 
