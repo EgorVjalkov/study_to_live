@@ -132,9 +132,12 @@ class CategoryData:
             print(self.cat_frame)
         return self.cat_frame
 
-    def count_a_modification(self, *args):
+    def count_a_modification(self, mods, positions):
+        if self.position not in positions:
+            if any(self.named_coefficients.values()) in mods: # остановился здесь.
+                print()
         mods = [i for i in args if i]
-        #print(mods)
+        print(mods)
         coefficient_dict = {}
         for i in mods:
             if type(i) == dict:
@@ -150,10 +153,12 @@ class CategoryData:
         return coefficient_dict
 
     def add_coef_column(self, name, show_calculation=False):
+        self.cat_frame['positions'] = self.mod_frame['positions'].map(lambda e: e[name])
         mods = [self.mod_frame.to_dict('list')[i] for i in self.mod_frame.to_dict('list') if 'mod' in i]
         if name in self.named_coefficients:
             mods.append(self.mod_frame[self.named_coefficients[name]].to_list())
-        coefs_list = list(map(self.count_a_modification, *mods))
+        mods.append(self.cat_frame['positions'].to_list())
+        coefs_list = list(map(self.count_a_modification, mods, self.cat_frame['positions']))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
@@ -174,22 +179,16 @@ class CategoryData:
                 price *= named_coef
         return price
 
-    def add_recipients_column(self, recipients=(), show_calculation=False):
-        if not recipients:
-            recipients = list(self.recipients_frame_dict.keys())
-        for name in recipients:
-            self.cat_frame[name+'_positions'] = self.mod_frame['positions'].map(lambda e: e[name])
-            if name+'_coef' not in self.cat_frame.columns:
-                self.cat_frame[name+'_coef'] = 1.00
-            self.cat_frame[name] = list(map(self.total_count,
+    def add_recipients_column(self, name, show_calculation=False):
+        self.cat_frame[name+'_total'] = list(map(self.total_count,
                                             pd.Series(name, index=self.cat_frame.index),
                                             self.cat_frame['price'],
                                             self.mod_frame['recipient_who_coef'],
                                             self.cat_frame['coef'],
                                             self.cat_frame[name+'_coef'],# !!!!!! СДЕЛАЙ РЕФАКТОР С ФУНКЦИЕЙ КОТОРАЯ СРАЗУ ОПРЕДЕЛЯЕТ ИМЕНОВАННЫЙ КОЭФФИЦИЕНТ
                                             self.cat_frame[name+'_positions']))
-            if not show_calculation:
-                del self.cat_frame[name+'_positions']
+        if not show_calculation:
+            del self.cat_frame[name+'_positions']
         if show_calculation:
             print(self.cat_frame)
         return self.cat_frame
@@ -219,7 +218,7 @@ for name in jan23.recipients:
             cd.add_price_column()
             cd.add_coef_column(name, show_calculation=show_calc)
             #result_dict[cat] = cd.cat_frame['price'].sum()
-        #    cd.add_recipients_column(show_calc)
+            #cd.add_recipients_column(name, show_calc)
             #cd.cat_frame = jan23.date.join(cd.cat_frame)
             #cd.cat_frame.set_index('DATE')
         #    #cd.cat_frame.to_excel('months/jan23/jan23_results.xlsx', sheet_name=cat.replace(':', '_'))
