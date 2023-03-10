@@ -132,20 +132,20 @@ class CategoryData:
             print(self.cat_frame)
         return self.cat_frame
 
-    def count_a_modification(self, mods, positions):
-        if self.position not in positions:
-            if any(self.named_coefficients.values()) in mods: # остановился здесь.
-                print()
-        mods = [i for i in args if i]
+    def count_a_modification(self, *mods):
+        mods = [i for i in mods if i]
         print(mods)
         coefficient_dict = {}
         for i in mods:
             if type(i) == dict:
+                i = mods.pop(mods.index(i))
                 key, value = list(i)[0], i[list(i)[0]]
                 i = eval(self.price_frame[key])[value] if type(self.price_frame[key]) == str else self.price_frame[key]
                 coefficient_dict[key] = i
-            else:
-                coefficient_dict[i] = self.price_frame[i] if i in self.price_frame else 1
+        positions = mods.pop(-1)
+        print(mods)
+        if self.position in positions:
+            coefficient_dict.update({i: self.price_frame[i] if i in self.price_frame else 1 for i in mods})
         if not SHOW_COEF_CALC:
             coefficient_dict = {k: coefficient_dict[k] for k in coefficient_dict if coefficient_dict[k] != 1}
         coefficient_dict['coef'] = np.array(list(coefficient_dict.values())).prod()
@@ -158,7 +158,7 @@ class CategoryData:
         if name in self.named_coefficients:
             mods.append(self.mod_frame[self.named_coefficients[name]].to_list())
         mods.append(self.cat_frame['positions'].to_list())
-        coefs_list = list(map(self.count_a_modification, mods, self.cat_frame['positions']))
+        coefs_list = list(map(self.count_a_modification, *mods))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
