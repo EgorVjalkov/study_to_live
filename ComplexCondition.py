@@ -19,6 +19,7 @@ class ComplexCondition:
                                 '>=': lambda r, y: r >= y,
                                 '>': lambda r, y: r > y}
         self.price = 0
+        #print(self.result, type(result), self.condition_for_price, type(self.condition_for_price))
 
     def prepare_result(self):
         if type(self.result) == str:
@@ -36,6 +37,7 @@ class ComplexCondition:
                         self.result[i] = True
                     else:
                         self.result[i[0]] = int(i[1:]) if i[1:].isdigit() else i[1:]
+        #print(self.result)
         return self.result
 
     def prepare_condition(self):
@@ -80,7 +82,6 @@ class ComplexCondition:
 
     def get_price_if_result_is_dict(self):
         #print(self.condition_for_price)
-        print(self.condition_for_price)
         key_extraction = list(self.result)[0]
         self.result = {'key': key_extraction, 'value': self.result[key_extraction]}
         d = self.condition_for_price[self.result['key']]
@@ -98,7 +99,13 @@ class ComplexCondition:
             return self.get_price_if_result_is_dict()
 
         elif type(self.condition_for_price) == dict:
-            self.price = int(self.condition_for_price[str(int(self.result))])
+            #print(self.condition_for_price.keys())
+            #print(self.result)
+            if list(filter(lambda i: type(i) == str, self.condition_for_price.keys())):
+                #print(str(int(self.result)), filter(lambda i: type(i) == str, list(self.condition_for_price.keys())))
+                self.price = int(self.condition_for_price[str(int(self.result))])
+            else:
+                self.price = int(self.condition_for_price[self.result])
             return self.price
         if '*' in self.condition_for_price:
             divider = int(self.condition_for_price.replace('*', ''))
