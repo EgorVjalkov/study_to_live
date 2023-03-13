@@ -14,18 +14,12 @@ class MonthData:
         date_keys = ['DATE', 'DAY']
         self.accessory = self.vedomost.get([i for i in self.vedomost.columns if i == i.upper() and i not in date_keys])
         self.date = self.vedomost.get(date_keys)
-
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
-        #for cat in self.categories:
-        #    print(self.categories[cat])
-        #    if self.categories[cat].dtype() == object:
-        #        self.categories[cat].fillna(False)
-        #    else:
-        #        self.categories[cat].fillna(0)
-        #print(self.categories)
-        self.meals_columns = [i for i in self.categories.columns if 'meals' in i]
-        self.NOT_meals_columns = [i for i in self.categories.columns if 'meals' not in i]
+        meals_in = lambda i: 'meals' in i or 'diet' in i
+        self.meals_columns = [i for i in self.categories.columns if meals_in(i)]
+        self.NOT_meals_columns = [i for i in self.categories.columns if not meals_in(i)]
         self.recipients = {k: self.date for k in recipients}
+        self.result_frame = {k: self.date.copy() for k in recipients}
 
     def get_named_vedomost(self, name):
         named_positions = [i[0] for i in self.recipients]
@@ -46,11 +40,8 @@ class MonthData:
         #print(self.recipients[name])
         return self.recipients
 
-    def add_cat_sum_frame(self, dict_of_result_frame):
-        for name in dict_of_result_frame:
-            dict_of_result_frame[name][self.limit] = dict_of_result_frame[name].sum()
-            self.recipients[name] = self.recipients[name].join(dict_of_result_frame[name]) #  ьожет быть проблема с джойном
-            #print(self.recipients)
+    def collect_to_result_frame(self, name, column_name, result_column):
+        self.result_frame[name][column_name] = result_column
         return self.recipients
 
 class AccessoryData:
@@ -150,7 +141,7 @@ class CategoryData:
 
     def count_a_modification(self, *mods):
         mods = [i for i in mods if i]
-        print(mods)
+        #print(mods)
         coefficient_dict = {}
         for i in mods:
             if type(i) == dict:
@@ -160,13 +151,13 @@ class CategoryData:
                 coefficient_dict[key] = i
         positions = mods.pop(-1)
         who_coef_list = mods.pop(-1)
-        print(mods)
+        #print(mods)
         if self.position in positions and name in who_coef_list:
             coefficient_dict.update({i: self.price_frame[i] if i in self.price_frame else 1 for i in mods})
         #if not SHOW_COEF_CALC:
         #    coefficient_dict = {k: coefficient_dict[k] for k in coefficient_dict if coefficient_dict[k] != 1}
         coefficient_dict['coef'] = np.array(list(coefficient_dict.values())).prod()
-        print(coefficient_dict)
+        #print(coefficient_dict)
         return coefficient_dict
 
     def total_count(self, price, coef):
@@ -193,31 +184,29 @@ class CategoryData:
 
 recipients = ['Egr', 'Lera']
 path ='months/fb23/'
-show_calc = True
+show_calc = False
 
 fb23 = MonthData(path+'fb23.xlsx', recipients)
 ad = AccessoryData(fb23.accessory)
 ad.get_mods_frame()
 for name in fb23.recipients:
-    os.mkdir(path+name)
-    fb23.get_named_vedomost(name)
-    result_dict = {}
-    for cat in fb23.recipients[name]:
-        if cat.islower():
-            #cat = 'z:edu'
-            cd = CategoryData(fb23.recipients[name][cat], ad.mods_frame, fb23.prices)
-            cd.add_price_column(name, show_calculation=show_calc)
-            cd.add_coef_and_result_column(name, show_calculation=show_calc)
-            result_dict[cat] = cd.cat_frame['result'].sum()
-            cd.cat_frame = fb23.date.join(cd.cat_frame)
-            cd.cat_frame.set_index('DATE')
-            cd.cat_frame.to_excel(f'months/fb23/{name}/{cat}.xlsx', sheet_name=cat.replace(':', '_'))
-            #jan23.add_cat_sum_frame(cd.get_a_result_column_in_dict())
-            #break
-        #for name in jan23.recipients: #сделай чтоб писало все
-        #    jan23.recipients[name].to_excel('months/jan23/jan23_results.xlsx', sheet_name=name+'_total')
-        #    total_count = jan23.recipients[name][jan23.NOT_meals_columns].tail(1).sum(1)
-        #    meals_count = jan23.recipients[name][jan23.meals_columns].tail(1).sum(1)
-        #    print(name, total_count, meals_count)
-        #print(jan23.recipients['Lera'])
-    print(pd.Series(result_dict), pd.Series(result_dict).sum())
+    try:
+        os.mkdir(path+name)
+    except FileExistsError:
+        fb23.get_named_vedomost(name)
+        result_dict = {}
+        for cat in fb23.recipients[name]:
+            if cat.islower():
+                #cat = 'z:edu'
+                cd = CategoryData(fb23.recipients[name][cat], ad.mods_frame, fb23.prices)
+                cd.add_price_column(name, show_calculation=show_calc)
+                cd.add_coef_and_result_column(name, show_calculation=show_calc)
+                result_dict[cat] = cd.cat_frame['result'].sum()
+                fb23.collect_to_result_frame(name, cat, cd.cat_frame['result'])
+                cd.cat_frame = fb23.date.join(cd.cat_frame)
+                cd.cat_frame.set_index('DATE')
+                cd.cat_frame.to_excel(f'months/fb23/{name}/{cat}.xlsx', sheet_name=cat.replace(':', '_'))
+                #break
+        print(name)
+        fb23.result_frame[name].to_excel(f'months/fb23/{name}/{name}_total.xlsx', sheet_name='total')
+        print(pd.Series(result_dict), pd.Series(result_dict).sum())
