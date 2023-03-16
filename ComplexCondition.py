@@ -21,6 +21,21 @@ class ComplexCondition:
         self.price = 0
         #print(self.result, type(result), self.condition_for_price, type(self.condition_for_price))
 
+    def prepare_named_result(self, recipient_name): # результат по литере
+        if type(self.result) == str:
+            comp_result = self.result.split(',')
+            for i in comp_result:
+                if i[0].isupper():
+                    if i[0] == recipient_name[0]:
+                        if len(i) == 1:
+                            self.result = True
+                        else:
+                            self.result = float(i[1:]) if i[1:].isdigit() else i[1:]
+                        break
+                    else:
+                        self.result = 'zero'
+        return self.result
+
     def prepare_result(self):
         if type(self.result) == str:
             if ':' in self.result:
@@ -30,13 +45,7 @@ class ComplexCondition:
                 if self.result.hour < 8:
                     self.result += datetime.timedelta(days=1)
             else:
-                comp_result = self.result.split(',')
-                self.result = {}
-                for i in comp_result:
-                    if len(i) == 1:
-                        self.result[i] = True
-                    else:
-                        self.result[i[0]] = int(i[1:]) if i[1:].isdigit() else i[1:]
+                self.result = {self.result[0]: self.result[1:]}
         #print(self.result)
         return self.result
 
@@ -92,9 +101,9 @@ class ComplexCondition:
         self.prepare_result()
         self.prepare_condition()
         #print(self.type_result)
-
         if type(self.result) == datetime.datetime:
             return self.get_price_if_datetime()
+
         elif type(self.result) == dict:
             return self.get_price_if_result_is_dict()
 
@@ -104,9 +113,8 @@ class ComplexCondition:
             if list(filter(lambda i: type(i) == str, self.condition_for_price.keys())):
                 #print(str(int(self.result)), filter(lambda i: type(i) == str, list(self.condition_for_price.keys())))
                 self.price = int(self.condition_for_price[str(int(self.result))])
-            else:
-                self.price = int(self.condition_for_price[self.result])
             return self.price
+
         if '*' in self.condition_for_price:
             divider = int(self.condition_for_price.replace('*', ''))
             self.price = divider * self.result
@@ -115,12 +123,14 @@ class ComplexCondition:
 
         return self.price
 
-results = ['2', 1.0, 1, True, 'L1']
+results = ['2', 1.0, 1, True, 'L1', 'L22:00', 'E1,L2', 'L,E']
 #cc = ComplexCondition('+F'), '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
 #cc = ComplexCondition('23,00', '{<.22: 3*, <.23: 2*, >.23: 0}')
 for i in results:
-    cc = ComplexCondition(result=i, condition=choice(['{50}', '50*']))
-    cc.prepare_result()
+    cc = ComplexCondition(result=i)
+    cc.prepare_named_result('Egr')
+    print(cc.result)
+    print()
 
 #cc = ComplexCondition('{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}', '+F')
 #cc = ComplexCondition('{<.22: 3*, <.23: 2*, >.23: 0}', '23,00')
