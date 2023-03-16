@@ -8,7 +8,7 @@ pd.set_option('display.max.columns', None)
 class MonthData:
     def __init__(self, path, recipients):
         vedomost = pd.read_excel(path, sheet_name='vedomost').fillna(False)
-        self.limit = len([i for i in vedomost['DATE'].to_list() if i])
+        self.limit = len([i for i in vedomost['DONE'].to_list() if i])
         self.vedomost = vedomost[0:self.limit].fillna(0)
         self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
         date_keys = ['DATE', 'DAY']
@@ -183,30 +183,32 @@ class CategoryData:
 
 
 recipients = ['Egr', 'Lera']
-path ='months/fb23/'
+path ='months/m23/'
+file_name = 'm23.xlsx'
 show_calc = False
 
-fb23 = MonthData(path+'fb23.xlsx', recipients)
-ad = AccessoryData(fb23.accessory)
+month_data = MonthData(path + file_name, recipients)
+ad = AccessoryData(month_data.accessory)
 ad.get_mods_frame()
-for name in fb23.recipients:
+for name in month_data.recipients:
     try:
         os.mkdir(path+name)
     except FileExistsError:
-        fb23.get_named_vedomost(name)
+        print('error')
+        month_data.get_named_vedomost(name)
         result_dict = {}
-        for cat in fb23.recipients[name]:
+        for cat in month_data.recipients[name]:
             if cat.islower():
                 #cat = 'z:edu'
-                cd = CategoryData(fb23.recipients[name][cat], ad.mods_frame, fb23.prices)
+                cd = CategoryData(month_data.recipients[name][cat], ad.mods_frame, month_data.prices)
                 cd.add_price_column(name, show_calculation=show_calc)
                 cd.add_coef_and_result_column(name, show_calculation=show_calc)
                 result_dict[cat] = cd.cat_frame['result'].sum()
-                fb23.collect_to_result_frame(name, cat, cd.cat_frame['result'])
-                cd.cat_frame = fb23.date.join(cd.cat_frame)
+                month_data.collect_to_result_frame(name, cat, cd.cat_frame['result'])
+                cd.cat_frame = month_data.date.join(cd.cat_frame)
                 cd.cat_frame.set_index('DATE')
                 cd.cat_frame.to_excel(f'months/fb23/{name}/{cat}.xlsx', sheet_name=cat.replace(':', '_'))
                 #break
         print(name)
-        fb23.result_frame[name].to_excel(f'months/fb23/{name}/{name}_total.xlsx', sheet_name='total')
+        month_data.result_frame[name].to_excel(f'months/fb23/{name}/{name}_total.xlsx', sheet_name='total')
         print(pd.Series(result_dict), pd.Series(result_dict).sum())
