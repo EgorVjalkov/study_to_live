@@ -4,14 +4,10 @@ from random import choice
 class ComplexCondition:
     def __init__(self, result='', condition='', date=''):
         #multiply_is = lambda i: i and '*' in i
-        #dict_is = lambda i: '{' in i
-        #float_is = lambda i: '.' in i and i.replace('.', '').isdigit()
-        #if dict_is(condition) and :
-        #    self.result = str(int(float(result)))
-        #elif multiply_is(condition):
-        #    self.result = float(result)
-        #else:# обычную строку отфильтруй
+        if '{' in condition:
+            result = str(int(float(result))) if type(result) == float else str(result)
         self.result = result
+
         self.condition_for_price = condition
         self.date = datetime.date.today() if date == 'DATE' or not date else date
         self.comparison_dict = {'<': lambda r, y: r < y,
@@ -19,7 +15,7 @@ class ComplexCondition:
                                 '>=': lambda r, y: r >= y,
                                 '>': lambda r, y: r > y}
         self.price = 0
-        #print(self.result, type(result), self.condition_for_price, type(self.condition_for_price))
+        print(self.result, type(result), self.condition_for_price, type(self.condition_for_price))
 
     def prepare_named_result(self, recipient_name): # результат по литере
         if type(self.result) == str:
@@ -38,22 +34,23 @@ class ComplexCondition:
 
     def prepare_result(self):
         if type(self.result) == str:
-            if ':' in self.result:
-                time = [int(i) for i in self.result.split(':')]
-                time = datetime.time(*time)
-                self.result = datetime.datetime.combine(self.date, time)
-                if self.result.hour < 8:
-                    self.result += datetime.timedelta(days=1)
-            else:
-                self.result = {self.result[0]: self.result[1:]}
-        #print(self.result)
+            if len(self.result) > 1:
+                if ':' in self.result:
+                    time = [int(i) for i in self.result.split(':')]
+                    time = datetime.time(*time)
+                    self.result = datetime.datetime.combine(self.date, time)
+                    if self.result.hour < 8:
+                        self.result += datetime.timedelta(days=1)
+                else:
+                    self.result = {self.result[0]: self.result[1:]}
+        print(self.result)
         return self.result
 
     def prepare_condition(self):
         if type(self.condition_for_price) == str:
             if '{' in self.condition_for_price:
                 self.condition_for_price = eval(self.condition_for_price)
-            #print(self.condition_for_price)
+            print(self.condition_for_price)
         return self.condition_for_price
 
     def get_price_if_datetime(self):
@@ -90,7 +87,7 @@ class ComplexCondition:
         return self.price
 
     def get_price_if_result_is_dict(self):
-        #print(self.condition_for_price)
+        print(self.condition_for_price)
         key_extraction = list(self.result)[0]
         self.result = {'key': key_extraction, 'value': self.result[key_extraction]}
         d = self.condition_for_price[self.result['key']]
@@ -108,11 +105,9 @@ class ComplexCondition:
             return self.get_price_if_result_is_dict()
 
         elif type(self.condition_for_price) == dict:
-            #print(self.condition_for_price.keys())
-            #print(self.result)
+            print(self.result, type(self.result))
             if list(filter(lambda i: type(i) == str, self.condition_for_price.keys())):
-                #print(str(int(self.result)), filter(lambda i: type(i) == str, list(self.condition_for_price.keys())))
-                self.price = int(self.condition_for_price[str(int(self.result))])
+                self.price = int(self.condition_for_price[self.result])
             return self.price
 
         if '*' in self.condition_for_price:
@@ -123,19 +118,18 @@ class ComplexCondition:
 
         return self.price
 
-results = ['2', 1.0, 1, True, 'L1', 'L22:00', 'E1,L2', 'L,E']
-#cc = ComplexCondition('+F'), '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
-#cc = ComplexCondition('23,00', '{<.22: 3*, <.23: 2*, >.23: 0}')
-for i in results:
-    cc = ComplexCondition(result=i)
-    cc.prepare_named_result('Egr')
-    print(cc.result)
-    print()
+#results = ['2', 1.0, 1, True, 'L1', 'L22:00', 'E1,L2', 'L']
+#
+#for i in results:
+#    cc = ComplexCondition(result=i)
+#    cc.prepare_named_result('Egr')
+#    print(cc.result)
+#    print()
 
-#cc = ComplexCondition('{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}', '+F')
+#cc = ComplexCondition('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
 #cc = ComplexCondition('{<.22: 3*, <.23: 2*, >.23: 0}', '23,00')
-cc = ComplexCondition(result=True)
-cc.prepare_result()
-#cc.prepare_condition_for_price()
-#print(cc.get_price())
+#cc = ComplexCondition(result=True)
+cc = ComplexCondition("T", '{"9": 50, "T": 0}')
+print(cc.get_price())
+
 

@@ -25,16 +25,12 @@ class MonthData:
         named_positions = [i[0] for i in self.recipients]
         for column in self.categories:
             position = column[0].upper()
-            if [i for i in self.categories[column] if type(i) == str and name[0] in i]:
+            if [i for i in self.categories[column] if type(i) == str and i[0] in named_positions]:
+                print(24, column)
                 column_list = [ComplexCondition(result=i).prepare_named_result(name) for i in self.categories[column]]
-                #for i in column_list:
-                #    if type(i) == dict:
-                #        if name[0] in i.keys():
-                #            column_list[column_list.index(i)] = i[name[0]]
-                #        else:
-                #            column_list[column_list.index(i)] = 'zero'
                 #self.recipients[name] = self.recipients[name].join(pd.Series(self.categories[column], name=column))
-                self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column+"named"))
+                #self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column+"named"))
+                self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column))
             else:
                 if name[0] == position or position not in named_positions:
                     self.recipients[name] = self.recipients[name].join(self.categories[column])
@@ -119,10 +115,11 @@ class CategoryData:
             price_calc[False] = self.price_frame['dutyFalse']
             price_calc[True] = self.price_frame['dutyTrue']
 
-        #print(self.name)
-        #print(result, type(result))
-        zero_or_bool = lambda i: type(i) == bool or i == 'zero'
+        print(self.name)
+        print(result, type(result))
+        zero_or_bool = lambda i: type(i) == bool or i == 'zero'# здесь надо менять иначе он не видит були, которые пойдут в словарьj
         price = price_calc[result] if zero_or_bool(result) else ComplexCondition(result, price_calc[True]).get_price()
+        print(price)
 
         return {'price': price, 'price_calc': price_calc}
 
@@ -137,6 +134,7 @@ class CategoryData:
             price_list = [list(i.values())[0] for i in price_list]
             self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'price_calc', price_list)
             self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'named_positions', named_positions)
+            print(self.cat_frame)
             #print(self.mod_frame[['zlata_mod', 'duty_mod', 'positions']])
         return self.cat_frame
 
@@ -186,7 +184,7 @@ class CategoryData:
 recipients = ['Egr', 'Lera']
 path ='months/m23/'
 file_name = 'm23.xlsx'
-show_calc = False
+show_calc = True
 
 month_data = MonthData(path + file_name, recipients)
 ad = AccessoryData(month_data.accessory)
@@ -198,20 +196,19 @@ for name in month_data.recipients:
         print('error')
         month_data.get_named_vedomost(name)
         print(month_data.recipients)
-        # оттестируй изменения комплеккс кондишн, там где кондишн из дист
-        #result_dict = {}
-        #for cat in month_data.recipients[name]:
-        #    if cat.islower():
-        #        #cat = 'z:edu'
-        #        cd = CategoryData(month_data.recipients[name][cat], ad.mods_frame, month_data.prices)
-        #        cd.add_price_column(name, show_calculation=show_calc)
-        #        cd.add_coef_and_result_column(name, show_calculation=show_calc)
-        #        result_dict[cat] = cd.cat_frame['result'].sum()
-        #        month_data.collect_to_result_frame(name, cat, cd.cat_frame['result'])
-        #        cd.cat_frame = month_data.date.join(cd.cat_frame)
-        #        cd.cat_frame.set_index('DATE')
-        #        cd.cat_frame.to_excel(f'months/fb23/{name}/{cat}.xlsx', sheet_name=cat.replace(':', '_'))
+        result_dict = {}
+        for cat in month_data.recipients[name]:
+            if cat.islower():
+                #cat = 'z:edu'
+                cd = CategoryData(month_data.recipients[name][cat], ad.mods_frame, month_data.prices)
+                cd.add_price_column(name, show_calculation=show_calc)
+                cd.add_coef_and_result_column(name, show_calculation=show_calc)
+                result_dict[cat] = cd.cat_frame['result'].sum()
+                month_data.collect_to_result_frame(name, cat, cd.cat_frame['result'])
+                cd.cat_frame = month_data.date.join(cd.cat_frame)
+                cd.cat_frame.set_index('DATE')
+                cd.cat_frame.to_excel(f'months/fb23/{name}/{cat}.xlsx', sheet_name=cat.replace(':', '_'))
         #        #break
-        #print(name)
-        #month_data.result_frame[name].to_excel(f'months/fb23/{name}/{name}_total.xlsx', sheet_name='total')
-        #print(pd.Series(result_dict), pd.Series(result_dict).sum())
+        print(name)
+        month_data.result_frame[name].to_excel(f'months/fb23/{name}/{name}_total.xlsx', sheet_name='total')
+        print(pd.Series(result_dict), pd.Series(result_dict).sum())
