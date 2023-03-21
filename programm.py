@@ -9,3 +9,6 @@ type(True)
 
 print('1'.isdigit())
 type(True)
+
+dict = {True: 5}
+print(4 in dict, dict[4]) # ключ как бы есть но его нет

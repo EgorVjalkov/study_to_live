@@ -6,8 +6,9 @@ class ComplexCondition:
         #multiply_is = lambda i: i and '*' in i
         if '{' in condition:
             result = str(int(float(result))) if type(result) == float else str(result)
-        self.result = result
+            condition = eval(condition)
 
+        self.result = result
         self.condition_for_price = condition
         self.date = datetime.date.today() if date == 'DATE' or not date else date
         self.comparison_dict = {'<': lambda r, y: r < y,
@@ -15,7 +16,7 @@ class ComplexCondition:
                                 '>=': lambda r, y: r >= y,
                                 '>': lambda r, y: r > y}
         self.price = 0
-        print(self.result, type(result), self.condition_for_price, type(self.condition_for_price))
+        #print(self.result, type(result), self.condition_for_price, type(self.condition_for_price))
 
     def prepare_named_result(self, recipient_name): # результат по литере
         if type(self.result) == str:
@@ -34,24 +35,25 @@ class ComplexCondition:
 
     def prepare_result(self):
         if type(self.result) == str:
-            if len(self.result) > 1:
-                if ':' in self.result:
-                    time = [int(i) for i in self.result.split(':')]
-                    time = datetime.time(*time)
-                    self.result = datetime.datetime.combine(self.date, time)
-                    if self.result.hour < 8:
-                        self.result += datetime.timedelta(days=1)
-                else:
-                    self.result = {self.result[0]: self.result[1:]}
+            if ':' in self.result:
+                time = [int(i) for i in self.result.split(':')]
+                time = datetime.time(*time)
+                self.result = datetime.datetime.combine(self.date, time)
+                if self.result.hour < 8:
+                    self.result += datetime.timedelta(days=1)
+
+            elif self.result not in self.condition_for_price:
+                self.result = {self.result[0]: self.result[1:]}
+
         print(self.result)
         return self.result
 
-    def prepare_condition(self):
-        if type(self.condition_for_price) == str:
-            if '{' in self.condition_for_price:
-                self.condition_for_price = eval(self.condition_for_price)
-            print(self.condition_for_price)
-        return self.condition_for_price
+    #def prepare_condition(self):
+    #    if type(self.condition_for_price) == str:
+    #        if '{' in self.condition_for_price:
+    #            self.condition_for_price = eval(self.condition_for_price)
+    #        print(self.condition_for_price)
+    #    return self.condition_for_price
 
     def get_price_if_datetime(self):
         delta = 0
@@ -96,7 +98,6 @@ class ComplexCondition:
 
     def get_price(self):
         self.prepare_result()
-        self.prepare_condition()
         #print(self.type_result)
         if type(self.result) == datetime.datetime:
             return self.get_price_if_datetime()
@@ -129,7 +130,7 @@ class ComplexCondition:
 #cc = ComplexCondition('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
 #cc = ComplexCondition('{<.22: 3*, <.23: 2*, >.23: 0}', '23,00')
 #cc = ComplexCondition(result=True)
-cc = ComplexCondition("T", '{"9": 50, "T": 0}')
+cc = ComplexCondition(True, '{"9": 50, "True": 0}')
 print(cc.get_price())
 
 

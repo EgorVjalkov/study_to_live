@@ -88,20 +88,11 @@ class AccessoryData:
 class CategoryData:
     def __init__(self, cf, mf, pf, date_frame=''):
         self.name = cf.name
-        #print(cf.dtypes)
-        #if cf.dtypes == 'float':
-        #    cf.astype('int')
-        if 'time' in self.name:
-            self.cat_frame = pd.DataFrame([i.replace(',', ':') if i else i for i in cf], columns=[self.name])
-        else:
-            self.cat_frame = pd.DataFrame([True if i == 'T' else i for i in cf], columns=[self.name])
+        self.cat_frame = pd.DataFrame([True if i == 'T' else i for i in cf], columns=[self.name])
         self.position = self.name[0].upper()
         self.price_frame = pf[self.name]
         self.mod_frame = mf
         self.recipients_frame_dict = {'Egr': pd.DataFrame(), 'Lera': pd.DataFrame()} # здесь можно сразу определить позиции и не делать лишнюю работу
-        self.recipients_key = \
-            {k[0]: self.recipients_frame_dict[k] for k in self.recipients_frame_dict.keys()} # не помню нах это нужно было...
-        #print(self.recipients_key)
         self.named_coefficients = {'Egr': 'DIF_DUTY'}
 
     def find_a_price(self, duty, result, positions):
@@ -114,12 +105,16 @@ class CategoryData:
             price_calc['duty'] = duty
             price_calc[False] = self.price_frame['dutyFalse']
             price_calc[True] = self.price_frame['dutyTrue']
-
-        print(self.name)
-        print(result, type(result))
-        zero_or_bool = lambda i: type(i) == bool or i == 'zero'# здесь надо менять иначе он не видит були, которые пойдут в словарьj
-        price = price_calc[result] if zero_or_bool(result) else ComplexCondition(result, price_calc[True]).get_price()
-        print(price)
+        #print(self.name)
+        #print(result, type(result), price_calc[True])
+        if result:
+            if result != 'zero' and type(price_calc[True]) == str:
+                price = ComplexCondition(result, price_calc[True]).get_price()
+            else:
+                price = price_calc[result]
+        else:
+            price = price_calc[result]
+        #print(price)
 
         return {'price': price, 'price_calc': price_calc}
 
