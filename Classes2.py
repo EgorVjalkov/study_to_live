@@ -26,7 +26,7 @@ class MonthData:
         for column in self.categories:
             position = column[0].upper()
             if [i for i in self.categories[column] if type(i) == str and i[0] in named_positions]:
-                print(24, column)
+                #print(24, column)
                 column_list = [ComplexCondition(result=i).prepare_named_result(name) for i in self.categories[column]]
                 #self.recipients[name] = self.recipients[name].join(pd.Series(self.categories[column], name=column))
                 #self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column+"named"))
@@ -177,33 +177,38 @@ class CategoryData:
 
 
 recipients = ['Egr', 'Lera']
-path ='months/m23/'
-file_name = 'm23.xlsx'
+month = "m23"
+path_to_file =f'months/{month}/{month}.xlsx'
 show_calc = True
 
-month_data = MonthData(path + file_name, recipients)
-ad = AccessoryData(month_data.accessory)
-ad.get_mods_frame()
-for name in month_data.recipients:
-    try:
-        os.mkdir(path+name)
-    except FileExistsError:
-        print('error')
-        month_data.get_named_vedomost(name)
-        print(month_data.recipients)
-        result_dict = {}
-        for cat in month_data.recipients[name]:
-            if cat.islower():
-                #cat = 'z:edu'
-                cd = CategoryData(month_data.recipients[name][cat], ad.mods_frame, month_data.prices)
-                cd.add_price_column(name, show_calculation=show_calc)
-                cd.add_coef_and_result_column(name, show_calculation=show_calc)
-                result_dict[cat] = cd.cat_frame['result'].sum()
-                month_data.collect_to_result_frame(name, cat, cd.cat_frame['result'])
-                cd.cat_frame = month_data.date.join(cd.cat_frame)
-                cd.cat_frame.set_index('DATE')
-                cd.cat_frame.to_excel(f'months/fb23/{name}/{cat}.xlsx', sheet_name=cat.replace(':', '_'))
-        #        #break
+try:
+    os.mkdir(f'output_files/{month}')
+except FileExistsError:
+
+    month_data = MonthData(path_to_file, recipients)
+    ad = AccessoryData(month_data.accessory)
+    ad.get_mods_frame()
+    for name in month_data.recipients:
         print(name)
-        month_data.result_frame[name].to_excel(f'months/fb23/{name}/{name}_total.xlsx', sheet_name='total')
-        print(pd.Series(result_dict), pd.Series(result_dict).sum())
+        try:
+            os.mkdir(f'output_files/{month}/{name}')
+        except FileExistsError:
+
+            month_data.get_named_vedomost(name)
+            #print(month_data.recipients)
+            result_dict = {}
+            for cat in month_data.recipients[name]:
+                if cat.islower():
+                    #cat = 'z:edu'
+                    cd = CategoryData(month_data.recipients[name][cat], ad.mods_frame, month_data.prices)
+                    cd.add_price_column(name, show_calculation=show_calc)
+                    cd.add_coef_and_result_column(name, show_calculation=show_calc)
+                    result_dict[cat] = cd.cat_frame['result'].sum()
+                    month_data.collect_to_result_frame(name, cat, cd.cat_frame['result'])
+                    cd.cat_frame = month_data.date.join(cd.cat_frame)
+                    cd.cat_frame.set_index('DATE')
+                    cd.cat_frame.to_excel(f'output_files/{month}/{name}/{cat}.xlsx', sheet_name=cat.replace(':', '_'))
+            #        #break
+            print(name)
+            month_data.result_frame[name].to_excel(f'output_files/{month}/{name}/{name}_total.xlsx', sheet_name='total')
+            print(pd.Series(result_dict), pd.Series(result_dict).sum())
