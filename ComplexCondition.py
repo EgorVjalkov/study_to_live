@@ -45,7 +45,7 @@ class ComplexCondition:
             elif self.result not in self.condition_for_price:
                 self.result = {self.result[0]: self.result[1:]}
 
-        print(self.result)
+        #print(self.result)
         return self.result
 
     #def prepare_condition(self):
@@ -89,7 +89,7 @@ class ComplexCondition:
         return self.price
 
     def get_price_if_result_is_dict(self):
-        print(self.condition_for_price)
+        #print(self.condition_for_price)
         key_extraction = list(self.result)[0]
         self.result = {'key': key_extraction, 'value': self.result[key_extraction]}
         d = self.condition_for_price[self.result['key']]
@@ -106,7 +106,7 @@ class ComplexCondition:
             return self.get_price_if_result_is_dict()
 
         elif type(self.condition_for_price) == dict:
-            print(self.result, type(self.result))
+            #print(self.result, type(self.result))
             if list(filter(lambda i: type(i) == str, self.condition_for_price.keys())):
                 self.price = int(self.condition_for_price[self.result])
             return self.price
@@ -131,6 +131,6 @@ class ComplexCondition:
 #cc = ComplexCondition('{<.22: 3*, <.23: 2*, >.23: 0}', '23,00')
 #cc = ComplexCondition(result=True)
 cc = ComplexCondition(True, '{"9": 50, "True": 0}')
-print(cc.get_price())
+#print(cc.get_price())
 
 
