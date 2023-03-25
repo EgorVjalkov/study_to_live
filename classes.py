@@ -86,14 +86,15 @@ class AccessoryData:
 
 
 class CategoryData:
-    def __init__(self, cf, mf, pf, date_frame=''):
+    def __init__(self, active_recipient, cf, mf, pf, date_frame=''):
+        self.active_recipient = active_recipient
         self.name = cf.name
         self.cat_frame = pd.DataFrame([True if i == 'T' else i for i in cf], columns=[self.name])
         self.position = self.name[0].upper()
         self.price_frame = pf[self.name]
         self.mod_frame = mf
-        self.recipients_frame_dict = {'Egr': pd.DataFrame(), 'Lera': pd.DataFrame()} # здесь можно сразу определить позиции и не делать лишнюю работу
         self.named_coefficients = {'Egr': 'DIF_DUTY'}
+
 
     def find_a_price(self, duty, result, positions):
         #print(positions)
@@ -118,8 +119,8 @@ class CategoryData:
 
         return {'price': price, 'price_calc': price_calc}
 
-    def add_price_column(self, name, show_calculation=False):
-        named_positions = self.mod_frame['positions'].map(lambda i: i[name])
+    def add_price_column(self, show_calculation=False):
+        named_positions = self.mod_frame['positions'].map(lambda i: i[self.active_recipient])
         price_list = list(map(self.find_a_price,
                               self.mod_frame['duty_mod'],
                               self.cat_frame[self.name],
@@ -146,7 +147,7 @@ class CategoryData:
         positions = mods.pop(-1)
         who_coef_list = mods.pop(-1)
         #print(mods)
-        if self.position in positions and name in who_coef_list:
+        if self.position in positions and self.active_recipient in who_coef_list:
             coefficient_dict.update({i: self.price_frame[i] if i in self.price_frame else 1 for i in mods})
         #if not SHOW_COEF_CALC:
         #    coefficient_dict = {k: coefficient_dict[k] for k in coefficient_dict if coefficient_dict[k] != 1}
@@ -159,11 +160,12 @@ class CategoryData:
             price *= coef
         return price
 
-    def add_coef_and_result_column(self, name, show_calculation=False):
-        self.cat_frame['positions'] = self.mod_frame['positions'].map(lambda e: e[name])
+    def add_coef_and_result_column(self, show_calculation=False):
+        self.cat_frame['positions'] = self.mod_frame['positions'].map(lambda e: e[self.active_recipient])
+        print(self.cat_frame['positions'])
         mods = [self.mod_frame.to_dict('list')[i] for i in self.mod_frame.to_dict('list') if 'mod' in i]
-        if name in self.named_coefficients:
-            mods.append(self.mod_frame[self.named_coefficients[name]].to_list())
+        if self.active_recipient in self.named_coefficients:
+            mods.append(self.mod_frame[self.named_coefficients[self.active_recipient]].to_list())
         mods.append(self.mod_frame['recipient_who_coef'].to_list())
         mods.append(self.cat_frame['positions'].to_list())
         coefs_list = list(map(self.count_a_modification, *mods))
@@ -174,44 +176,3 @@ class CategoryData:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
             print(self.cat_frame)
         return self.price_frame
-
-
-recipients = ['Egr', 'Lera']
-month = "m23"
-path_to_file = f'months/{month}/{month}.xlsx'
-show_calc = False
-
-while True:
-    try:
-        os.mkdir(f'output_files/{month}')
-    except FileExistsError:
-        break
-
-month_data = MonthData(path_to_file, recipients)
-ad = AccessoryData(month_data.accessory)
-ad.get_mods_frame()
-for name in month_data.recipients:
-    while True:
-        try:
-            os.mkdir(f'output_files/{month}/{name}')
-        except FileExistsError:
-            break
-
-    month_data.get_named_vedomost(name)
-    #print(month_data.recipients)
-    result_dict = {}
-    for column in month_data.recipients[name]:
-        if column.islower():
-            #column = 'z:edu'
-            cd = CategoryData(month_data.recipients[name][column], ad.mods_frame, month_data.prices)
-            cd.add_price_column(name, show_calculation=show_calc)
-            cd.add_coef_and_result_column(name, show_calculation=show_calc)
-            result_dict[column] = cd.cat_frame['result'].sum()
-            month_data.collect_to_result_frame(name, column, cd.cat_frame['result'])
-            cd.cat_frame = month_data.date.join(cd.cat_frame)
-            cd.cat_frame = cd.cat_frame.set_index('DATE')
-            cd.cat_frame.to_excel(f'output_files/{month}/{name}/{name}:{column}.xlsx', sheet_name=column.replace(':', '_'))
-            #break
-    print(name)
-    month_data.result_frame[name].to_excel(f'output_files/{month}/{name}/{name}_total.xlsx', sheet_name='total')
-    print(pd.Series(result_dict), pd.Series(result_dict).sum())
