@@ -41,6 +41,7 @@ class MonthData:
         self.result_frame[name][column_name] = result_column
         return self.recipients
 
+
 class AccessoryData:
     def __init__(self, af):
         self.af = af
@@ -130,7 +131,7 @@ class CategoryData:
             price_list = [list(i.values())[0] for i in price_list]
             self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'price_calc', price_list)
             self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'named_positions', named_positions)
-            print(self.cat_frame)
+            #print(self.cat_frame)
             #print(self.mod_frame[['zlata_mod', 'duty_mod', 'positions']])
         return self.cat_frame
 
@@ -162,7 +163,6 @@ class CategoryData:
 
     def add_coef_and_result_column(self, show_calculation=False):
         self.cat_frame['positions'] = self.mod_frame['positions'].map(lambda e: e[self.active_recipient])
-        print(self.cat_frame['positions'])
         mods = [self.mod_frame.to_dict('list')[i] for i in self.mod_frame.to_dict('list') if 'mod' in i]
         if self.active_recipient in self.named_coefficients:
             mods.append(self.mod_frame[self.named_coefficients[self.active_recipient]].to_list())
@@ -174,5 +174,5 @@ class CategoryData:
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'who_coef', self.mod_frame['recipient_who_coef'])
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
-            print(self.cat_frame)
+            #print(self.cat_frame)
         return self.price_frame

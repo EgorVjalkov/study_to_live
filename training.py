@@ -1,6 +1,5 @@
-# from random import choice
-# import pandas as pd
-# import Classes as Cl
+import pandas as pd
+import classes as cl
 #
 # d = {'1.12': False, '2.12': 5.9}
 # d = pd.Series(d, name='A:GYM')
@@ -56,6 +55,8 @@
 #         print('mistakes')
 #
 # new_test(250)
+import pandas as pd
+
 list = {'Egr': 1, "Lrea": 2, 'adidas': 4}
 iter = iter(list)
 def change(iter):
@@ -66,3 +67,27 @@ active = change(iter)
 print(active)
 active = change(iter)
 print(active)
+
+
+def check_dicts_in_price_frame(price_frame):
+    turn_out_dict = lambda i: type(i) == str and '{' in i
+    for cat in price_frame:
+        if cat != 'category':
+            cat_dict = pd.DataFrame(price_frame[cat].to_list(), index=price_frame['category'], columns=[cat])
+            cat_dict = cat_dict.to_dict('index')
+            #print(cat_dict)
+            for index in cat_dict:
+                value = cat_dict[index][cat]
+                #print(index, value)
+                if turn_out_dict(value):
+                    try:
+                        check = eval(value)
+                    except SyntaxError:
+                        print(cat, index, value)
+                    else:
+                        print(f"all data is correct in {cat}")
+
+month = "m23"
+path_to_file = f'months/{month}/{month}.xlsx'
+prices = pd.read_excel(path_to_file, sheet_name='price')
+check_dicts_in_price_frame(prices)
