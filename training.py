@@ -57,37 +57,14 @@ import classes as cl
 # new_test(250)
 import pandas as pd
 
-list = {'Egr': 1, "Lrea": 2, 'adidas': 4}
-iter = iter(list)
-def change(iter):
-    active = (next(iter))
-    return active
+ser = pd.DataFrame([1, 2, 3])
+ser2 = pd.Series([2, 2, 2], name=1)
 
-active = change(iter)
-print(active)
-active = change(iter)
-print(active)
+ser3 = ser.join(ser2)
+print(ser3)
+def func(column, column2):
+    print(1)
+    print(column)
+    print(column2)
+    #return [i if i > column2[column.index(i)] else 0 for i in column]
 
-
-def check_dicts_in_price_frame(price_frame):
-    turn_out_dict = lambda i: type(i) == str and '{' in i
-    for cat in price_frame:
-        if cat != 'category':
-            cat_dict = pd.DataFrame(price_frame[cat].to_list(), index=price_frame['category'], columns=[cat])
-            cat_dict = cat_dict.to_dict('index')
-            #print(cat_dict)
-            for index in cat_dict:
-                value = cat_dict[index][cat]
-                #print(index, value)
-                if turn_out_dict(value):
-                    try:
-                        check = eval(value)
-                    except SyntaxError:
-                        print(cat, index, value)
-                    else:
-                        print(f"all data is correct in {cat}")
-
-month = "m23"
-path_to_file = f'months/{month}/{month}.xlsx'
-prices = pd.read_excel(path_to_file, sheet_name='price')
-check_dicts_in_price_frame(prices)

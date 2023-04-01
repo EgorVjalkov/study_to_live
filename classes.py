@@ -1,23 +1,22 @@
 import pandas as pd
 from ComplexCondition import ComplexCondition
 import numpy as np
-import os
-
 pd.set_option('display.max.columns', None)
-#SHOW_COEF_CALC = False
+
+
 class MonthData:
     def __init__(self, path, recipients):
         vedomost = pd.read_excel(path, sheet_name='vedomost').fillna(False)
         self.limit = len([i for i in vedomost['DONE'].to_list() if i])
-        self.vedomost = vedomost[0:self.limit].fillna(0)
+        self.vedomost = vedomost[0:self.limit]
         self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
         date_keys = ['DATE', 'DAY']
         self.accessory = self.vedomost.get([i for i in self.vedomost.columns if i == i.upper() and i not in date_keys])
         self.date = self.vedomost.get(date_keys)
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
-        meals_in = lambda i: 'meals' in i or 'diet' in i
-        self.meals_columns = [i for i in self.categories.columns if meals_in(i)]
-        self.NOT_meals_columns = [i for i in self.categories.columns if not meals_in(i)]
+        meals_is = lambda i: 'meals' in i or 'diet' in i
+        self.meals_columns = [i for i in self.categories.columns if meals_is(i)]
+        self.NOT_meals_columns = [i for i in self.categories.columns if not meals_is(i)]
         self.recipients = {k: self.date for k in recipients}
         self.result_frame = {k: self.date.copy() for k in recipients}
 
@@ -107,8 +106,8 @@ class CategoryData:
             price_calc['duty'] = duty
             price_calc[False] = self.price_frame['dutyFalse']
             price_calc[True] = self.price_frame['dutyTrue']
-        #print(self.name)
-        #print(result, type(result), price_calc[True])
+        # print(self.name)
+        # print(result, type(result), price_calc[True])
         if result:
             if result != 'zero' and type(price_calc[True]) == str:
                 price = ComplexCondition(result, price_calc[True]).get_price()
@@ -121,16 +120,15 @@ class CategoryData:
         return {'price': price, 'price_calc': price_calc}
 
     def add_price_column(self, show_calculation=False):
-        named_positions = self.mod_frame['positions'].map(lambda i: i[self.active_recipient])
+        self.cat_frame['positions'] = self.mod_frame['positions'].map(lambda e: e[self.active_recipient])
         price_list = list(map(self.find_a_price,
                               self.mod_frame['duty_mod'],
                               self.cat_frame[self.name],
-                              named_positions))
+                              self.cat_frame['positions']))
         self.cat_frame['price'] = [i.pop('price') for i in price_list]
         if show_calculation:
             price_list = [list(i.values())[0] for i in price_list]
             self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'price_calc', price_list)
-            self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'named_positions', named_positions)
             #print(self.cat_frame)
             #print(self.mod_frame[['zlata_mod', 'duty_mod', 'positions']])
         return self.cat_frame
@@ -162,7 +160,6 @@ class CategoryData:
         return price
 
     def add_coef_and_result_column(self, show_calculation=False):
-        self.cat_frame['positions'] = self.mod_frame['positions'].map(lambda e: e[self.active_recipient])
         mods = [self.mod_frame.to_dict('list')[i] for i in self.mod_frame.to_dict('list') if 'mod' in i]
         if self.active_recipient in self.named_coefficients:
             mods.append(self.mod_frame[self.named_coefficients[self.active_recipient]].to_list())

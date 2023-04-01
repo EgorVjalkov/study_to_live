@@ -8,6 +8,7 @@ authors = ["EgorVjalkov <e.vjalkov@yandex.ru>"]
 python = "^3.10"
 pandas = "^1.5.2"
 openpyxl = "^3.0.10"
+colorama = "^0.4.6"
 
 [tool.poetry.dev-dependencies]
 
