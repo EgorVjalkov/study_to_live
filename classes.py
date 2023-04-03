@@ -18,7 +18,14 @@ class MonthData:
         self.meals_columns = [i for i in self.categories.columns if meals_is(i)]
         self.NOT_meals_columns = [i for i in self.categories.columns if not meals_is(i)]
         self.recipients = {k: self.date for k in recipients}
-        self.result_frame = {k: self.date.copy() for k in recipients}
+
+        date_frame_for_result_frame = self.date.copy().astype('str').set_index('DATE')
+        date_frame_for_result_frame = pd.concat(
+            [date_frame_for_result_frame, pd.DataFrame(['count', 'sum'], columns=date_frame_for_result_frame.columns)]
+        )
+        self.result_frame = {k: date_frame_for_result_frame for k in recipients}
+        #for name in self.result_frame:
+        #    print(self.result_frame[name])
 
     def get_named_vedomost(self, name):
         named_positions = [i[0] for i in self.recipients]
@@ -36,10 +43,14 @@ class MonthData:
         #print(self.recipients[name])
         return self.recipients
 
-    def collect_to_result_frame(self, name, column_name, result_column):
+    def collect_to_result_frame(self, name, column_name, result_column, true_count):
+        result = int(result_column.sum())
+        result_column = result_column.to_list()
+        #done_percent = true_count / len() процент сделанного нужно считать исходя из категорий и позиций!!! сделай нужно тут!
+        result_column.append(true_count)
+        result_column.append(result)
         self.result_frame[name][column_name] = result_column
-        return self.recipients
-
+        return self.result_frame
 
 class AccessoryData:
     def __init__(self, af):
@@ -90,6 +101,7 @@ class CategoryData:
         self.active_recipient = active_recipient
         self.name = cf.name
         self.cat_frame = pd.DataFrame([True if i == 'T' else i for i in cf], columns=[self.name])
+        self.true_count = 0
         self.position = self.name[0].upper()
         self.price_frame = pf[self.name]
         self.mod_frame = mf
@@ -111,8 +123,11 @@ class CategoryData:
         if result:
             if result != 'zero' and type(price_calc[True]) == str:
                 price = ComplexCondition(result, price_calc[True]).get_price()
+                if price >= 0:
+                    self.true_count += 1
             else:
                 price = price_calc[result]
+                self.true_count += 1
         else:
             price = price_calc[result]
         #print(price)
@@ -157,7 +172,7 @@ class CategoryData:
     def total_count(self, price, coef):
         if price > 0:
             price *= coef
-        return price
+        return round(price, 2)
 
     def add_coef_and_result_column(self, show_calculation=False):
         mods = [self.mod_frame.to_dict('list')[i] for i in self.mod_frame.to_dict('list') if 'mod' in i]

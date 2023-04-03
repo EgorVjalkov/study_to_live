@@ -66,5 +66,8 @@ def func(column, column2):
     print(1)
     print(column)
     print(column2)
-    #return [i if i > column2[column.index(i)] else 0 for i in column]
+
+
+df = pd.DataFrame(['count', 'sum'], columns=['DAY'])   #return [i if i > column2[column.index(i)] else 0 for i in column]
+print(df)
 
