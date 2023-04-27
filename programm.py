@@ -5,7 +5,7 @@ from testing import does_need_correction
 
 
 recipients = ['Egr', 'Lera']
-month = "m23"
+month = "apr23"
 path_to_file = f'months/{month}/{month}.xlsx'
 show_calc = True
 

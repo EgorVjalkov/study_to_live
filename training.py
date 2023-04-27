@@ -56,18 +56,19 @@ import classes as cl
 #
 # new_test(250)
 import pandas as pd
-
-ser = pd.DataFrame([1, 2, 3])
-ser2 = pd.Series([2, 2, 2], name=1)
-
-ser3 = ser.join(ser2)
-print(ser3)
-def func(column, column2):
-    print(1)
-    print(column)
-    print(column2)
+import classes as cl
 
 
-df = pd.DataFrame(['count', 'sum'], columns=['DAY'])   #return [i if i > column2[column.index(i)] else 0 for i in column]
-print(df)
+recipients = ['Egr', 'Lera']
+month = "apr23"
+path_to_file = f'months/{month}/{month}.xlsx'
+show_calc = True
 
+
+month_data = cl.MonthData(path_to_file, recipients)
+ad = cl.AccessoryData(month_data.accessory)
+ad.get_mods_frame()
+accessory = month_data.vedomost.get([i for i in month_data.vedomost.columns if i == i.upper()])
+acc = pd.concat([accessory, ad.mods_frame], axis=1)
+acc.to_excel(f'output_files/{month}/testing_af.xlsx')
+#print(acc)

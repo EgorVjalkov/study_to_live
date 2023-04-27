@@ -70,8 +70,8 @@ class AccessoryData:
         self.mods_frame['weak_mod'] = ['WEAK' + str(int(i)) if i else i for i in self.af['WEAK']]
         self.mods_frame['duty_mod'] = ['duty' + str(int(i)) if i else i for i in self.af['DUTY']]
         self.mods_frame['DIF_DUTY'] = [{'DIF_DUTY': str(int(i))} if i else i for i in self.af['DIF_DUTY']]
-        #print(self.mods_frame[['duty', 'zlata']].eq('duty24', 'M')) #!!!!!!!!!!
 
+# здесь не дает применять понижающий коэффициент к М
         def f_recipient_mod(duty, zlata):
             if zlata == 'M' or duty == 'duty24':
                 return ['Lera']
@@ -80,9 +80,9 @@ class AccessoryData:
         self.mods_frame['recipient_who_coef'] = list(map(f_recipient_mod,
                                                          self.mods_frame['duty_mod'],
                                                          self.mods_frame['zlata_mod']))
-
         def f_for_positions(*mods):
             #print(mods)
+            mods = ['' if i == 'duty8' else i for i in mods]
             mods_key = ', '.join([i for i in mods if i])
             if mods_key not in self.positions_logic:
                 if 'duty24' in mods_key:
@@ -118,8 +118,8 @@ class CategoryData:
             price_calc['duty'] = duty
             price_calc[False] = self.price_frame['dutyFalse']
             price_calc[True] = self.price_frame['dutyTrue']
-        # print(self.name)
-        # print(result, type(result), price_calc[True])
+        #print(self.name)
+        #print(result, type(result), price_calc[True])
         if result:
             if result != 'zero' and type(price_calc[True]) == str:
                 price = ComplexCondition(result, price_calc[True]).get_price()

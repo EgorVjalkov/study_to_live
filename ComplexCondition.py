@@ -42,6 +42,9 @@ class ComplexCondition:
                 if self.result.hour < 8:
                     self.result += datetime.timedelta(days=1)
 
+            elif '*' in self.condition_for_price:
+                self.result = float(self.result)
+
             elif self.result not in self.condition_for_price:
                 self.result = {self.result[0]: self.result[1:]}
 
