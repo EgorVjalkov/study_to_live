@@ -73,7 +73,7 @@ class AccessoryData:
 
 # здесь не дает применять понижающий коэффициент к М
         def f_recipient_mod(duty, zlata):
-            if zlata == 'M' or duty == 'duty24':
+            if duty == 'duty24': # убрал M
                 return ['Lera']
             else:
                 return ['Egr', 'Lera']

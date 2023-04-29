@@ -68,7 +68,6 @@ show_calc = True
 month_data = cl.MonthData(path_to_file, recipients)
 ad = cl.AccessoryData(month_data.accessory)
 ad.get_mods_frame()
-accessory = month_data.vedomost.get([i for i in month_data.vedomost.columns if i == i.upper()])
-acc = pd.concat([accessory, ad.mods_frame], axis=1)
+acc = pd.concat([month_data.date, ad.mods_frame], axis=1)
 acc.to_excel(f'output_files/{month}/testing_af.xlsx')
 #print(acc)
