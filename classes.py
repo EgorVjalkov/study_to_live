@@ -24,8 +24,6 @@ class MonthData:
             [date_frame_for_result_frame, pd.DataFrame(['count', 'sum'], columns=date_frame_for_result_frame.columns)]
         )
         self.result_frame = {k: date_frame_for_result_frame for k in recipients}
-        #for name in self.result_frame:
-        #    print(self.result_frame[name])
 
     def get_named_vedomost(self, name):
         named_positions = [i[0] for i in self.recipients]
@@ -63,23 +61,16 @@ class AccessoryData:
             'M': {'Lera': ['A', 'Z', 'L'], 'Egr': ['E', 'H']},
             '': {'Lera': ['A', 'Z', 'H', 'L'], 'Egr': ['A', 'Z', 'H', 'E']}
         }
+        self.children_positions = ('A', 'Z')
+        self.named_coefficients = {'Egr': ['DIF_DUTY'], 'Lera': []}
 
     def get_mods_frame(self):
         self.mods_frame = pd.DataFrame(index=self.af.index)
+        self.mods_frame['duty'] = ['duty' + str(int(i)) if i else i for i in self.af['DUTY']]
         self.mods_frame['zlata_mod'] = self.af['MOD']
         self.mods_frame['weak_mod'] = ['WEAK' + str(int(i)) if i else i for i in self.af['WEAK']]
-        self.mods_frame['duty_mod'] = ['duty' + str(int(i)) if i else i for i in self.af['DUTY']]
         self.mods_frame['DIF_DUTY'] = [{'DIF_DUTY': str(int(i))} if i else i for i in self.af['DIF_DUTY']]
 
-# здесь не дает применять понижающий коэффициент к М
-        def f_recipient_mod(duty, zlata):
-            if duty == 'duty24': # убрал M
-                return ['Lera']
-            else:
-                return ['Egr', 'Lera']
-        self.mods_frame['recipient_who_coef'] = list(map(f_recipient_mod,
-                                                         self.mods_frame['duty_mod'],
-                                                         self.mods_frame['zlata_mod']))
         def f_for_positions(*mods):
             #print(mods)
             mods = ['' if i == 'duty8' else i for i in mods]
@@ -92,8 +83,46 @@ class AccessoryData:
             #print(mods_key)
             return self.positions_logic[mods_key]
         self.mods_frame['positions'] = list(map(f_for_positions,
-                                                self.mods_frame['duty_mod'],
+                                                self.mods_frame['duty'],
                                                 self.mods_frame['zlata_mod']))
+
+        def with_children(positions):
+            recipient_list = []
+            for r in positions:
+                pos = [i for i in positions[r] if i in self.children_positions]
+                if pos:
+                    recipient_list.append(r)
+            return recipient_list
+        self.mods_frame['with_children'] = list(map(with_children, self.mods_frame['positions']))
+
+        mods_for_coef = self.mods_frame.get([i for i in self.mods_frame.columns if 'mod' in i])
+        mods_for_coef = mods_for_coef.to_dict('index')
+        all_named_mods = []
+        x = [all_named_mods.extend(i) for i in self.named_coefficients.values()]
+        named_mods = self.mods_frame.get(all_named_mods).to_dict('index')
+
+        def named_coefs(positions, duty, with_children, coef_dict, named_coefs):
+            new_coef_dict = {k: coef_dict.copy() for k in list(positions.keys())}
+            for r in new_coef_dict:
+                if r not in with_children:
+                    if duty == 'duty24':
+                        new_coef_dict[r].clear()
+                    else:
+                        del new_coef_dict[r]['weak_mod']
+                if duty == 'duty8':
+                    new_coef_dict[r].update({'duty': duty})
+                r_coefs = {k: named_coefs[k] for k in named_coefs if k in self.named_coefficients[r] if named_coefs[k]}
+                new_coef_dict[r].update(r_coefs)
+                new_coef_dict[r] = [i for i in list(new_coef_dict[r].values()) if i]
+
+            #print(new_coef_dict)
+            return new_coef_dict
+        self.mods_frame['named_coefs'] = list(map(named_coefs,
+                                                  self.mods_frame['positions'],
+                                                  self.mods_frame['duty'],
+                                                  self.mods_frame['with_children'],
+                                                  mods_for_coef.values(),
+                                                  named_mods.values()))
 
 
 class CategoryData:
@@ -137,7 +166,7 @@ class CategoryData:
     def add_price_column(self, show_calculation=False):
         self.cat_frame['positions'] = self.mod_frame['positions'].map(lambda e: e[self.active_recipient])
         price_list = list(map(self.find_a_price,
-                              self.mod_frame['duty_mod'],
+                              self.mod_frame['duty'],
                               self.cat_frame[self.name],
                               self.cat_frame['positions']))
         self.cat_frame['price'] = [i.pop('price') for i in price_list]
@@ -148,23 +177,16 @@ class CategoryData:
             #print(self.mod_frame[['zlata_mod', 'duty_mod', 'positions']])
         return self.cat_frame
 
-    def count_a_modification(self, *mods):
-        mods = [i for i in mods if i]
-        #print(mods)
+    def count_a_modification(self, coefs):
+        recipient_coefs = coefs[self.active_recipient]
         coefficient_dict = {}
-        for i in mods:
-            if type(i) == dict:
-                i = mods.pop(mods.index(i))
-                key, value = list(i)[0], i[list(i)[0]]
-                i = eval(self.price_frame[key])[value] if type(self.price_frame[key]) == str else self.price_frame[key]
-                coefficient_dict[key] = i
-        positions = mods.pop(-1)
-        who_coef_list = mods.pop(-1)
-        #print(mods)
-        if self.position in positions and self.active_recipient in who_coef_list:
-            coefficient_dict.update({i: self.price_frame[i] if i in self.price_frame else 1 for i in mods})
-        #if not SHOW_COEF_CALC:
-        #    coefficient_dict = {k: coefficient_dict[k] for k in coefficient_dict if coefficient_dict[k] != 1}
+        for coef in recipient_coefs:
+            if type(coef) == dict:
+                coef = recipient_coefs.pop(recipient_coefs.index(coef))
+                key, value = list(coef)[0], coef[list(coef)[0]]
+                coef = eval(self.price_frame[key])[value] if type(self.price_frame[key]) == str else self.price_frame[key]
+                coefficient_dict[key] = coef
+        coefficient_dict.update({i: self.price_frame[i] if i in self.price_frame else 1 for i in recipient_coefs})
         coefficient_dict['coef'] = np.array(list(coefficient_dict.values())).prod()
         #print(coefficient_dict)
         return coefficient_dict
@@ -175,16 +197,11 @@ class CategoryData:
         return round(price, 2)
 
     def add_coef_and_result_column(self, show_calculation=False):
-        mods = [self.mod_frame.to_dict('list')[i] for i in self.mod_frame.to_dict('list') if 'mod' in i]
-        if self.active_recipient in self.named_coefficients:
-            mods.append(self.mod_frame[self.named_coefficients[self.active_recipient]].to_list())
-        mods.append(self.mod_frame['recipient_who_coef'].to_list())
-        mods.append(self.cat_frame['positions'].to_list())
-        coefs_list = list(map(self.count_a_modification, *mods))
+        coefs_list = list(map(self.count_a_modification, self.mod_frame['named_coefs']))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
         self.cat_frame['result'] = list(map(self.total_count, self.cat_frame['price'], self.cat_frame['coef']))
         if show_calculation:
-            self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'who_coef', self.mod_frame['recipient_who_coef'])
+            self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'with_children', self.mod_frame['with_children'])
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
             #print(self.cat_frame)
         return self.price_frame

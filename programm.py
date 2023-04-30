@@ -46,5 +46,4 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         print(name)
         month_data.result_frame[name].to_excel(f'output_files/{month}/{name}/{name}_total.xlsx', sheet_name='total')
         print(pd.Series(result_dict), pd.Series(result_dict).sum())
-
-# сделай чтоб в таблицу total писала сумма
+# здесь баги в тотале нужно искать проблемму
