@@ -17,13 +17,14 @@ class MonthData:
         meals_is = lambda i: 'meals' in i or 'diet' in i
         self.meals_columns = [i for i in self.categories.columns if meals_is(i)]
         self.NOT_meals_columns = [i for i in self.categories.columns if not meals_is(i)]
-        self.recipients = {k: self.date for k in recipients}
+        self.recipients = {k: self.date.copy() for k in recipients}
 
         date_frame_for_result_frame = self.date.copy().astype('str').set_index('DATE')
         date_frame_for_result_frame = pd.concat(
             [date_frame_for_result_frame, pd.DataFrame(['count', 'sum'], columns=date_frame_for_result_frame.columns)]
         )
         self.result_frame = {k: date_frame_for_result_frame for k in recipients}
+        print(self.result_frame)
 
     def get_named_vedomost(self, name):
         named_positions = [i[0] for i in self.recipients]
@@ -41,14 +42,19 @@ class MonthData:
         #print(self.recipients[name])
         return self.recipients
 
-    def collect_to_result_frame(self, name, column_name, result_column, true_count):
-        result = int(result_column.sum())
+    def get_result_column(self, column_name, result_column, true_count):
+        result = round(result_column.sum(), 2)
         result_column = result_column.to_list()
-        #done_percent = true_count / len() процент сделанного нужно считать исходя из категорий и позиций!!! сделай нужно тут!
         result_column.append(true_count)
         result_column.append(result)
-        self.result_frame[name][column_name] = result_column
-        return self.result_frame
+        result_column = pd.Series(result_column, name=column_name)
+        return result_column
+
+    def collect_to_result_frame(self, name, column_name, result_column, true_count):
+        #print(self.result_frame[name])
+        new_column = self.get_result_column(column_name, result_column, true_count)
+        self.result_frame[name] = pd.concat([self.result_frame[name], new_column], axis=1)
+        print(self.result_frame[name])
 
 class AccessoryData:
     def __init__(self, af):
