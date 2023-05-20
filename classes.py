@@ -54,7 +54,7 @@ class MonthData:
         #print(self.result_frame[name])
         new_column = self.get_result_column(column_name, result_column, true_count)
         self.result_frame[name] = pd.concat([self.result_frame[name], new_column], axis=1)
-        print(self.result_frame[name])
+        #print(self.result_frame[name])
 
 class AccessoryData:
     def __init__(self, af):
@@ -145,8 +145,9 @@ class CategoryData:
 
     def find_a_price(self, duty, result, positions):
         #print(positions)
+        done_mark = 'zero'
         if self.position not in positions:
-            return {'price': 0, 'price_calc': 'not in positions'}
+            return {'price': 0, 'mark': done_mark, 'price_calc': 'not in positions'}
 
         price_calc = {True: self.price_frame['True'], False: self.price_frame['False'], 'zero': 0}
         if duty:
@@ -158,16 +159,15 @@ class CategoryData:
         if result:
             if result != 'zero' and type(price_calc[True]) == str:
                 price = ComplexCondition(result, price_calc[True]).get_price()
-                if price >= 0:
-                    self.true_count += 1
+                done_mark = 'True' if price >= 0 else 'False'
             else:
                 price = price_calc[result]
-                self.true_count += 1
+                done_mark = result
         else:
             price = price_calc[result]
         #print(price)
 
-        return {'price': price, 'price_calc': price_calc}
+        return {'price': price, 'mark': done_mark, 'price_calc': price_calc}
 
     def add_price_column(self, show_calculation=False):
         self.cat_frame['positions'] = self.mod_frame['positions'].map(lambda e: e[self.active_recipient])
