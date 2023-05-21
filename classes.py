@@ -19,11 +19,11 @@ class MonthData:
         self.NOT_meals_columns = [i for i in self.categories.columns if not meals_is(i)]
         self.recipients = {k: self.date.copy() for k in recipients}
 
-        date_frame_for_result_frame = self.date.copy().astype('str').set_index('DATE')
-        date_frame_for_result_frame = pd.concat(
-            [date_frame_for_result_frame, pd.DataFrame(['count', 'sum'], columns=date_frame_for_result_frame.columns)]
-        )
-        self.result_frame = {k: date_frame_for_result_frame for k in recipients}
+        date_frame_for_result_frame = self.date.copy().astype('str')
+        mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['count', 'sum']}, index=(self.limit, self.limit+1))
+        self.date_frame = pd.concat(
+            [date_frame_for_result_frame, mini_frame])
+        self.result_frame = {k: self.date_frame for k in recipients}
         print(self.result_frame)
 
     def get_named_vedomost(self, name):
@@ -48,6 +48,7 @@ class MonthData:
         result_column.append(true_count)
         result_column.append(result)
         result_column = pd.Series(result_column, name=column_name)
+        print(result_column)
         return result_column
 
     def collect_to_result_frame(self, name, column_name, result_column, true_count):
@@ -55,6 +56,7 @@ class MonthData:
         new_column = self.get_result_column(column_name, result_column, true_count)
         self.result_frame[name] = pd.concat([self.result_frame[name], new_column], axis=1)
         #print(self.result_frame[name])
+        return self.result_frame
 
 class AccessoryData:
     def __init__(self, af):
@@ -136,12 +138,14 @@ class CategoryData:
         self.active_recipient = active_recipient
         self.name = cf.name
         self.cat_frame = pd.DataFrame([True if i == 'T' else i for i in cf], columns=[self.name])
-        self.true_count = 0
         self.position = self.name[0].upper()
         self.price_frame = pf[self.name]
         self.mod_frame = mf
         self.named_coefficients = {'Egr': 'DIF_DUTY'}
 
+    def count_true_marks(self):
+        true_list = [i for i in self.cat_frame['mark'] if i == 'True']
+        return len(true_list)
 
     def find_a_price(self, duty, result, positions):
         #print(positions)
@@ -165,9 +169,10 @@ class CategoryData:
                 done_mark = result
         else:
             price = price_calc[result]
+            done_mark = result
         #print(price)
 
-        return {'price': price, 'mark': done_mark, 'price_calc': price_calc}
+        return {'price': price, 'mark': str(done_mark), 'price_calc': price_calc}
 
     def add_price_column(self, show_calculation=False):
         self.cat_frame['positions'] = self.mod_frame['positions'].map(lambda e: e[self.active_recipient])
@@ -176,6 +181,7 @@ class CategoryData:
                               self.cat_frame[self.name],
                               self.cat_frame['positions']))
         self.cat_frame['price'] = [i.pop('price') for i in price_list]
+        self.cat_frame['mark'] = [i.pop('mark') for i in price_list]
         if show_calculation:
             price_list = [list(i.values())[0] for i in price_list]
             self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'price_calc', price_list)
