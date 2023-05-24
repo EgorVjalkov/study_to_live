@@ -142,6 +142,7 @@ class CategoryData:
         self.price_frame = pf[self.name]
         self.mod_frame = mf
         self.named_coefficients = {'Egr': 'DIF_DUTY'}
+        self.bonus_logic = self.price_frame['bonus']
 
     def count_true_marks(self):
         true_list = [i for i in self.cat_frame['mark'] if i == 'True']
@@ -217,3 +218,39 @@ class CategoryData:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
             #print(self.cat_frame)
         return self.price_frame
+
+
+class BonusFrame:
+    def __init__(self, cat_frame, price_frame):
+        self.name = price_frame.name
+        self.bonus_logic = price_frame['bonus']
+        self.mark_frame = pd.Series(cat_frame['mark'])
+        self.bonus_frame = [0] * len(self.mark_frame)
+
+    def has_bonus_logic(self):
+        flag = True if self.bonus_logic else False
+        return flag
+
+    def count_a_bonus(self):
+        bonus_logic = self.bonus_logic.split(', ')
+        interval, bonus = int(bonus_logic[0]), int(bonus_logic[1])
+
+        mark_dict = self.mark_frame.to_dict()
+        mark_dict = {k: mark_dict[k] for k in mark_dict if mark_dict[k] != 'zero'}
+        counter = 1
+
+        for k in mark_dict:
+            if mark_dict[k] == 'True':
+                if counter != interval:
+                    counter += 1
+                else:
+                    self.bonus_frame[k] = bonus
+                    counter = 1
+                    print(bonus)
+                print(counter, interval,)
+
+            elif mark_dict[k] == 'False':
+                counter = 1
+
+        print(self.bonus_frame)
+        return self.bonus_frame

@@ -33,10 +33,13 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         result_dict = {}
         for column in month_data.recipients[name]:
             if column.islower():
-                #column = 'a:bottle'
+                column = 'h:kitchen'
                 cd = cl.CategoryData(name, month_data.recipients[name][column], ad.mods_frame, month_data.prices)
                 cd.add_price_column(show_calculation=show_calc)
                 cd.add_coef_and_result_column(show_calculation=show_calc)
+                bonus_frame = cl.BonusFrame(cd.cat_frame, cd.price_frame)
+                if bonus_frame.has_bonus_logic():
+                    cd.cat_frame['bonus'] = bonus_frame.count_a_bonus()
                 result_dict[column] = cd.cat_frame['result'].sum()
                 #print(month_data.recipients[name])
 
@@ -44,7 +47,7 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
                 cd.cat_frame = month_data.date.join(cd.cat_frame)
                 cd.cat_frame = cd.cat_frame.set_index('DATE')
                 cd.cat_frame.to_excel(f'output_files/{month}/{name}/{name}:{column}.xlsx', sheet_name=column.replace(':', '_'))
-                #break
+                break
         print(name)
         month_data.result_frame[name].set_index('DATE').to_excel(f'output_files/{month}/{name}/{name}_total.xlsx', sheet_name='total')
         print(pd.Series(result_dict), pd.Series(result_dict).sum())
