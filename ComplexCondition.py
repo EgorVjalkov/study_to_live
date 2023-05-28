@@ -83,8 +83,8 @@ class ComplexCondition:
                                     delta = (self.result - comparison_value).seconds / 60
                             else:
                                 delta = 60
-                            divider = float(self.condition_for_price[k].replace('*', ''))
-                            self.price += delta * divider
+                            multiplic = float(self.condition_for_price[k].replace('*', ''))
+                            self.price += delta * multiplic
                             #print(delta)
                         #print(k, self.condition_for_price[k], inner_condition, self.price)
 # limiting

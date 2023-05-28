@@ -20,9 +20,8 @@ class MonthData:
         self.recipients = {k: self.date.copy() for k in recipients}
 
         date_frame_for_result_frame = self.date.copy().astype('str')
-        mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['count', 'sum']}, index=(self.limit, self.limit+1))
-        self.date_frame = pd.concat(
-            [date_frame_for_result_frame, mini_frame])
+        mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=(self.limit, self.limit+1))
+        self.date_frame = pd.concat([date_frame_for_result_frame, mini_frame])
         self.result_frame = {k: self.date_frame for k in recipients}
         print(self.result_frame)
 
@@ -42,21 +41,25 @@ class MonthData:
         #print(self.recipients[name])
         return self.recipients
 
-    def get_result_column(self, column_name, result_column, true_count):
+    def get_result_column(self, column_name, result_column, true_percent):
         result = round(result_column.sum(), 2)
         result_column = result_column.to_list()
-        result_column.append(true_count)
+        result_column.append(true_percent)
         result_column.append(result)
         result_column = pd.Series(result_column, name=column_name)
         print(result_column)
         return result_column
 
-    def collect_to_result_frame(self, name, column_name, result_column, true_count):
+    def collect_to_result_frame(self, name, column_name, result_column, true_count, bonus_column=()):
         #print(self.result_frame[name])
         new_column = self.get_result_column(column_name, result_column, true_count)
         self.result_frame[name] = pd.concat([self.result_frame[name], new_column], axis=1)
+        if bonus_column:
+            bonus_column = pd.Series(bonus_column, name=column_name+'_bonus')
+            self.result_frame[name] = pd.concat([self.result_frame[name], bonus_column], axis=1)
         #print(self.result_frame[name])
         return self.result_frame
+
 
 class AccessoryData:
     def __init__(self, af):
@@ -144,9 +147,10 @@ class CategoryData:
         self.named_coefficients = {'Egr': 'DIF_DUTY'}
         self.bonus_logic = self.price_frame['bonus']
 
-    def count_true_marks(self):
+    def count_true_percent(self):
         true_list = [i for i in self.cat_frame['mark'] if i == 'True']
-        return len(true_list)
+        true_percent = len(true_list) / len(self.cat_frame['mark'])
+        return int(true_percent * 100)
 
     def find_a_price(self, duty, result, positions):
         #print(positions)
@@ -224,18 +228,24 @@ class BonusFrame:
     def __init__(self, cat_frame, price_frame):
         self.name = price_frame.name
         self.bonus_logic = price_frame['bonus']
-        self.mark_frame = pd.Series(cat_frame['mark'])
-        self.bonus_frame = [0] * len(self.mark_frame)
+        self.mark_ser = pd.Series(cat_frame['mark'])
+        self.max_bonus_ser = pd.Series(['True'] * len(self.mark_ser))
+        self.bonus_list = [0] * len(self.mark_ser)
 
     def has_bonus_logic(self):
         flag = True if self.bonus_logic else False
         return flag
 
-    def count_a_bonus(self):
+    def count_a_bonus(self, mark_ser=pd.Series()):
         bonus_logic = self.bonus_logic.split(', ')
         interval, bonus = int(bonus_logic[0]), int(bonus_logic[1])
 
-        mark_dict = self.mark_frame.to_dict()
+        if not mark_ser.empty:
+            mark_dict = mark_ser.to_dict()
+        else:
+            mark_dict = self.mark_ser.to_dict()
+        bonus_list = self.bonus_list.copy()
+
         mark_dict = {k: mark_dict[k] for k in mark_dict if mark_dict[k] != 'zero'}
         counter = 1
 
@@ -244,7 +254,7 @@ class BonusFrame:
                 if counter != interval:
                     counter += 1
                 else:
-                    self.bonus_frame[k] = bonus
+                    bonus_list[k] = bonus
                     counter = 1
                     print(bonus)
                 print(counter, interval,)
@@ -252,5 +262,17 @@ class BonusFrame:
             elif mark_dict[k] == 'False':
                 counter = 1
 
-        print(self.bonus_frame)
-        return self.bonus_frame
+        return bonus_list
+
+    def get_bonus_list_with_sum(self):
+        self.bonus_list = self.count_a_bonus()
+        max_bonus_list = self.count_a_bonus(self.max_bonus_ser)
+        bonus_count = len([i for i in self.bonus_list if i])
+        max_bonus_count = len([i for i in max_bonus_list if i])
+        true_percent = bonus_count / max_bonus_count
+
+        self.bonus_list.append(sum(self.bonus_list))
+        self.bonus_list.insert(-1, int(true_percent * 100))
+        print(self.bonus_list)
+        return self.bonus_list
+
