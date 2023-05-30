@@ -60,7 +60,7 @@ import classes as cl
 
 
 recipients = ['Egr', 'Lera']
-month = "apr23"
+month = "may23"
 path_to_file = f'months/{month}/{month}.xlsx'
 show_calc = True
 
@@ -68,5 +68,5 @@ show_calc = True
 month_data = cl.MonthData(path_to_file, recipients)
 ad = cl.AccessoryData(month_data.accessory)
 ad.get_mods_frame()
-acc = pd.concat([month_data.date, ad.mods_frame], axis=1)
-acc.to_excel(f'output_files/{month}/testing_af.xlsx')
+# acc = pd.concat([month_data.date, ad.mods_frame], axis=1)
+# acc.to_excel(f'output_files/{month}/testing_af.xlsx')

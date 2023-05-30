@@ -33,21 +33,22 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         result_dict = {}
         for column in md.recipients[name]:
             if column.islower():
-                #column = 'h:kitchen'
+                #column = 'e:hygiene'
                 cd = cl.CategoryData(name, md.recipients[name][column], ad.mods_frame, md.prices)
+                #print(cd.cat_frame)
                 cd.add_price_column(show_calculation=show_calc)
                 cd.add_coef_and_result_column(show_calculation=show_calc)
+                result_dict[column] = cd.cat_frame['result'].sum()
 
                 bonus_column = cl.BonusFrame(cd.cat_frame, cd.price_frame)
                 if bonus_column.has_bonus_logic():
                     cd.cat_frame['bonus'] = bonus_column.count_a_bonus()
+                    result_dict[column+'_bonus'] = cd.cat_frame['bonus'].sum()
                     bl_with_sum = bonus_column.get_bonus_list_with_sum()
                 else:
                     bl_with_sum = ()
 
-                result_dict[column] = cd.cat_frame['result'].sum()
                 #print(month_data.recipients[name])
-
                 md.collect_to_result_frame(name, column, cd.cat_frame['result'], cd.count_true_percent(), bl_with_sum)
                 cd.cat_frame = md.date.join(cd.cat_frame)
                 cd.cat_frame = cd.cat_frame.set_index('DATE')
@@ -56,4 +57,3 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         print(name)
         md.result_frame[name].set_index('DATE').to_excel(f'output_files/{month}/{name}/{name}_total.xlsx', sheet_name='total')
         print(pd.Series(result_dict), pd.Series(result_dict).sum())
-# здесь баги в тотале нужно искать проблемму

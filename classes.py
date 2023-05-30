@@ -6,24 +6,21 @@ pd.set_option('display.max.columns', None)
 
 class MonthData:
     def __init__(self, path, recipients):
-        vedomost = pd.read_excel(path, sheet_name='vedomost').fillna(False)
+        vedomost = pd.read_excel(path, sheet_name='vedomost', dtype='object').fillna(False)
+        self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
         self.limit = len([i for i in vedomost['DONE'].to_list() if i])
         self.vedomost = vedomost[0:self.limit]
-        self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
         date_keys = ['DATE', 'DAY']
         self.accessory = self.vedomost.get([i for i in self.vedomost.columns if i == i.upper() and i not in date_keys])
         self.date = self.vedomost.get(date_keys)
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
-        meals_is = lambda i: 'meals' in i or 'diet' in i
-        self.meals_columns = [i for i in self.categories.columns if meals_is(i)]
-        self.NOT_meals_columns = [i for i in self.categories.columns if not meals_is(i)]
         self.recipients = {k: self.date.copy() for k in recipients}
 
         date_frame_for_result_frame = self.date.copy().astype('str')
         mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=(self.limit, self.limit+1))
         self.date_frame = pd.concat([date_frame_for_result_frame, mini_frame])
         self.result_frame = {k: self.date_frame for k in recipients}
-        print(self.result_frame)
+        # print(self.result_frame)
 
     def get_named_vedomost(self, name):
         named_positions = [i[0] for i in self.recipients]
@@ -47,7 +44,7 @@ class MonthData:
         result_column.append(true_percent)
         result_column.append(result)
         result_column = pd.Series(result_column, name=column_name)
-        print(result_column)
+        # print(result_column)
         return result_column
 
     def collect_to_result_frame(self, name, column_name, result_column, true_count, bonus_column=()):
@@ -140,7 +137,7 @@ class CategoryData:
     def __init__(self, active_recipient, cf, mf, pf, date_frame=''):
         self.active_recipient = active_recipient
         self.name = cf.name
-        self.cat_frame = pd.DataFrame([True if i == 'T' else i for i in cf], columns=[self.name])
+        self.cat_frame = pd.DataFrame([True if i == 'T' else i for i in cf], columns=[self.name], dtype='str')
         self.position = self.name[0].upper()
         self.price_frame = pf[self.name]
         self.mod_frame = mf
@@ -158,16 +155,16 @@ class CategoryData:
         if self.position not in positions:
             return {'price': 0, 'mark': done_mark, 'price_calc': 'not in positions'}
 
-        price_calc = {True: self.price_frame['True'], False: self.price_frame['False'], 'zero': 0}
+        price_calc = {'True': self.price_frame['True'], 'False': self.price_frame['False'], 'zero': 0}
         if duty:
             price_calc['duty'] = duty
-            price_calc[False] = self.price_frame['dutyFalse']
-            price_calc[True] = self.price_frame['dutyTrue']
+            price_calc['False'] = self.price_frame['dutyFalse']
+            price_calc['True'] = self.price_frame['dutyTrue']
         #print(self.name)
         #print(result, type(result), price_calc[True])
-        if result:
-            if result != 'zero' and type(price_calc[True]) == str:
-                price = ComplexCondition(result, price_calc[True]).get_price()
+        if result != 'False':
+            if result != 'zero' and type(price_calc['True']) == str:
+                price = ComplexCondition(result, price_calc['True']).get_price()
                 done_mark = 'True' if price >= 0 else 'False'
             else:
                 price = price_calc[result]
@@ -256,8 +253,8 @@ class BonusFrame:
                 else:
                     bonus_list[k] = bonus
                     counter = 1
-                    print(bonus)
-                print(counter, interval,)
+                    # print(bonus)
+                # print(counter, interval,)
 
             elif mark_dict[k] == 'False':
                 counter = 1
@@ -273,6 +270,6 @@ class BonusFrame:
 
         self.bonus_list.append(sum(self.bonus_list))
         self.bonus_list.insert(-1, int(true_percent * 100))
-        print(self.bonus_list)
+        #print(self.bonus_list)
         return self.bonus_list
 
