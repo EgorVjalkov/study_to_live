@@ -67,6 +67,8 @@ show_calc = True
 
 month_data = cl.MonthData(path_to_file, recipients)
 ad = cl.AccessoryData(month_data.accessory)
+ad.get_in_time_sleeptime_col('Egr', month_data.vedomost)
+print(ad.mods_frame)
 ad.get_mods_frame()
 # acc = pd.concat([month_data.date, ad.mods_frame], axis=1)
 # acc.to_excel(f'output_files/{month}/testing_af.xlsx')

@@ -132,6 +132,22 @@ class AccessoryData:
                                                   mods_for_coef.values(),
                                                   named_mods.values()))
 
+    def get_in_time_sleeptime_col(self, name, vedomost):
+        def hour_extraction(time):
+            hour = 0
+            if time:
+                if ':' in time:
+                    hour = int(time.split(':')[0])
+                else:
+                    hour = 21
+            return hour
+
+        sleep_time_ser_name = name[0].lower() + ':sleeptime'
+        sleeptime_ser = list(map(hour_extraction, vedomost[sleep_time_ser_name]))
+        before_0 = lambda i: i > 20
+        sleeptime_ser = list(map(before_0, sleeptime_ser))
+        self.mods_frame[name+'_sleep_in_time'] = sleeptime_ser
+
 
 class CategoryData:
     def __init__(self, active_recipient, cf, mf, pf, date_frame=''):
@@ -141,40 +157,40 @@ class CategoryData:
         self.position = self.name[0].upper()
         self.price_frame = pf[self.name]
         self.mod_frame = mf
+        self.in_time_sleep_time = self.mod_frame[active_recipient+'_sleep_in_time']
         self.named_coefficients = {'Egr': 'DIF_DUTY'}
         self.bonus_logic = self.price_frame['bonus']
 
     def count_true_percent(self):
+        not_zero_mark_list = [i for i in self.cat_frame['mark'] if i != 'zero']
         true_list = [i for i in self.cat_frame['mark'] if i == 'True']
-        true_percent = len(true_list) / len(self.cat_frame['mark'])
+        true_percent = len(true_list) / len(not_zero_mark_list)
         return int(true_percent * 100)
 
     def find_a_price(self, duty, result, positions):
         #print(positions)
-        done_mark = 'zero'
+        done_mark = 'can`t'
         if self.position not in positions:
             return {'price': 0, 'mark': done_mark, 'price_calc': 'not in positions'}
 
-        price_calc = {'True': self.price_frame['True'], 'False': self.price_frame['False'], 'zero': 0}
+        price_calc = {'True': self.price_frame['True'], 'False': self.price_frame['False'], 'can`t': 0, 'wishn`t': 0}
+        # can`t - невозможно сделать по уважительной причине, wishn`t - сделал другой, при совместных категориях
         if duty:
             price_calc['duty'] = duty
             price_calc['False'] = self.price_frame['dutyFalse']
             price_calc['True'] = self.price_frame['dutyTrue']
         #print(self.name)
         #print(result, type(result), price_calc[True])
-        if result != 'False':
-            if result != 'zero' and type(price_calc['True']) == str:
-                price = ComplexCondition(result, price_calc['True']).get_price()
-                done_mark = 'True' if price >= 0 else 'False'
-            else:
-                price = price_calc[result]
-                done_mark = result
+        if result not in price_calc:
+            price = ComplexCondition(result, price_calc['True']).get_price()
+            done_mark = 'True' if price >= 0 else 'False'
         else:
             price = price_calc[result]
             done_mark = result
         #print(price)
+        price_calc = {k: price_calc[k] for k in price_calc if k not in ('can`t', 'wishn`t')}
 
-        return {'price': price, 'mark': str(done_mark), 'price_calc': price_calc}
+        return {'price': price, 'mark': str(done_mark), 'price_calc': list(price_calc.values())}
 
     def add_price_column(self, show_calculation=False):
         self.cat_frame['positions'] = self.mod_frame['positions'].map(lambda e: e[self.active_recipient])
@@ -213,6 +229,7 @@ class CategoryData:
     def add_coef_and_result_column(self, show_calculation=False):
         coefs_list = list(map(self.count_a_modification, self.mod_frame['named_coefs']))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
+        # print(self.cat_frame, self.name)
         self.cat_frame['result'] = list(map(self.total_count, self.cat_frame['price'], self.cat_frame['coef']))
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'with_children', self.mod_frame['with_children'])
@@ -243,7 +260,8 @@ class BonusFrame:
             mark_dict = self.mark_ser.to_dict()
         bonus_list = self.bonus_list.copy()
 
-        mark_dict = {k: mark_dict[k] for k in mark_dict if mark_dict[k] != 'zero'}
+        mark_dict = {k: mark_dict[k] for k in mark_dict if mark_dict[k] not in ('can`t', 'wishn`t')}
+        print(mark_dict)
         counter = 1
 
         for k in mark_dict:
@@ -263,7 +281,9 @@ class BonusFrame:
 
     def get_bonus_list_with_sum(self):
         self.bonus_list = self.count_a_bonus()
+        print(self.max_bonus_ser) # туту есть баги неправильно считает
         max_bonus_list = self.count_a_bonus(self.max_bonus_ser)
+        print(max_bonus_list)
         bonus_count = len([i for i in self.bonus_list if i])
         max_bonus_count = len([i for i in max_bonus_list if i])
         true_percent = bonus_count / max_bonus_count

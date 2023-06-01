@@ -134,7 +134,7 @@ class ComplexCondition:
                             self.result = i[1:] if i[1:].isdigit() else i[1:]
                         break
                     else:
-                        self.result = 'zero'
+                        self.result = 'wishn`t'
         return self.result
 
 
@@ -149,9 +149,9 @@ class ComplexCondition:
 # cc = ComplexCondition('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
 # cc = ComplexCondition('23:00', '{"<.22": "3*", "<.23": "2*", ">.23": 0}')
 # cc = ComplexCondition(4.0, '10*')
-cc = ComplexCondition('1', '{1: 50, 0: 0}')
+#cc = ComplexCondition('1', '{1: 50, 0: 0}')
 # cc = ComplexCondition(result=True)
 # cc = ComplexCondition(4.0, '{">=.4": 50, "<.4": 0}')
-print(cc.get_price())
+#print(cc.get_price())
 
 
