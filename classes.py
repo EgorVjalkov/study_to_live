@@ -162,9 +162,9 @@ class CategoryData:
         self.bonus_logic = self.price_frame['bonus']
 
     def count_true_percent(self):
-        not_zero_mark_list = [i for i in self.cat_frame['mark'] if i != 'zero']
+        not_cant_mark_list = [i for i in self.cat_frame['mark'] if i != 'can`t']
         true_list = [i for i in self.cat_frame['mark'] if i == 'True']
-        true_percent = len(true_list) / len(not_zero_mark_list)
+        true_percent = len(true_list) / len(not_cant_mark_list)
         return int(true_percent * 100)
 
     def find_a_price(self, duty, result, positions):
@@ -243,7 +243,10 @@ class BonusFrame:
         self.name = price_frame.name
         self.bonus_logic = price_frame['bonus']
         self.mark_ser = pd.Series(cat_frame['mark'])
-        self.max_bonus_ser = pd.Series(['True'] * len(self.mark_ser))
+        all_True_exept_cant = lambda i: 'True' if i != 'can`t' else i
+        # остановился здесь. пытаюсь педеделать подсчет процента выполнения бонуса, путем сокращения сcan`t меток
+        self.max_bonus_ser = self.mark_ser.map(all_True_exept_cant)
+        # self.max_bonus_ser = pd.Series(['can`t' if i == 'can`t' else 'True' for i in self.mark_ser])
         self.bonus_list = [0] * len(self.mark_ser)
 
     def has_bonus_logic(self):
@@ -261,7 +264,7 @@ class BonusFrame:
         bonus_list = self.bonus_list.copy()
 
         mark_dict = {k: mark_dict[k] for k in mark_dict if mark_dict[k] not in ('can`t', 'wishn`t')}
-        print(mark_dict)
+        # print('count_a_bonus', mark_dict)
         counter = 1
 
         for k in mark_dict:
@@ -281,15 +284,13 @@ class BonusFrame:
 
     def get_bonus_list_with_sum(self):
         self.bonus_list = self.count_a_bonus()
-        print(self.max_bonus_ser) # туту есть баги неправильно считает
         max_bonus_list = self.count_a_bonus(self.max_bonus_ser)
-        print(max_bonus_list)
         bonus_count = len([i for i in self.bonus_list if i])
         max_bonus_count = len([i for i in max_bonus_list if i])
         true_percent = bonus_count / max_bonus_count
 
         self.bonus_list.append(sum(self.bonus_list))
         self.bonus_list.insert(-1, int(true_percent * 100))
-        #print(self.bonus_list)
+        print('finish:', 'logic', self.bonus_logic, self.bonus_list)
         return self.bonus_list
 
