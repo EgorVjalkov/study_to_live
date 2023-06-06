@@ -59,5 +59,6 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
                 cd.cat_frame.to_excel(f'output_files/{month}/{name}/{name}:{column}.xlsx', sheet_name=column.replace(':', '_'))
                 # break
         print(name)
+        md.get_day_sum_if_sleep_in_time(name, ad.mods_frame[name + '_sleep_in_time'])
         md.result_frame[name].set_index('DATE').to_excel(f'output_files/{month}/{name}/{name}_total.xlsx', sheet_name='total')
         print(pd.Series(result_dict), pd.Series(result_dict).sum())

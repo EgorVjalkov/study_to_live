@@ -2,7 +2,7 @@ import pandas as pd
 from ComplexCondition import ComplexCondition
 import numpy as np
 pd.set_option('display.max.columns', None)
-
+# в серии где баиньки после нуля - необходимо запилить сумму и % от суммы. понадобится в тотал фрейме
 
 class MonthData:
     def __init__(self, path, recipients):
@@ -56,6 +56,22 @@ class MonthData:
             self.result_frame[name] = pd.concat([self.result_frame[name], bonus_column], axis=1)
         #print(self.result_frame[name])
         return self.result_frame
+
+    def get_day_sum_if_sleep_in_time(self, name, sleep_in_time_ser):
+        def get_day_sum(day_row, sleep_in_time_flag):
+            if not sleep_in_time_flag:
+                day_row = {i: day_row[i] if day_row[i] < 0 else 0 for i in day_row if 'bonus' not in i}
+                day_bonus = {i: day_row[i] for i in day_row if 'bonus' in i}
+                day_row.update(day_bonus)
+            print(day_row)
+            return sum(day_row.values())
+
+        categories = [i for i in self.result_frame[name].columns if i.islower()]
+        only_categories_frame = self.result_frame[name][categories].copy()
+        self.result_frame[name] = pd.concat([self.result_frame[name], sleep_in_time_ser], axis=1)
+        day_sum_ser = pd.Series(list(map(get_day_sum, only_categories_frame.to_dict('rows'), sleep_in_time_ser)))
+        self.result_frame[name] = pd.concat([self.result_frame[name], day_sum_ser], axis=1)
+        print(self.result_frame[name])
 
 
 class AccessoryData:
