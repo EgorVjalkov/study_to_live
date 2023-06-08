@@ -19,7 +19,7 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
             break
 
     md = cl.MonthData(path_to_file, recipients)
-    ad = cl.AccessoryData(md.accessory)
+    ad = cl.AccessoryData(md.accessory, md.vedomost, recipients)
     ad.get_mods_frame()
     for name in recipients:
         ad.get_in_time_sleeptime_col(name, md.vedomost)
@@ -34,7 +34,7 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         result_dict = {}
         for column in md.recipients[name]:
             if column.islower():
-                #column = 'h:kitchen'
+                #column = 'e:dev'
                 cd = cl.CategoryData(name, md.recipients[name][column], ad.mods_frame, md.prices)
                 # print(cd.cat_frame)
                 cd.add_price_column(show_calculation=show_calc)
@@ -45,7 +45,6 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
                 if bonus_column.has_bonus_logic():
                     cd.cat_frame['bonus'] = bonus_column.count_a_bonus()
                     result_dict[column+'_bonus'] = cd.cat_frame['bonus'].sum()
-                    print(cd.name)
                     bl_with_sum = bonus_column.get_bonus_list_with_sum()
                 else:
                     bl_with_sum = ()
@@ -57,7 +56,7 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
                 cd.cat_frame = md.date.join(cd.cat_frame)
                 cd.cat_frame = cd.cat_frame.set_index('DATE')
                 cd.cat_frame.to_excel(f'output_files/{month}/{name}/{name}:{column}.xlsx', sheet_name=column.replace(':', '_'))
-                # break
+                #break
         print(name)
         md.get_day_sum_if_sleep_in_time(name, ad.mods_frame[name + '_sleep_in_time'])
         md.result_frame[name].set_index('DATE').to_excel(f'output_files/{month}/{name}/{name}_total.xlsx', sheet_name='total')

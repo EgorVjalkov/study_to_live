@@ -3,6 +3,8 @@ from ComplexCondition import ComplexCondition
 import numpy as np
 pd.set_option('display.max.columns', None)
 # в серии где баиньки после нуля - необходимо запилить сумму и % от суммы. понадобится в тотал фрейме
+# проблема в том что кудвто пропадает difduty и не отражается в результате
+# пытаюсь педеделать подсчет процента выполнения бонуса, путем сокращения сcan`t меток
 
 class MonthData:
     def __init__(self, path, recipients):
@@ -75,8 +77,9 @@ class MonthData:
 
 
 class AccessoryData:
-    def __init__(self, af):
+    def __init__(self, af, vedomost, recipients):
         self.af = af
+        self.vedomost = vedomost
         self.mods_frame = {}
         self.positions_logic = {
             'duty24': {'Lera': ['A', 'Z', 'H', 'L'], 'Egr': ['E']},
@@ -86,7 +89,8 @@ class AccessoryData:
             '': {'Lera': ['A', 'Z', 'H', 'L'], 'Egr': ['A', 'Z', 'H', 'E']}
         }
         self.children_positions = ('A', 'Z')
-        self.named_coefficients = {'Egr': ['DIF_DUTY'], 'Lera': []}
+        self.named_coefficients = {'Egr': ['DIF_DUTY', 'Egr_sleepless'], 'Lera': ['Lera_sleepless']}
+        self.recipients = recipients
 
     def get_mods_frame(self):
         self.mods_frame = pd.DataFrame(index=self.af.index)
@@ -94,6 +98,14 @@ class AccessoryData:
         self.mods_frame['zlata_mod'] = self.af['MOD']
         self.mods_frame['weak_mod'] = ['WEAK' + str(int(i)) if i else i for i in self.af['WEAK']]
         self.mods_frame['DIF_DUTY'] = [{'DIF_DUTY': str(int(i))} if i else i for i in self.af['DIF_DUTY']]
+
+        def get_sleepless_col(name, vedomost):
+            sleepless_ser_name = name[0].lower() + ':siesta'
+            sleepless_ser = list(map(lambda i: 'SLEEP' if i else False, vedomost[sleepless_ser_name]))
+            return pd.Series(sleepless_ser, name=f'{name}_sleepless')
+
+        for name in self.recipients:
+            self.mods_frame = pd.concat([self.mods_frame, get_sleepless_col(name, self.vedomost)], axis=1)
 
         def f_for_positions(*mods):
             #print(mods)
@@ -124,6 +136,8 @@ class AccessoryData:
         all_named_mods = []
         x = [all_named_mods.extend(i) for i in self.named_coefficients.values()]
         named_mods = self.mods_frame.get(all_named_mods).to_dict('index')
+        print(mods_for_coef)
+        print(named_mods)
 
         def named_coefs(positions, duty, with_children, coef_dict, named_coefs):
             new_coef_dict = {k: coef_dict.copy() for k in list(positions.keys())}
@@ -139,7 +153,7 @@ class AccessoryData:
                 new_coef_dict[r].update(r_coefs)
                 new_coef_dict[r] = [i for i in list(new_coef_dict[r].values()) if i]
 
-            #print(new_coef_dict)
+            print(new_coef_dict)
             return new_coef_dict
         self.mods_frame['named_coefs'] = list(map(named_coefs,
                                                   self.mods_frame['positions'],
@@ -173,8 +187,6 @@ class CategoryData:
         self.position = self.name[0].upper()
         self.price_frame = pf[self.name]
         self.mod_frame = mf
-        self.in_time_sleep_time = self.mod_frame[active_recipient+'_sleep_in_time']
-        self.named_coefficients = {'Egr': 'DIF_DUTY'}
         self.bonus_logic = self.price_frame['bonus']
 
     def count_true_percent(self):
@@ -234,9 +246,8 @@ class CategoryData:
                 coefficient_dict[key] = coef
         coefficient_dict.update({i: self.price_frame[i] if i in self.price_frame else 1 for i in recipient_coefs})
         coefficient_dict['coef'] = np.array(list(coefficient_dict.values())).prod()
-        #print(coefficient_dict)
         return coefficient_dict
-
+# не могу понять где он выкидывает коэффициент со сложностью дежурства
     def total_count(self, price, coef):
         if price > 0:
             price *= coef
@@ -245,12 +256,11 @@ class CategoryData:
     def add_coef_and_result_column(self, show_calculation=False):
         coefs_list = list(map(self.count_a_modification, self.mod_frame['named_coefs']))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
-        # print(self.cat_frame, self.name)
         self.cat_frame['result'] = list(map(self.total_count, self.cat_frame['price'], self.cat_frame['coef']))
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'with_children', self.mod_frame['with_children'])
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
-            #print(self.cat_frame)
+        print(self.cat_frame)
         return self.price_frame
 
 
@@ -260,7 +270,6 @@ class BonusFrame:
         self.bonus_logic = price_frame['bonus']
         self.mark_ser = pd.Series(cat_frame['mark'])
         all_True_exept_cant = lambda i: 'True' if i != 'can`t' else i
-        # остановился здесь. пытаюсь педеделать подсчет процента выполнения бонуса, путем сокращения сcan`t меток
         self.max_bonus_ser = self.mark_ser.map(all_True_exept_cant)
         # self.max_bonus_ser = pd.Series(['can`t' if i == 'can`t' else 'True' for i in self.mark_ser])
         self.bonus_list = [0] * len(self.mark_ser)
@@ -307,6 +316,6 @@ class BonusFrame:
 
         self.bonus_list.append(sum(self.bonus_list))
         self.bonus_list.insert(-1, int(true_percent * 100))
-        print('finish:', 'logic', self.bonus_logic, self.bonus_list)
+#        print('finish:', 'logic', self.bonus_logic, self.bonus_list)
         return self.bonus_list
 
