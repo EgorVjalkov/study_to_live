@@ -2,7 +2,7 @@ import pandas as pd
 from ComplexCondition import ComplexCondition
 import numpy as np
 pd.set_option('display.max.columns', None)
-# в серии где баиньки после нуля - необходимо запилить сумму и % от суммы. понадобится в тотал фрейме
+# замуть с добавление процента от суммы, которая пострадала от незасыпального налога. хрень с функцией
 # проблема в том что кудвто пропадает difduty и не отражается в результате
 # пытаюсь педеделать подсчет процента выполнения бонуса, путем сокращения сcan`t меток
 
@@ -40,18 +40,28 @@ class MonthData:
         #print(self.recipients[name])
         return self.recipients
 
-    def get_result_column(self, column_name, result_column, true_percent):
-        result = round(result_column.sum(), 2)
-        result_column = result_column.to_list()
-        result_column.append(true_percent)
-        result_column.append(result)
-        result_column = pd.Series(result_column, name=column_name)
-        # print(result_column)
-        return result_column
+    def get_result_column(self, column_name, mark_column=pd.Series(), result_column=pd.Series(), default_sum=0):
+        def count_true_percent(mark_column):
+            not_cant_mark_list = [i for i in mark_column if i != 'can`t']
+            true_list = [i for i in mark_column if i == 'True']
+            percent = len(true_list) / len(not_cant_mark_list)
+            return int(percent * 100)
 
-    def collect_to_result_frame(self, name, column_name, result_column, true_count, bonus_column=()):
+        true_percent = count_true_percent(mark_column)
+        if result_column.empty:
+            mark_column = pd.concat([mark_column, pd.Series({self.limit: true_percent, self.limit+1: ''})], axis=0)
+            mark_column.name = column_name
+            return mark_column
+        else:
+            result = round(result_column.sum(), 2)
+            total_ser = pd.Series({self.limit: true_percent, self.limit+1: result})
+            result_column = pd.concat([result_column, total_ser], axis=0)
+            result_column.name = column_name
+            return result_column
+
+    def collect_to_result_frame(self, name, column_name, result_column, mark_column, bonus_column=()):
         #print(self.result_frame[name])
-        new_column = self.get_result_column(column_name, result_column, true_count)
+        new_column = self.get_result_column(column_name, mark_column, result_column)
         self.result_frame[name] = pd.concat([self.result_frame[name], new_column], axis=1)
         if bonus_column:
             bonus_column = pd.Series(bonus_column, name=column_name+'_bonus')
@@ -60,20 +70,34 @@ class MonthData:
         return self.result_frame
 
     def get_day_sum_if_sleep_in_time(self, name, sleep_in_time_ser):
-        def get_day_sum(day_row, sleep_in_time_flag):
-            if not sleep_in_time_flag:
-                day_row = {i: day_row[i] if day_row[i] < 0 else 0 for i in day_row if 'bonus' not in i}
-                day_bonus = {i: day_row[i] for i in day_row if 'bonus' in i}
-                day_row.update(day_bonus)
+        def get_day_sum(day_row, sleep_in_time_flag=''):
             print(day_row)
-            return sum(day_row.values())
+            percent_row_cell = day_row.pop('DAY')
+            if sleep_in_time_flag:
+                if sleep_in_time_flag == 'False':
+                    day_row = {i: day_row[i] if day_row[i] < 0 else 0 for i in day_row if 'bonus' not in i}
+                    day_bonus = {i: day_row[i] for i in day_row if 'bonus' in i}
+                    day_row.update(day_bonus)
+            if percent_row_cell == 'done_percent':
+                return np.mean(np.array(list(day_row.values())))
+            else:
+                return sum(day_row.values())
 
-        categories = [i for i in self.result_frame[name].columns if i.islower()]
+        categories = [i for i in self.result_frame[name].columns if i.islower() or i == 'DAY']
         only_categories_frame = self.result_frame[name][categories].copy()
+        default_sum = pd.Series(list(map(get_day_sum, only_categories_frame.to_dict('index').values())), name='day_sum')
+        self.result_frame[name] = pd.concat([self.result_frame[name], default_sum], axis=1)
+
+        sleep_in_time_ser = self.get_result_column(sleep_in_time_ser.name, sleep_in_time_ser)
         self.result_frame[name] = pd.concat([self.result_frame[name], sleep_in_time_ser], axis=1)
-        day_sum_ser = pd.Series(list(map(get_day_sum, only_categories_frame.to_dict('rows'), sleep_in_time_ser)))
-        self.result_frame[name] = pd.concat([self.result_frame[name], day_sum_ser], axis=1)
-        print(self.result_frame[name])
+
+        day_sum_after_0 = list(map(get_day_sum, only_categories_frame.to_dict('index').values(), sleep_in_time_ser))
+        day_sum_after_0 = pd.Series(day_sum_after_0[:-2]) # статистику пресчитаем отдельно
+        day_sum_after_0 = self.get_result_column('sleep_in_time_sum', result_column=day_sum_after_0, default_sum = default_sum[-1])
+        # day_sum_ser = self.get_result_column('day_sum', )
+        # print(day_sum_ser)
+        # self.result_frame[name] = pd.concat([self.result_frame[name], day_sum_ser], axis=1)
+        #print(self.result_frame[name])
 
 
 class AccessoryData:
@@ -99,13 +123,30 @@ class AccessoryData:
         self.mods_frame['weak_mod'] = ['WEAK' + str(int(i)) if i else i for i in self.af['WEAK']]
         self.mods_frame['DIF_DUTY'] = [{'DIF_DUTY': str(int(i))} if i else i for i in self.af['DIF_DUTY']]
 
-        def get_sleepless_col(name, vedomost):
-            sleepless_ser_name = name[0].lower() + ':siesta'
+        def get_sleepless_col(recipient, vedomost):
+            sleepless_ser_name = recipient[0].lower() + ':siesta'
             sleepless_ser = list(map(lambda i: 'SLEEP' if i else False, vedomost[sleepless_ser_name]))
-            return pd.Series(sleepless_ser, name=f'{name}_sleepless')
+            return pd.Series(sleepless_ser, name=f'{recipient}_sleepless')
+
+        def get_in_time_sleeptime_col(recipient, vedomost):
+            def hour_extraction(time):
+                hour = 0
+                if time:
+                    if ':' in time:
+                        hour = int(time.split(':')[0])
+                    else:
+                        hour = 21
+                return hour
+
+            sleep_time_ser_name = recipient[0].lower() + ':sleeptime'
+            sleeptime_ser = list(map(hour_extraction, vedomost[sleep_time_ser_name]))
+            before_0 = lambda i: 'True' if i > 20 else 'False'
+            sleeptime_ser = list(map(before_0, sleeptime_ser))
+            return pd.Series(sleeptime_ser, name=recipient + '_sleep_in_time')
 
         for name in self.recipients:
             self.mods_frame = pd.concat([self.mods_frame, get_sleepless_col(name, self.vedomost)], axis=1)
+            self.mods_frame = pd.concat([self.mods_frame, get_in_time_sleeptime_col(name, self.vedomost)], axis=1)
 
         def f_for_positions(*mods):
             #print(mods)
@@ -136,8 +177,8 @@ class AccessoryData:
         all_named_mods = []
         x = [all_named_mods.extend(i) for i in self.named_coefficients.values()]
         named_mods = self.mods_frame.get(all_named_mods).to_dict('index')
-        print(mods_for_coef)
-        print(named_mods)
+        # print(mods_for_coef)
+        # print(named_mods)
 
         def named_coefs(positions, duty, with_children, coef_dict, named_coefs):
             new_coef_dict = {k: coef_dict.copy() for k in list(positions.keys())}
@@ -153,7 +194,7 @@ class AccessoryData:
                 new_coef_dict[r].update(r_coefs)
                 new_coef_dict[r] = [i for i in list(new_coef_dict[r].values()) if i]
 
-            print(new_coef_dict)
+            # print(new_coef_dict)
             return new_coef_dict
         self.mods_frame['named_coefs'] = list(map(named_coefs,
                                                   self.mods_frame['positions'],
@@ -161,22 +202,6 @@ class AccessoryData:
                                                   self.mods_frame['with_children'],
                                                   mods_for_coef.values(),
                                                   named_mods.values()))
-
-    def get_in_time_sleeptime_col(self, name, vedomost):
-        def hour_extraction(time):
-            hour = 0
-            if time:
-                if ':' in time:
-                    hour = int(time.split(':')[0])
-                else:
-                    hour = 21
-            return hour
-
-        sleep_time_ser_name = name[0].lower() + ':sleeptime'
-        sleeptime_ser = list(map(hour_extraction, vedomost[sleep_time_ser_name]))
-        before_0 = lambda i: i > 20
-        sleeptime_ser = list(map(before_0, sleeptime_ser))
-        self.mods_frame[name+'_sleep_in_time'] = sleeptime_ser
 
 
 class CategoryData:
@@ -260,7 +285,7 @@ class CategoryData:
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'with_children', self.mod_frame['with_children'])
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
-        print(self.cat_frame)
+        # print(self.cat_frame)
         return self.price_frame
 
 
