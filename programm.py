@@ -33,9 +33,8 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         result_dict = {}
         for column in md.recipients[name]:
             if column.islower():
-                #column = 'e:dev'
+                #column = 'e:plan'
                 cd = cl.CategoryData(name, md.recipients[name][column], ad.mods_frame, md.prices)
-                # print(cd.cat_frame)
                 cd.add_price_column(show_calculation=show_calc)
                 cd.add_coef_and_result_column(show_calculation=show_calc)
                 result_dict[column] = cd.cat_frame['result'].sum()
@@ -48,9 +47,6 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
                 else:
                     bc_with_sum = ()
 
-                # print(cd.cat_frame)
-
-                #print(month_data.recipients[name])
                 md.collect_to_result_frame(name, column, cd.cat_frame['result'], cd.cat_frame['mark'], bc_with_sum)
                 cd.cat_frame = md.date.join(cd.cat_frame)
                 cd.cat_frame = cd.cat_frame.set_index('DATE')

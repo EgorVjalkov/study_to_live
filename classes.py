@@ -2,8 +2,7 @@ import pandas as pd
 from ComplexCondition import ComplexCondition
 import numpy as np
 pd.set_option('display.max.columns', None)
-# замуть с добавление процента от суммы, которая пострадала от незасыпального налога. хрень с функцией
-# проблема в том что кудвто пропадает difduty и не отражается в результате
+# проблема в том что кудвто пропадает difduty и не отражается в результате, тама зашажка даже
 # пытаюсь педеделать подсчет процента выполнения бонуса, путем сокращения сcan`t меток
 
 class MonthData:
@@ -40,7 +39,7 @@ class MonthData:
         #print(self.recipients[name])
         return self.recipients
 
-    def get_result_column(self, column_name, mark_column=pd.Series(), result_column=pd.Series(), default_sum=0):
+    def get_result_column(self, column_name, mark_column=pd.Series(), result_column=pd.Series()):
         def count_true_percent(mark_column):
             not_cant_mark_list = [i for i in mark_column if i != 'can`t']
             true_list = [i for i in mark_column if i == 'True']
@@ -71,8 +70,8 @@ class MonthData:
 
     def get_day_sum_if_sleep_in_time(self, name, sleep_in_time_ser):
         def get_day_sum(day_row, sleep_in_time_flag=''):
-            print(day_row)
             percent_row_cell = day_row.pop('DAY')
+            print(day_row)
             if sleep_in_time_flag:
                 if sleep_in_time_flag == 'False':
                     day_row = {i: day_row[i] if day_row[i] < 0 else 0 for i in day_row if 'bonus' not in i}
@@ -81,23 +80,25 @@ class MonthData:
             if percent_row_cell == 'done_percent':
                 return np.mean(np.array(list(day_row.values())))
             else:
-                return sum(day_row.values())
+                return round(sum(day_row.values()), 2)
 
         categories = [i for i in self.result_frame[name].columns if i.islower() or i == 'DAY']
         only_categories_frame = self.result_frame[name][categories].copy()
+
         default_sum = pd.Series(list(map(get_day_sum, only_categories_frame.to_dict('index').values())), name='day_sum')
         self.result_frame[name] = pd.concat([self.result_frame[name], default_sum], axis=1)
 
         sleep_in_time_ser = self.get_result_column(sleep_in_time_ser.name, sleep_in_time_ser)
         self.result_frame[name] = pd.concat([self.result_frame[name], sleep_in_time_ser], axis=1)
 
-        day_sum_after_0 = list(map(get_day_sum, only_categories_frame.to_dict('index').values(), sleep_in_time_ser))
-        day_sum_after_0 = pd.Series(day_sum_after_0[:-2]) # статистику пресчитаем отдельно
-        day_sum_after_0 = self.get_result_column('sleep_in_time_sum', result_column=day_sum_after_0, default_sum = default_sum[-1])
-        # day_sum_ser = self.get_result_column('day_sum', )
-        # print(day_sum_ser)
-        # self.result_frame[name] = pd.concat([self.result_frame[name], day_sum_ser], axis=1)
-        #print(self.result_frame[name])
+        day_sum_after_0_ser = list(map(get_day_sum, only_categories_frame.to_dict('index').values(), sleep_in_time_ser))
+        day_sum_after_0_ser = pd.Series(day_sum_after_0_ser[:-2]) # статистику пресчитаем отдельно
+        sum_after_0 = round(day_sum_after_0_ser.sum(), 2)
+        done_percent_after_0 = round(sum_after_0/default_sum[self.limit+1], 2) * 100
+        total_statistic = pd.Series({self.limit: done_percent_after_0, self.limit+1: sum_after_0})
+        day_sum_after_0_ser = pd.concat([day_sum_after_0_ser, total_statistic], axis=0)
+        day_sum_after_0_ser.name = 'day_sum_in_time'
+        self.result_frame[name] = pd.concat([self.result_frame[name], day_sum_after_0_ser], axis=1)
 
 
 class AccessoryData:
@@ -285,7 +286,7 @@ class CategoryData:
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'with_children', self.mod_frame['with_children'])
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
-        # print(self.cat_frame)
+        print(self.cat_frame)
         return self.price_frame
 
 
