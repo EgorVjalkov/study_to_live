@@ -2,7 +2,8 @@ import pandas as pd
 from ComplexCondition import ComplexCondition
 import numpy as np
 pd.set_option('display.max.columns', None)
-# проблема в том что кудвто пропадает difduty и не отражается в результате, тама зашажка даже
+# проблема на уровне accessory_data почемуто добавляет именовонную колонну единожы в перый фрейм
+# есть такая мысль, что изменен modframe какойто прогой
 # пытаюсь педеделать подсчет процента выполнения бонуса, путем сокращения сcan`t меток
 
 class MonthData:
@@ -71,7 +72,7 @@ class MonthData:
     def get_day_sum_if_sleep_in_time(self, name, sleep_in_time_ser):
         def get_day_sum(day_row, sleep_in_time_flag=''):
             percent_row_cell = day_row.pop('DAY')
-            print(day_row)
+            #print(day_row)
             if sleep_in_time_flag:
                 if sleep_in_time_flag == 'False':
                     day_row = {i: day_row[i] if day_row[i] < 0 else 0 for i in day_row if 'bonus' not in i}
@@ -175,14 +176,17 @@ class AccessoryData:
 
         mods_for_coef = self.mods_frame.get([i for i in self.mods_frame.columns if 'mod' in i])
         mods_for_coef = mods_for_coef.to_dict('index')
+        print(mods_for_coef)
         all_named_mods = []
         x = [all_named_mods.extend(i) for i in self.named_coefficients.values()]
         named_mods = self.mods_frame.get(all_named_mods).to_dict('index')
+        print(named_mods)
         # print(mods_for_coef)
         # print(named_mods)
-
+# замуть в этой функции
         def named_coefs(positions, duty, with_children, coef_dict, named_coefs):
             new_coef_dict = {k: coef_dict.copy() for k in list(positions.keys())}
+            print(new_coef_dict)
             for r in new_coef_dict:
                 if r not in with_children:
                     if duty == 'duty24':
@@ -195,7 +199,7 @@ class AccessoryData:
                 new_coef_dict[r].update(r_coefs)
                 new_coef_dict[r] = [i for i in list(new_coef_dict[r].values()) if i]
 
-            # print(new_coef_dict)
+            print(new_coef_dict)
             return new_coef_dict
         self.mods_frame['named_coefs'] = list(map(named_coefs,
                                                   self.mods_frame['positions'],
@@ -267,26 +271,36 @@ class CategoryData:
         for coef in recipient_coefs:
             if type(coef) == dict:
                 coef = recipient_coefs.pop(recipient_coefs.index(coef))
+                print(coef)
                 key, value = list(coef)[0], coef[list(coef)[0]]
-                coef = eval(self.price_frame[key])[value] if type(self.price_frame[key]) == str else self.price_frame[key]
+                price_data = self.price_frame[key]
+                print(price_data)
+                coef = eval(price_data)[value] if type(price_data) == str else price_data
+                print(coef)
                 coefficient_dict[key] = coef
         coefficient_dict.update({i: self.price_frame[i] if i in self.price_frame else 1 for i in recipient_coefs})
         coefficient_dict['coef'] = np.array(list(coefficient_dict.values())).prod()
         return coefficient_dict
 # не могу понять где он выкидывает коэффициент со сложностью дежурства
+
     def total_count(self, price, coef):
         if price > 0:
             price *= coef
         return round(price, 2)
 
     def add_coef_and_result_column(self, show_calculation=False):
-        coefs_list = list(map(self.count_a_modification, self.mod_frame['named_coefs']))
+        print(self.mod_frame)
+        named_coefs2 = [i[self.active_recipient] for i in self.mod_frame['named_coefs']]
+        print(named_coefs2)
+        coefs_list = list(map(self.count_a_modification, self.mod_frame['named_coefs'].copy()))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
+        print(coefs_list)
         self.cat_frame['result'] = list(map(self.total_count, self.cat_frame['price'], self.cat_frame['coef']))
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'with_children', self.mod_frame['with_children'])
+            self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'named_coefs', self.mod_frame['named_coefs'])
+            self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'named_coefs2', pd.Series(named_coefs2))
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
-        print(self.cat_frame)
         return self.price_frame
 
 
