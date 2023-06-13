@@ -2,10 +2,8 @@ import pandas as pd
 from ComplexCondition import ComplexCondition
 import numpy as np
 pd.set_option('display.max.columns', None)
-# проблема на уровне accessory_data почемуто добавляет именовонную колонну единожы в перый фрейм
-# есть такая мысль, что изменен modframe какойто прогой
-# пытаюсь педеделать подсчет процента выполнения бонуса, путем сокращения сcan`t меток
 
+#реализуй новые возможности бонусной логики
 class MonthData:
     def __init__(self, path, recipients):
         vedomost = pd.read_excel(path, sheet_name='vedomost', dtype='object').fillna(False)
@@ -219,12 +217,6 @@ class CategoryData:
         self.mod_frame = mf
         self.bonus_logic = self.price_frame['bonus']
 
-    def count_true_percent(self):
-        not_cant_mark_list = [i for i in self.cat_frame['mark'] if i != 'can`t']
-        true_list = [i for i in self.cat_frame['mark'] if i == 'True']
-        true_percent = len(true_list) / len(not_cant_mark_list)
-        return int(true_percent * 100)
-
     def find_a_price(self, duty, result, positions):
         #print(positions)
         done_mark = 'can`t'
@@ -267,21 +259,21 @@ class CategoryData:
 
     def count_a_modification(self, coefs):
         recipient_coefs = coefs[self.active_recipient]
+        #print(recipient_coefs)
+        coefficient_list = recipient_coefs.copy()
         coefficient_dict = {}
-        for coef in recipient_coefs:
+        for coef in coefficient_list:
             if type(coef) == dict:
-                coef = recipient_coefs.pop(recipient_coefs.index(coef))
-                print(coef)
-                key, value = list(coef)[0], coef[list(coef)[0]]
+                named_coef = coef
+                key, value = list(named_coef)[0], coef[list(named_coef)[0]]
                 price_data = self.price_frame[key]
-                print(price_data)
-                coef = eval(price_data)[value] if type(price_data) == str else price_data
-                print(coef)
-                coefficient_dict[key] = coef
-        coefficient_dict.update({i: self.price_frame[i] if i in self.price_frame else 1 for i in recipient_coefs})
+                named_coef = eval(price_data)[value] if type(price_data) == str else price_data
+                coefficient_dict[key] = named_coef
+                del coefficient_list[coefficient_list.index(coef)]
+        coefficient_dict.update({i: self.price_frame[i] if i in self.price_frame else 1 for i in coefficient_list})
         coefficient_dict['coef'] = np.array(list(coefficient_dict.values())).prod()
+        #print(coefficient_dict)
         return coefficient_dict
-# не могу понять где он выкидывает коэффициент со сложностью дежурства
 
     def total_count(self, price, coef):
         if price > 0:
@@ -289,17 +281,11 @@ class CategoryData:
         return round(price, 2)
 
     def add_coef_and_result_column(self, show_calculation=False):
-        print(self.mod_frame)
-        named_coefs2 = [i[self.active_recipient] for i in self.mod_frame['named_coefs']]
-        print(named_coefs2)
         coefs_list = list(map(self.count_a_modification, self.mod_frame['named_coefs'].copy()))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
-        print(coefs_list)
         self.cat_frame['result'] = list(map(self.total_count, self.cat_frame['price'], self.cat_frame['coef']))
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'with_children', self.mod_frame['with_children'])
-            self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'named_coefs', self.mod_frame['named_coefs'])
-            self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'named_coefs2', pd.Series(named_coefs2))
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
         return self.price_frame
 
