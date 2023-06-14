@@ -4,39 +4,64 @@ import numpy as np
 pd.set_option('display.max.columns', None)
 
 #реализуй новые возможности бонусной логики
+# сделай 2 мод фрейма на каждого участника
+# реализуй подход с категорией плэйс
+# реализуй подход с категорией MOD WEAK
+
+
+class Recipient:
+    def __init__(self, name, date_frame):
+        self.r_name = name
+        self.litera = name[0]
+        self.private_position = self.litera.lower()
+        self.mod_data = date_frame.copy()
+        self.cat_data = date_frame.copy()
+
+        self.positions = ['z', 'a', 'h', 'e', 'l']
+        self.coefficients = ['KG', 'KGD', 'g', 'd24', 'd8']
+
+    def get_and_collect_r_name_col(self, column, new_column_name=''):
+
+        def extract_by_litera(day):
+            day = day.split(', ')
+            day = {i[0]: i[1:] if len(i) > 1 else '' for i in day}
+            return day[self.litera]
+
+        self.mod_data[new_column_name] = column.map(extract_by_litera)
+
+    def get_r_positions(self):
+
+        def extract_positions(children, place):
+            positions = [i for i in list(children+place) if i in self.positions]
+            positions.append(self.private_position)
+            return positions
+
+        self.mod_data['positions'] = list(map(extract_positions, self.mod_data['children'], self.mod_data['place']))
+
+
+
 class MonthData:
     def __init__(self, path, recipients):
         vedomost = pd.read_excel(path, sheet_name='vedomost', dtype='object').fillna(False)
         self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
         self.limit = len([i for i in vedomost['DONE'].to_list() if i])
         self.vedomost = vedomost[0:self.limit]
+        del self.vedomost['DONE']
+
         date_keys = ['DATE', 'DAY']
         self.accessory = self.vedomost.get([i for i in self.vedomost.columns if i == i.upper() and i not in date_keys])
         self.date = self.vedomost.get(date_keys)
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
-        self.recipients = {k: self.date.copy() for k in recipients}
+
+        self.recipients_mod = {k: self.date.copy() for k in recipients}
+        self.recipients_cat = self.recipients_mod.copy()
 
         date_frame_for_result_frame = self.date.copy().astype('str')
         mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=(self.limit, self.limit+1))
         self.date_frame = pd.concat([date_frame_for_result_frame, mini_frame])
         self.result_frame = {k: self.date_frame for k in recipients}
-        # print(self.result_frame)
 
-    def get_named_vedomost(self, name):
-        named_positions = [i[0] for i in self.recipients]
-        for column in self.categories:
-            position = column[0].upper()
-            if [i for i in self.categories[column] if type(i) == str and i[0] in named_positions]:
-                #print(24, column)
-                column_list = [ComplexCondition(result=i).prepare_named_result(name) for i in self.categories[column]]
-                #self.recipients[name] = self.recipients[name].join(pd.Series(self.categories[column], name=column))
-                #self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column+"named"))
-                self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column))
-            else:
-                if name[0] == position or position not in named_positions:
-                    self.recipients[name] = self.recipients[name].join(self.categories[column])
-        #print(self.recipients[name])
-        return self.recipients
+
 
     def get_result_column(self, column_name, mark_column=pd.Series(), result_column=pd.Series()):
         def count_true_percent(mark_column):
