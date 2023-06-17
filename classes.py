@@ -3,7 +3,6 @@ from ComplexCondition import ComplexCondition
 import numpy as np
 pd.set_option('display.max.columns', None)
 
-#реализуй новые возможности бонусной логики
 # сделай 2 мод фрейма на каждого участника
 # реализуй подход с категорией плэйс
 # реализуй подход с категорией MOD WEAK
@@ -199,17 +198,17 @@ class AccessoryData:
 
         mods_for_coef = self.mods_frame.get([i for i in self.mods_frame.columns if 'mod' in i])
         mods_for_coef = mods_for_coef.to_dict('index')
-        print(mods_for_coef)
+        #print(mods_for_coef)
         all_named_mods = []
         x = [all_named_mods.extend(i) for i in self.named_coefficients.values()]
         named_mods = self.mods_frame.get(all_named_mods).to_dict('index')
-        print(named_mods)
+        #print(named_mods)
         # print(mods_for_coef)
         # print(named_mods)
 # замуть в этой функции
         def named_coefs(positions, duty, with_children, coef_dict, named_coefs):
             new_coef_dict = {k: coef_dict.copy() for k in list(positions.keys())}
-            print(new_coef_dict)
+            #print(new_coef_dict)
             for r in new_coef_dict:
                 if r not in with_children:
                     if duty == 'duty24':
@@ -222,7 +221,7 @@ class AccessoryData:
                 new_coef_dict[r].update(r_coefs)
                 new_coef_dict[r] = [i for i in list(new_coef_dict[r].values()) if i]
 
-            print(new_coef_dict)
+            #print(new_coef_dict)
             return new_coef_dict
         self.mods_frame['named_coefs'] = list(map(named_coefs,
                                                   self.mods_frame['positions'],
@@ -318,43 +317,47 @@ class CategoryData:
 class BonusFrame:
     def __init__(self, cat_frame, price_frame):
         self.name = price_frame.name
-        self.bonus_logic = price_frame['bonus']
+        self.logic = price_frame['logic']
+        self.interval = price_frame['N']
+        self.bonus = price_frame['bonus']
         self.mark_ser = pd.Series(cat_frame['mark'])
         all_True_exept_cant = lambda i: 'True' if i != 'can`t' else i
         self.max_bonus_ser = self.mark_ser.map(all_True_exept_cant)
         # self.max_bonus_ser = pd.Series(['can`t' if i == 'can`t' else 'True' for i in self.mark_ser])
         self.bonus_list = [0] * len(self.mark_ser)
 
+    @property
+    def tools(self):
+        return {'every N': self.every_n_give_a_bonus}
+
     def has_bonus_logic(self):
-        flag = True if self.bonus_logic else False
+        flag = True if self.logic else False
         return flag
 
-    def count_a_bonus(self, mark_ser=pd.Series()):
-        bonus_logic = self.bonus_logic.split(', ')
-        interval, bonus = int(bonus_logic[0]), int(bonus_logic[1])
-
-        if not mark_ser.empty:
-            mark_dict = mark_ser.to_dict()
-        else:
-            mark_dict = self.mark_ser.to_dict()
-        bonus_list = self.bonus_list.copy()
-
-        mark_dict = {k: mark_dict[k] for k in mark_dict if mark_dict[k] not in ('can`t', 'wishn`t')}
-        # print('count_a_bonus', mark_dict)
+    def every_n_give_a_bonus(self, mark_dict, bonus_list):
         counter = 1
-
         for k in mark_dict:
             if mark_dict[k] == 'True':
-                if counter != interval:
+                if counter != self.interval:
                     counter += 1
                 else:
-                    bonus_list[k] = bonus
+                    bonus_list[k] = self.bonus
                     counter = 1
                     # print(bonus)
                 # print(counter, interval,)
 
             elif mark_dict[k] == 'False':
                 counter = 1
+        return bonus_list
+
+    def count_a_bonus(self, mark_ser=pd.Series()):
+        if not mark_ser.empty:
+            mark_dict = mark_ser.to_dict()
+        else:
+            mark_dict = self.mark_ser.to_dict()
+
+        mark_dict = {k: mark_dict[k] for k in mark_dict if mark_dict[k] not in ('can`t', 'wishn`t')}
+        bonus_list = self.tools[self.logic](mark_dict, self.bonus_list.copy())
 
         return bonus_list
 
@@ -369,4 +372,5 @@ class BonusFrame:
         self.bonus_list.insert(-1, int(true_percent * 100))
 #        print('finish:', 'logic', self.bonus_logic, self.bonus_list)
         return self.bonus_list
+
 

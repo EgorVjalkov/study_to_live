@@ -1,5 +1,3 @@
-import pandas as pd
-import classes as cl
 #
 # d = {'1.12': False, '2.12': 5.9}
 # d = pd.Series(d, name='A:GYM')
@@ -61,13 +59,24 @@ import classes as cl
 
 recipients = ['Egr', 'Lera']
 month = "may23"
-path_to_file = f'months/{month}/{month}.xlsx'
+path_to_file_may = f'months/{month}/{month}.xlsx'
+month_2 = "jun23NEW_VERSION"
+path_to_file_jun = f'months/{month_2}/{month_2}.xlsx'
 show_calc = True
 
 
-month_data = cl.MonthData(path_to_file, recipients)
-ad = cl.AccessoryData(month_data.accessory, month_data.vedomost, recipients)
+month_data_may = cl.MonthData(path_to_file_may, recipients)
+ad = cl.AccessoryData(month_data_may.accessory, month_data_may.vedomost, recipients)
 #ad.get_in_time_sleeptime_col('Egr', month_data.vedomost)
 ad.get_mods_frame()
-acc = pd.concat([month_data.date, ad.mods_frame], axis=1)
+acc = pd.concat([month_data_may.date, ad.mods_frame], axis=1)
 acc.to_excel(f'output_files/{month}/testing_af.xlsx')
+cat = 'e:dev'
+cf = cl.CategoryData('Egr', month_data_may.vedomost[cat], ad.mods_frame, month_data_may.prices)
+cf.add_price_column()
+jun_prices = cl.MonthData(path_to_file_jun, recipients).prices[cat]
+bonus_column = cl.BonusFrame(cf.cat_frame, jun_prices)
+if bonus_column.has_bonus_logic():
+    cf.cat_frame['bonus'] = bonus_column.count_a_bonus()
+    print(cf.cat_frame.get(['mark', 'bonus']))
+
