@@ -20,7 +20,6 @@ class Recipient:
         self.coefficients = ['KG', 'KGD', 'g', 'd24', 'd8']
 
     def get_and_collect_r_name_col(self, column, new_column_name=''):
-
         def extract_by_litera(day):
             day = day.split(', ')
             day = {i[0]: i[1:] if len(i) > 1 else '' for i in day}
@@ -29,7 +28,6 @@ class Recipient:
         self.mod_data[new_column_name] = column.map(extract_by_litera)
 
     def get_r_positions(self):
-
         def extract_positions(children, place):
             positions = [i for i in list(children+place) if i in self.positions]
             positions.append(self.private_position)
@@ -37,7 +35,17 @@ class Recipient:
 
         self.mod_data['positions'] = list(map(extract_positions, self.mod_data['children'], self.mod_data['place']))
 
+    def get_duty_coefficients(self):
+        def extract_duty_coefs(place):
+            if place[0] == 'd':
+                duty, severity = tuple(place.replace(')', '').split('('))
+                return duty, severity
+            else:
+                return False
 
+        self.mod_data['duty'] = list(map(extract_duty_coefs, self.mod_data['place']))
+        print(self.r_name)
+        print(self.mod_data)
 
 class MonthData:
     def __init__(self, path, recipients):
@@ -56,7 +64,7 @@ class MonthData:
         self.recipients_cat = self.recipients_mod.copy()
 
         date_frame_for_result_frame = self.date.copy().astype('str')
-        mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=(self.limit, self.limit+1))
+        mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=[self.limit, self.limit+1])
         self.date_frame = pd.concat([date_frame_for_result_frame, mini_frame])
         self.result_frame = {k: self.date_frame for k in recipients}
 

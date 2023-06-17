@@ -24,6 +24,7 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         r.get_and_collect_r_name_col(md.accessory['COM'], 'children')
         r.get_and_collect_r_name_col(md.accessory['PLACE'], 'place')
         r.get_r_positions()
+        r.get_duty_coefficients()
 
     #ad = cl.AccessoryData(md.accessory, md.vedomost, recipients)
 #    ad.get_mods_frame()
