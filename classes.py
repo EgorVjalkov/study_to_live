@@ -3,10 +3,6 @@ from ComplexCondition import ComplexCondition
 import numpy as np
 pd.set_option('display.max.columns', None)
 
-# сделай 2 мод фрейма на каждого участника
-# реализуй подход с категорией плэйс
-# реализуй подход с категорией MOD WEAK
-
 
 class Recipient:
     def __init__(self, name, date_frame):
@@ -27,7 +23,7 @@ class Recipient:
 
         self.mod_data[new_column_name] = column.map(extract_by_litera)
 
-    def get_r_positions(self):
+    def get_r_positions_col(self):
         def extract_positions(children, place):
             positions = [i for i in list(children+place) if i in self.positions]
             positions.append(self.private_position)
@@ -35,7 +31,10 @@ class Recipient:
 
         self.mod_data['positions'] = list(map(extract_positions, self.mod_data['children'], self.mod_data['place']))
 
-    def get_duty_coefficients(self):
+    def get_children_coef(self):
+        self.mod_data['child_coef'] = self.mod_data['children'].map(len)
+
+    def get_duty_coefficients_col(self):
         def extract_duty_coefs(place):
             if place[0] == 'd':
                 duty, severity = tuple(place.replace(')', '').split('('))
@@ -43,9 +42,27 @@ class Recipient:
             else:
                 return False
 
-        self.mod_data['duty'] = list(map(extract_duty_coefs, self.mod_data['place']))
+        self.mod_data['duty_coef'] = list(map(extract_duty_coefs, self.mod_data['place']))
+
+    def get_weak_coefficients_col(self, weak_col):
+        def count_weak_num(r_children, weak_children):
+            r_weak_list = []
+            if all([r_children, weak_children]):
+                r_weak_list = [r_weak_list.append(i) for i in weak_children if i in r_children]
+            return len(r_weak_list)
+
+        self.mod_data['weak_coef'] = list(map(count_weak_num, self.mod_data['children'], weak_col))
+
+    def get_coefs_col(self):
+        def get_coef_dict(row_of_coefs):
+            row_of_coefs = {i[0].upper(): row_of_coefs[i] for i in row_of_coefs}
+            return row_of_coefs
+
+        coef_frame = self.mod_data.get([i for i in self.mod_data if 'coef' in i])
+        self.mod_data['coefs'] = list(map(get_coef_dict, coef_frame.to_dict('index').values()))
         print(self.r_name)
         print(self.mod_data)
+
 
 class MonthData:
     def __init__(self, path, recipients):
