@@ -23,7 +23,7 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         r = cl.Recipient(r_name, md.date)
         r.get_and_collect_r_name_col(md.accessory['COM'], 'children')
         r.get_and_collect_r_name_col(md.accessory['PLACE'], 'place')
-        r.get_children_coef()
+        r.get_children_coef(md.accessory['KG'])
         r.get_duty_coefficients_col()
         r.get_weak_coefficients_col(md.accessory['WEAK'])
         r.get_r_positions_col()

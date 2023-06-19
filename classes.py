@@ -31,7 +31,14 @@ class Recipient:
 
         self.mod_data['positions'] = list(map(extract_positions, self.mod_data['children'], self.mod_data['place']))
 
-    def get_children_coef(self):
+    def get_children_coef(self, KG_col):
+        def extract_KG_coefs(r_children, KG_coefs):
+            child_coefs_list = False
+            if all([r_children, KG_coefs]):
+                child_coefs_list = [i[1:] for i in KG_coefs.split(', ') if i[0] in r_children]
+            return child_coefs_list
+
+        self.mod_data['KG_coefs'] = list(map(extract_KG_coefs, self.mod_data['children'], KG_col))
         self.mod_data['child_coef'] = self.mod_data['children'].map(len)
 
     def get_duty_coefficients_col(self):
@@ -48,7 +55,7 @@ class Recipient:
         def count_weak_num(r_children, weak_children):
             r_weak_list = []
             if all([r_children, weak_children]):
-                r_weak_list = [r_weak_list.append(i) for i in weak_children if i in r_children]
+                r_weak_list = [i for i in weak_children if i in r_children]
             return len(r_weak_list)
 
         self.mod_data['weak_coef'] = list(map(count_weak_num, self.mod_data['children'], weak_col))
