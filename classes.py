@@ -2,6 +2,18 @@ import pandas as pd
 from ComplexCondition import ComplexCondition
 import numpy as np
 pd.set_option('display.max.columns', None)
+# подумай каак вручную примутить к д8 все!
+
+
+class CompCoef:
+    def __init__(self, coef_data):
+        self.coef_data = coef_data
+
+    @property
+    def severity_dict(self):
+        name = self.coef_data[:self.coef_data.find('(')]
+        severity = self.coef_data[self.coef_data.find('(')+1]
+        return {'name': name, 'sev': severity}
 
 
 class Recipient:
@@ -31,25 +43,28 @@ class Recipient:
 
         self.mod_data['positions'] = list(map(extract_positions, self.mod_data['children'], self.mod_data['place']))
 
-    def get_children_coef(self, KG_col):
+    def get_children_coef_col(self, KG_col):
         def extract_KG_coefs(r_children, KG_coefs):
-            child_coefs_list = False
+            sum_coef = 0
             if all([r_children, KG_coefs]):
-                child_coefs_list = [i[1:] for i in KG_coefs.split(', ') if i[0] in r_children]
-            return child_coefs_list
+                KG_coefs_list = [int(CompCoef(i).severity_dict['sev']) for i in KG_coefs.split(', ') if i[0] in r_children]
+                sum_coef = sum(KG_coefs_list)
+            return sum_coef
 
-        self.mod_data['KG_coefs'] = list(map(extract_KG_coefs, self.mod_data['children'], KG_col))
         self.mod_data['child_coef'] = self.mod_data['children'].map(len)
+        self.mod_data['KG_coef'] = list(map(extract_KG_coefs, self.mod_data['children'], KG_col))
 
     def get_duty_coefficients_col(self):
         def extract_duty_coefs(place):
             if place[0] == 'd':
-                duty, severity = tuple(place.replace(')', '').split('('))
-                return duty, severity
+                duty_coef = CompCoef(place).severity_dict
+                return duty_coef['name'], duty_coef['sev']
             else:
-                return False
+                return ''
 
-        self.mod_data['duty_coef'] = list(map(extract_duty_coefs, self.mod_data['place']))
+        duty_coef_list = list(map(extract_duty_coefs, self.mod_data['place']))
+        self.mod_data['d24_coef'] = [i[1] if 'd24' in i else False for i in duty_coef_list]
+        self.mod_data['d8_coef'] = [i[1] if 'd8' in i else False for i in duty_coef_list]
 
     def get_weak_coefficients_col(self, weak_col):
         def count_weak_num(r_children, weak_children):
@@ -60,9 +75,13 @@ class Recipient:
 
         self.mod_data['weak_coef'] = list(map(count_weak_num, self.mod_data['children'], weak_col))
 
-    def get_coefs_col(self):
+    def get_sleepless_col(self, vedomost):
+        sleepless_col_name = self.private_position + ':siesta'
+        self.mod_data['sleep_coef'] = list(map(lambda i: True if i else False, vedomost[sleepless_col_name]))
+
+    def get_all_coefs_col(self):
         def get_coef_dict(row_of_coefs):
-            row_of_coefs = {i[0].upper(): row_of_coefs[i] for i in row_of_coefs}
+            row_of_coefs = {i.replace('_coef', ''): row_of_coefs[i] for i in row_of_coefs if row_of_coefs[i]}
             return row_of_coefs
 
         coef_frame = self.mod_data.get([i for i in self.mod_data if 'coef' in i])
