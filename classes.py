@@ -12,7 +12,8 @@ class CompCoef:
     @property
     def severity_dict(self):
         name = self.coef_data[:self.coef_data.find('(')]
-        severity = self.coef_data[self.coef_data.find('(')+1]
+        severity = self.coef_data[self.coef_data.find('(')+1:self.coef_data.find(')')]
+        #print(severity)
         return {'name': name, 'sev': severity}
 
 
@@ -29,25 +30,20 @@ class Recipient:
 
     def get_and_collect_r_name_col(self, column, new_column_name=''):
         def extract_by_litera(day):
-            day = day.split(', ')
-            day = {i[0]: i[1:] if len(i) > 1 else '' for i in day}
-            return day[self.litera]
+            if day:
+                day = day.split(', ')
+                day = [i[1:] if len(i) > 1 else '' for i in day if i[0] == self.litera]
+                return ''.join(day)
+            else:
+                return ''
 
         self.mod_data[new_column_name] = column.map(extract_by_litera)
-
-    def get_r_positions_col(self):
-        def extract_positions(children, place):
-            positions = [i for i in list(children+place) if i in self.positions]
-            positions.append(self.private_position)
-            return positions
-
-        self.mod_data['positions'] = list(map(extract_positions, self.mod_data['children'], self.mod_data['place']))
 
     def get_children_coef_col(self, KG_col):
         def extract_KG_coefs(r_children, KG_coefs):
             sum_coef = 0
             if all([r_children, KG_coefs]):
-                KG_coefs_list = [int(CompCoef(i).severity_dict['sev']) for i in KG_coefs.split(', ') if i[0] in r_children]
+                KG_coefs_list = [float(CompCoef(i).severity_dict['sev']) for i in KG_coefs.split(', ') if i[0] in r_children]
                 sum_coef = sum(KG_coefs_list)
             return sum_coef
 
@@ -55,16 +51,16 @@ class Recipient:
         self.mod_data['KG_coef'] = list(map(extract_KG_coefs, self.mod_data['children'], KG_col))
 
     def get_duty_coefficients_col(self):
-        def extract_duty_coefs(place):
-            if place[0] == 'd':
-                duty_coef = CompCoef(place).severity_dict
+        def extract_duty_coefs(duty):
+            if duty:
+                duty_coef = CompCoef(duty).severity_dict
                 return duty_coef['name'], duty_coef['sev']
             else:
                 return ''
 
-        duty_coef_list = list(map(extract_duty_coefs, self.mod_data['place']))
-        self.mod_data['d24_coef'] = [i[1] if 'd24' in i else False for i in duty_coef_list]
-        self.mod_data['d8_coef'] = [i[1] if 'd8' in i else False for i in duty_coef_list]
+        duty_coef_list = list(map(extract_duty_coefs, self.mod_data['duty']))
+        self.mod_data['d24_coef'] = [i[1] if 'd24' in i else '' for i in duty_coef_list]
+        self.mod_data['d8_coef'] = [i[1] if 'd8' in i else '' for i in duty_coef_list]
 
     def get_weak_coefficients_col(self, weak_col):
         def count_weak_num(r_children, weak_children):
@@ -79,6 +75,14 @@ class Recipient:
         sleepless_col_name = self.private_position + ':siesta'
         self.mod_data['sleep_coef'] = list(map(lambda i: True if i else False, vedomost[sleepless_col_name]))
 
+    def get_r_positions_col(self):
+        def extract_positions(children, home):
+            positions = [i for i in list(children+home) if i in self.positions]
+            positions.append(self.private_position)
+            return positions
+
+        self.mod_data['positions'] = list(map(extract_positions, self.mod_data['children'], self.mod_data['home']))
+
     def get_all_coefs_col(self):
         def get_coef_dict(row_of_coefs):
             row_of_coefs = {i.replace('_coef', ''): row_of_coefs[i] for i in row_of_coefs if row_of_coefs[i]}
@@ -86,8 +90,10 @@ class Recipient:
 
         coef_frame = self.mod_data.get([i for i in self.mod_data if 'coef' in i])
         self.mod_data['coefs'] = list(map(get_coef_dict, coef_frame.to_dict('index').values()))
-        print(self.r_name)
-        print(self.mod_data)
+
+    def get_test_frame(self):
+        all_mods = self.mod_data.get(['children', 'home', 'duty']).to_dict('index')
+
 
 
 class MonthData:
