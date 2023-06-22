@@ -95,7 +95,6 @@ class Recipient:
         all_mods = self.mod_data.get(['children', 'home', 'duty']).to_dict('index')
 
 
-
 class MonthData:
     def __init__(self, path, recipients):
         vedomost = pd.read_excel(path, sheet_name='vedomost', dtype='object').fillna(False)

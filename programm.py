@@ -19,30 +19,17 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
             break
 
     md = cl.MonthData(path_to_file, recipients)
-    for r_name in recipients:
-        r = cl.Recipient(r_name, md.date)
-        r.get_and_collect_r_name_col(md.accessory['COM'], 'children')
-        r.get_and_collect_r_name_col(md.accessory['HOME'], 'home')
-        r.get_and_collect_r_name_col(md.accessory['DUTY'], 'duty')
-        r.get_children_coef_col(md.accessory['KG'])
-        r.get_duty_coefficients_col()
-        r.get_weak_coefficients_col(md.accessory['WEAK'])
-        r.get_sleepless_col(md.vedomost)
-        r.get_r_positions_col()
-        r.get_all_coefs_col()
-        print(r.mod_data)
+    ad = cl.AccessoryData(md.accessory, md.vedomost, recipients)
+    ad.get_mods_frame()
 
-    #ad = cl.AccessoryData(md.accessory, md.vedomost, recipients)
-#    ad.get_mods_frame()
-#
-#    for name in recipients:
-#        while True:
-#            try:
-#                os.mkdir(f'output_files/{month}/{name}')
-#            except FileExistsError:
-#                break
-#
-#        md.get_named_vedomost(name)
+    for name in recipients:
+        while True:
+            try:
+                os.mkdir(f'output_files/{month}/{name}')
+            except FileExistsError:
+                break
+
+        md.get_named_vedomost(name)
 #        #print(month_data.recipients)
 #        result_dict = {}
 #        for column in md.recipients[name]:
