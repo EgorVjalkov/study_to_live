@@ -91,8 +91,18 @@ class Recipient:
         coef_frame = self.mod_data.get([i for i in self.mod_data if 'coef' in i])
         self.mod_data['coefs'] = list(map(get_coef_dict, coef_frame.to_dict('index').values()))
 
-    def get_test_frame(self):
-        all_mods = self.mod_data.get(['children', 'home', 'duty']).to_dict('index')
+    def get_r_vedomost(self, recipients, categories):
+        all_private_positions = [i[0].upper() for i in recipients]
+        for column in categories:
+            position = column[0].upper()
+            double_category_flag = [i for i in categories[column] if type(i) == str and i[0] in all_private_positions]
+            if double_category_flag:
+                column_list = [ComplexCondition(result=i).prepare_named_result(self.r_name) for i in categories[column]]
+                self.cat_data[column] = column_list
+            else:
+                if self.litera == position or position not in all_private_positions:
+                    self.cat_data[column] = categories[column]
+        return self.cat_data
 
 
 class MonthData:
@@ -108,15 +118,29 @@ class MonthData:
         self.date = self.vedomost.get(date_keys)
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
 
-        self.recipients_mod = {k: self.date.copy() for k in recipients}
-        self.recipients_cat = self.recipients_mod.copy()
+        self.recipients = {k: self.date.copy() for k in recipients}
 
         date_frame_for_result_frame = self.date.copy().astype('str')
         mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=[self.limit, self.limit+1])
         self.date_frame = pd.concat([date_frame_for_result_frame, mini_frame])
         self.result_frame = {k: self.date_frame for k in recipients}
 
-
+    def get_named_vedomost(self, name):
+        private_positions = [i[0] for i in self.recipients]
+        for column in self.categories:
+            position = column[0].upper()
+            print([i for i in self.categories[column] if type(i) == str and i[0] in private_positions])
+            if [i for i in self.categories[column] if type(i) == str and i[0] in private_positions]:
+                #print(24, column)
+                column_list = [ComplexCondition(result=i).prepare_named_result(name) for i in self.categories[column]]
+                #self.recipients[name] = self.recipients[name].join(pd.Series(self.categories[column], name=column))
+                #self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column+"named"))
+                self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column))
+            else:
+                if name[0] == position or position not in private_positions:
+                    self.recipients[name] = self.recipients[name].join(self.categories[column])
+        #print(self.recipients[name])
+        return self.recipients
 
     def get_result_column(self, column_name, mark_column=pd.Series(), result_column=pd.Series()):
         def count_true_percent(mark_column):

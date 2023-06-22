@@ -30,4 +30,8 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         r.get_sleepless_col(md.vedomost)
         r.get_r_positions_col()
         r.get_all_coefs_col()
-        print(r.mod_data)
+        #for_self_control = r.mod_data.get(['positions', 'coefs'])
+        #for_self_control.to_excel(f'output_files/{month}/{r_name}_self_control_NEW.xlsx')
+        r.get_r_vedomost(recipients, md.categories)
+        print(r.cat_data)
+

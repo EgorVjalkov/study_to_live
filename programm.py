@@ -7,7 +7,7 @@ from testing import does_need_correction
 recipients = ['Egr', 'Lera']
 month = "jun23NEW_VERSION"
 
-path_to_file = f'months/{month}/{month}.xlsx'
+path_to_file = f'months/{month}/jun23OLD_VERSION.xlsx'
 show_calc = True
 
 if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
@@ -29,7 +29,13 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
             except FileExistsError:
                 break
 
+        #for_self_control = ad.mods_frame.get(['positions', 'named_coefs'])
+        #extract_by_name = lambda i: i[name]
+        #for_self_control = for_self_control.applymap(extract_by_name)
+        #for_self_control.to_excel(f'output_files/{month}/{name}_self_control_OLD.xlsx')
+
         md.get_named_vedomost(name)
+        #print(for_self_control)
 #        #print(month_data.recipients)
 #        result_dict = {}
 #        for column in md.recipients[name]:
