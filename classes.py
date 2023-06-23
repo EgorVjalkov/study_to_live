@@ -2,7 +2,9 @@ import pandas as pd
 from ComplexCondition import ComplexCondition
 import numpy as np
 pd.set_option('display.max.columns', None)
-# подумай каак вручную примутить к д8 все!
+
+# отрихтуй категори фрейм
+# оттестируй все категории в сравнении с старой методой
 
 
 class CompCoef:
