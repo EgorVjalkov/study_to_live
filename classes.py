@@ -16,6 +16,24 @@ class CompCoef:
         #print(severity)
         return {'name': name, 'sev': severity}
 
+    @property
+    def have_coef_data(self):
+        return True if self.coef_data else False
+
+    def count_a_coef_value(self, coef, mark=''):
+        counted_coef = self.coef_data
+        if '{' in self.coef_data:
+            counted_coef = eval(self.coef_data)[mark]
+        elif '[' in self.coef_data:
+            counted_coef = eval(self.coef_data)[int(coef)]
+
+        #print(counted_coef)
+        if type(counted_coef) == str:
+            coef_value = ComplexCondition(coef, counted_coef).get_price_if_multiply()
+            return coef_value
+        else:
+            return counted_coef
+
 
 class Recipient:
     def __init__(self, name, date_frame):
@@ -312,8 +330,7 @@ class AccessoryData:
 
 
 class CategoryData:
-    def __init__(self, active_recipient, cf, mf, pf, date_frame=''):
-        self.active_recipient = active_recipient
+    def __init__(self, cf, mf, pf, date_frame=''):
         self.name = cf.name
         self.cat_frame = pd.DataFrame([True if i == 'T' else i for i in cf], columns=[self.name], dtype='str')
         self.position = self.name[0].upper()
@@ -361,33 +378,36 @@ class CategoryData:
             #print(self.mod_frame[['zlata_mod', 'duty_mod', 'positions']])
         return self.cat_frame
 
-    def count_a_modification(self, coefs):
-        recipient_coefs = coefs[self.active_recipient]
-        #print(recipient_coefs)
-        coefficient_list = recipient_coefs.copy()
-        coefficient_dict = {}
-        for coef in coefficient_list:
-            if type(coef) == dict:
-                named_coef = coef
-                key, value = list(named_coef)[0], coef[list(named_coef)[0]]
-                price_data = self.price_frame[key]
-                named_coef = eval(price_data)[value] if type(price_data) == str else price_data
-                coefficient_dict[key] = named_coef
-                del coefficient_list[coefficient_list.index(coef)]
-        coefficient_dict.update({i: self.price_frame[i] if i in self.price_frame else 1 for i in coefficient_list})
-        coefficient_dict['coef'] = np.array(list(coefficient_dict.values())).prod()
-        #print(coefficient_dict)
-        return coefficient_dict
+    def count_a_modification(self, coefs): # сюда нужно интегрировать марки
+        mark = "True"
+        coef_dict = {}
+        #print('coefs', coefs)
+        for coef_name in coefs:
+            coef = CompCoef(self.price_frame[coef_name])
+            if coef.have_coef_data:
+                coef_value = coef.count_a_coef_value(coefs[coef_name], mark)
+                coef_dict[coef_name] = coef_value
+            else:
+                coef_dict[coef_name] = 0
+        coef_dict['coef'] = sum(coef_dict.values())
+        return coef_dict
 
-    def total_count(self, price, coef):
-        if price > 0:
-            price *= coef
-        return round(price, 2)
+    def total_count(self, coef):
+        #price = 50 # здесь нужно поэкспериментировать
+        price = 50
+        coef = abs(price) * coef
+        price += coef
+        return coef, round(price, 2)
 
     def add_coef_and_result_column(self, show_calculation=False):
-        coefs_list = list(map(self.count_a_modification, self.mod_frame['named_coefs'].copy()))
+        coefs_list = list(map(self.count_a_modification, self.mod_frame['coefs'].copy()))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
-        self.cat_frame['result'] = list(map(self.total_count, self.cat_frame['price'], self.cat_frame['coef']))
+        self.cat_frame['result'] = list(map(self.total_count, self.cat_frame['coef']))
+
+        for_self_control = pd.concat([self.mod_frame['coefs'], pd.Series(coefs_list, name='count'),
+                                      self.cat_frame['coef'], self.cat_frame['result']], axis='columns')
+        for_self_control.to_excel(f'output_files/{self.name}_testing_coef.xlsx')
+
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'with_children', self.mod_frame['with_children'])
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)

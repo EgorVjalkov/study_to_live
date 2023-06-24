@@ -33,5 +33,11 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         #for_self_control = r.mod_data.get(['positions', 'coefs'])
         #for_self_control.to_excel(f'output_files/{month}/{r_name}_self_control_NEW.xlsx')
         r.get_r_vedomost(recipients, md.categories)
-        print(r.cat_data)
+        #print(r.cat_data)
+        for column in r.cat_data:
+            if column.islower():
+                #column = 'e:plan'
+                cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
+                #cd.add_price_column(show_calculation=show_calc)
+                cd.add_coef_and_result_column(show_calculation=show_calc)
 
