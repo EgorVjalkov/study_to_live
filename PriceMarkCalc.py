@@ -1,13 +1,14 @@
 import datetime
 from random import choice
 
-class ComplexCondition:
+class PriceMarkCalc:
     def __init__(self, result='', condition='', date=''):
         self.comparison_dict = {'<': lambda r, y: r < y,
                                 '<=': lambda r, y: r <= y,
                                 '>=': lambda r, y: r >= y,
                                 '>': lambda r, y: r > y}
 
+        print(condition)
         if '{' in condition:
             for operator in self.comparison_dict:
                 if operator in condition:
@@ -18,14 +19,17 @@ class ComplexCondition:
             condition = eval(condition)
 
         self.result = result
-        self.condition_for_price = condition
+        self.condition = condition
         self.price = 0
+
+        self.mark = result
+        self.mark_dict = {'+': True, '-': False}
 
         self.date = datetime.date.today() if date == 'DATE' or not date else date
 
         # print(self.result, type(result), self.condition_for_price, type(self.condition_for_price))
 
-    def prepare_result_if_condition_is_dict(self):
+    def prepare_result(self):
         if ':' in self.result:
             time = [int(i) for i in self.result.split(':')]
             time = datetime.time(*time)
@@ -34,18 +38,18 @@ class ComplexCondition:
                 self.result += datetime.timedelta(days=1)
 
         else:
-            if self.result not in self.condition_for_price:
+            if self.result not in self.condition:
                 try:
-                    if int(self.result) in self.condition_for_price:
-                        self.result = int(self.result)
+                    self.result = float(self.result)
                 except ValueError:
-                    self.result = {self.result[0]: self.result[1:]}
+                    print(self.result)
+                    return self.result
 
         return self.result
 
     def get_price_if_datetime(self):
         delta = 0
-        for k in self.condition_for_price:
+        for k in self.condition:
             if '.' in k:
                 inner_condition = k.split('.')
                 if inner_condition[0] in self.comparison_dict:
@@ -58,8 +62,8 @@ class ComplexCondition:
 
                     inner_condition = self.comparison_dict[comparison_operator](self.result, comparison_value)
                     if inner_condition:
-                        if type(self.condition_for_price[k]) == int:
-                            self.price = self.condition_for_price[k]
+                        if type(self.condition[k]) == int:
+                            self.price = self.condition[k]
                         else:
                             if not delta:
                                 if comparison_value > self.result:
@@ -68,7 +72,7 @@ class ComplexCondition:
                                     delta = (self.result - comparison_value).seconds / 60
                             else:
                                 delta = 60
-                            multiplic = float(self.condition_for_price[k].replace('*', ''))
+                            multiplic = float(self.condition[k].replace('*', ''))
                             self.price += delta * multiplic
                             #print(delta)
                         #print(k, self.condition_for_price[k], inner_condition, self.price)
@@ -77,51 +81,55 @@ class ComplexCondition:
         return self.price
 
     def get_price_if_comparison_logic(self):
-        for i in self.condition_for_price:
-            operator, value = tuple(i.split('.'))
-            if self.comparison_dict[operator](int(self.result), int(value)):
-                self.condition_for_price = self.condition_for_price[i]
-                break
-        if '*' in str(self.condition_for_price):
-            self.price = self.get_price_if_multiply()
-        else:
-            self.price = int(self.condition_for_price)
+        for i in self.condition:
+            if '.' in i:
+                operator, value = tuple(i.split('.'))
+                if self.comparison_dict[operator](int(self.result), int(value)):
+                    self.price = self.condition[i]
+                    break
         return self.price
 
     def get_price_if_multiply(self):
-        #print(self.result, self.condition_for_price)
-        multiplicator = float(self.condition_for_price.replace('*', ''))
-        return float(self.result) * multiplicator
+        multiplicator = float(self.price.replace('*', ''))
+        self.price = float(self.result) * multiplicator
+        return self.price
 
-    def get_price_if_result_is_dict(self):
-        key_extraction = list(self.result)[0]
-        self.result = {'key': key_extraction, 'value': self.result[key_extraction]}
-        d = self.condition_for_price[self.result['key']]
-        self.price = [d[i] for i in d if self.result['value'] in i][0]
-        return int(self.price)
+    def get_price_if_complex_result(self):
+        key, value = self.result[0], self.result[1:]
+        result_d_by_key = self.condition[key]
+        for i in result_d_by_key:
+            if value in i:
+                self.price = float(result_d_by_key[i])
+        self.mark = key
+        return self.price, self.mark
 
     def get_price(self):
-        if type(self.condition_for_price) == dict:
-            self.prepare_result_if_condition_is_dict()
+        self.prepare_result()
+        print(self.result, self.condition)
 
+        if self.result in self.condition:
+            self.price = self.condition[self.result]# done
+
+        else:
             if self.comparison_flag:
                 if type(self.result) == datetime.datetime:
-                    return self.get_price_if_datetime()
+                    self.get_price_if_datetime()
                 else:
-                    return self.get_price_if_comparison_logic()
+                    self.get_price_if_comparison_logic()# done
 
             else:
-                if type(self.result) == dict:
-                    return self.get_price_if_result_is_dict()
-                else:
-                    self.price = self.condition_for_price[self.result]
+                self.get_price_if_complex_result()# done
+
+        if '*' in str(self.price):
+            self.get_price_if_multiply()# done
+
+        if self.mark not in self.mark_dict:
+            self.mark = True if self.price >= 0 else False
         else:
-            if '*' in str(self.condition_for_price):
-                self.price = self.get_price_if_multiply()
-            else:
-                self.price = self.condition_for_price
+            self.mark = self.mark_dict[self.mark]
 
-        return int(self.price)
+        print(self.price, self.mark)
+        return self.price, self.mark
 
     def prepare_named_result(self, recipient_name): # результат по литере
         if type(self.result) == str:
@@ -139,20 +147,20 @@ class ComplexCondition:
         return self.result
 
 
-#results = ['2', 1.0, 1, True, 'L1', 'L22:00', 'E1,L2', 'L']
-#
-#for i in results:
-#    cc = ComplexCondition(result=i)
+results = ['2', 1.0, 1, True, 'L1', 'L22:00', 'E1,L2', 'L']
+
+# for i in results:
+#    cc = PriceMarkCalc(result=i)
 #    cc.prepare_named_result('Egr')
 #    print(cc.result)
 #    print()
 
-# cc = ComplexCondition('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
-# cc = ComplexCondition('23:00', '{"<.22": "3*", "<.23": "2*", ">.23": 0}')
-# cc = ComplexCondition(4.0, '10*')
-#cc = ComplexCondition('1', '{1: 50, 0: 0}')
-# cc = ComplexCondition(result=True)
-# cc = ComplexCondition(4.0, '{">=.4": 50, "<.4": 0}')
-#print(cc.get_price())
+# cc = PriceMarkCalc('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
+# cc = PriceMarkCalc('23:00', '{"<.22": "3*", "<.23": "2*", ">.23": 0}')
+# cc = PriceMarkCalc(4.0, '10*')
+# cc = PriceMarkCalc('1', '{1: 50, 0: 0}')
+# cc = PriceMarkCalc(result=True)
+# cc = PriceMarkCalc(4.0, '{">=.4": 50, "<.4": 0}')
+# print(cc.get_price())
 
 

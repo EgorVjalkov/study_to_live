@@ -4,7 +4,7 @@ import pandas as pd
 from testing import does_need_correction
 
 
-recipients = ['Egr', 'Lera']
+recipients = ['Lera']
 month = "jun23NEW_VERSION"
 
 path_to_file = f'months/{month}/{month}.xlsx'
@@ -35,10 +35,11 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         r.get_r_vedomost(recipients, md.categories)
         for column in r.cat_data:
             if column.islower():
-                column = 'a:titi'
+                column = 'l:meals'
                 cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
                 cd.add_price_column(show_calculation=show_calc)
                 # cd.add_coef_and_result_column(show_calculation=show_calc)
                 # print(cd.cat_frame)
                 break
+        #break
 

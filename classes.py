@@ -1,8 +1,10 @@
 import pandas as pd
-from ComplexCondition import ComplexCondition
+from PriceMarkCalc import PriceMarkCalc
 import numpy as np
 pd.set_option('display.max.columns', None)
 
+# попробуй для каждой категории ввести дефолтное значение, из которого прочерки будут самозаполняться при инициации
+# проблемы в салькуляторе цены, т.к. замуть сранная с "-", надо сделать, чтоб если нет "-", по умолчанию он был
 # отрихтуй категори фрейм
 # оттестируй все категории в сравнении с старой методой
 
@@ -31,7 +33,7 @@ class CompCoef:
 
         #print(counted_coef)
         if type(counted_coef) == str:
-            coef_value = ComplexCondition(coef, counted_coef).get_price_if_multiply()
+            coef_value = PriceMarkCalc(coef, counted_coef).get_price_if_multiply()
             return coef_value
         else:
             return counted_coef
@@ -117,7 +119,7 @@ class Recipient:
             position = column[0].upper()
             double_category_flag = [i for i in categories[column] if type(i) == str and i[0] in all_private_positions]
             if double_category_flag:
-                column_list = [ComplexCondition(result=i).prepare_named_result(self.r_name) for i in categories[column]]
+                column_list = [PriceMarkCalc(result=i).prepare_named_result(self.r_name) for i in categories[column]]
                 self.cat_data[column] = column_list
             else:
                 if self.litera == position or position not in all_private_positions:
@@ -152,7 +154,7 @@ class MonthData:
             #print([i for i in self.categories[column] if type(i) == str and i[0] in private_positions])
             if [i for i in self.categories[column] if type(i) == str and i[0] in private_positions]:
                 #print(24, column)
-                column_list = [ComplexCondition(result=i).prepare_named_result(name) for i in self.categories[column]]
+                column_list = [PriceMarkCalc(result=i).prepare_named_result(name) for i in self.categories[column]]
                 #self.recipients[name] = self.recipients[name].join(pd.Series(self.categories[column], name=column))
                 #self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column+"named"))
                 self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column))
@@ -334,32 +336,27 @@ class AccessoryData:
 class CategoryData:
     def __init__(self, cf, mf, pf, date_frame=''):
         self.name = cf.name
-        self.cat_frame = pd.DataFrame([True if i == 'T' else i for i in cf], columns=[self.name], dtype='str')
+        change_dict = {'T': '+', False: '-'}
+        self.cat_frame = pd.DataFrame([change_dict[i] if i in change_dict else i for i in cf], columns=[self.name], dtype='str')
         self.position = self.name[0]
         self.price_frame = pf[self.name]
         self.mod_frame = mf
+        #print(self.cat_frame)
 
     def find_a_price(self, result, positions):
-        print(positions)
-        done_mark = 'can`t'
+        mark = 'can`t'
         if self.position not in positions:
-            print('exit')
-            return {'price': 0, 'mark': done_mark, 'price_calc': 'not in positions'}
+            return {'price': 0, 'mark': mark, 'price_calc': 'not in positions'}
 
         price_calc = {'price': self.price_frame['PRICE'], 'can`t': 0, 'wishn`t': 0}
-        # can`t - невозможно сделать по уважительной причине, wishn`t - сделал другой, при совместных категориях
-        print(self.name, price_calc)
-        print(result)
         if result not in price_calc:
-            price = ComplexCondition(result, price_calc['price']).get_price()
-            done_mark = 'True' if price >= 0 else 'False'
+            price, mark = PriceMarkCalc(result, price_calc['price']).get_price()
         else:
             price = price_calc[result]
-            done_mark = result
-        #print(price)
+            mark = result
+        print(price, mark)
         price_calc = {k: price_calc[k] for k in price_calc if k not in ('can`t', 'wishn`t')}
-
-        return {'price': price, 'mark': str(done_mark), 'price_calc': list(price_calc.values())}
+        return {'price': price, 'mark': mark, 'price_calc': list(price_calc.values())}
 
     def add_price_column(self, show_calculation=False):
         price_list = list(map(self.find_a_price,
@@ -371,7 +368,8 @@ class CategoryData:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'price_calc', self.price_frame['PRICE'])
             #print(self.cat_frame)
             #print(self.mod_frame[['zlata_mod', 'duty_mod', 'positions']])
-            print(self.cat_frame)
+            #print(self.cat_frame)
+        print(self.cat_frame)
         return self.cat_frame
 
     def count_a_modification(self, coefs): # сюда нужно интегрировать марки
