@@ -89,7 +89,8 @@ class ComplexCondition:
         return self.price
 
     def get_price_if_multiply(self):
-        multiplicator = int(self.condition_for_price.replace('*', ''))
+        #print(self.result, self.condition_for_price)
+        multiplicator = float(self.condition_for_price.replace('*', ''))
         return float(self.result) * multiplicator
 
     def get_price_if_result_is_dict(self):
