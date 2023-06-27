@@ -28,6 +28,7 @@ class CompCoef:
         counted_coef = self.coef_data
         if '{' in self.coef_data:
             counted_coef = eval(self.coef_data)[mark]
+            print(counted_coef)
         elif '[' in self.coef_data:
             counted_coef = eval(self.coef_data)[int(coef)]
 
@@ -348,13 +349,13 @@ class CategoryData:
         if self.position not in positions:
             return {'price': 0, 'mark': mark, 'price_calc': 'not in positions'}
 
-        price_calc = {'price': self.price_frame['PRICE'], 'can`t': 0, 'wishn`t': 0}
+        price_calc = {'price': self.price_frame['PRICE'], 'can`t': 0, 'wishn`t': 0, '!': -50}
         if result not in price_calc:
             price, mark = PriceMarkCalc(result, price_calc['price']).get_price()
         else:
             price = price_calc[result]
-            mark = result
-        print(price, mark)
+            mark = result if result != '!' else False
+        #print(price, mark)
         price_calc = {k: price_calc[k] for k in price_calc if k not in ('can`t', 'wishn`t')}
         return {'price': price, 'mark': mark, 'price_calc': list(price_calc.values())}
 
@@ -366,44 +367,49 @@ class CategoryData:
         self.cat_frame['mark'] = [i.pop('mark') for i in price_list]
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'price_calc', self.price_frame['PRICE'])
-            #print(self.cat_frame)
-            #print(self.mod_frame[['zlata_mod', 'duty_mod', 'positions']])
-            #print(self.cat_frame)
         print(self.cat_frame)
         return self.cat_frame
 
-    def count_a_modification(self, coefs): # сюда нужно интегрировать марки
-        mark = "True"
+    def count_a_modification(self, coefs, mark): # сюда нужно интегрировать марки
+        if mark not in ('True', 'False'):
+            return {'coef': 0, 'mark': mark}
+
         coef_dict = {}
-        #print('coefs', coefs)
+        print('coefs', coefs)
         for coef_name in coefs:
             coef = CompCoef(self.price_frame[coef_name])
             if coef.have_coef_data:
+                print(coef.coef_data)
                 coef_value = coef.count_a_coef_value(coefs[coef_name], mark)
                 coef_dict[coef_name] = coef_value
             else:
                 coef_dict[coef_name] = 0
         coef_dict['coef'] = sum(coef_dict.values())
+        print(coef_dict)
         return coef_dict
 
-    def total_count(self, coef):
+    def total_count(self, price, coef):
         #price = 50 # здесь нужно поэкспериментировать
-        price = 50
+        #price = 50
         coef = abs(price) * coef
         price += coef
         return coef, round(price, 2)
 
     def add_coef_and_result_column(self, show_calculation=False):
-        coefs_list = list(map(self.count_a_modification, self.mod_frame['coefs'].copy()))
+        coefs_list = list(map(self.count_a_modification, self.mod_frame['coefs'].copy(), self.cat_frame['mark']))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
-        self.cat_frame['result'] = list(map(self.total_count, self.cat_frame['coef']))
 
         for_self_control = pd.concat([self.mod_frame['coefs'], pd.Series(coefs_list, name='count'),
-                                      self.cat_frame['coef'], self.cat_frame['result']], axis='columns')
+                                      self.cat_frame['coef']], axis='columns')
         for_self_control.to_excel(f'output_files/{self.name}_testing_coef.xlsx')
 
+        #self.cat_frame['result'] = list(map(self.total_count, self.cat_frame['coef']))
+
+        #for_self_control = pd.concat([self.mod_frame['coefs'], pd.Series(coefs_list, name='count'),
+        #                              self.cat_frame['coef'], self.cat_frame['result']], axis='columns')
+        #for_self_control.to_excel(f'output_files/{self.name}_testing_coef.xlsx')
+
         if show_calculation:
-            self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'with_children', self.mod_frame['with_children'])
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
         return self.price_frame
 
