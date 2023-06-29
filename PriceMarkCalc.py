@@ -8,7 +8,6 @@ class PriceMarkCalc:
                                 '>=': lambda r, y: r >= y,
                                 '>': lambda r, y: r > y}
 
-        print(condition)
         if '{' in condition:
             for operator in self.comparison_dict:
                 if operator in condition:
@@ -23,7 +22,7 @@ class PriceMarkCalc:
         self.price = 0
 
         self.mark = result
-        self.mark_dict = {'+': True, '-': False}
+        self.mark_dict = {'+': 'True', '-': 'False', '0': 'False'}
 
         self.date = datetime.date.today() if date == 'DATE' or not date else date
 
@@ -42,7 +41,6 @@ class PriceMarkCalc:
                 try:
                     self.result = float(self.result)
                 except ValueError:
-                    print(self.result)
                     return self.result
 
         return self.result
@@ -63,7 +61,7 @@ class PriceMarkCalc:
                     inner_condition = self.comparison_dict[comparison_operator](self.result, comparison_value)
                     if inner_condition:
                         if type(self.condition[k]) == int:
-                            self.price = self.condition[k]
+                            self.price += self.condition[k]
                         else:
                             if not delta:
                                 if comparison_value > self.result:
@@ -75,7 +73,7 @@ class PriceMarkCalc:
                             multiplic = float(self.condition[k].replace('*', ''))
                             self.price += delta * multiplic
                             #print(delta)
-                        #print(k, self.condition_for_price[k], inner_condition, self.price)
+                        #print(k, self.condition[k], inner_condition, self.price, '\n')
 # limiting
                     self.price = 200 if self.price > 200 else self.price
         return self.price
@@ -84,13 +82,13 @@ class PriceMarkCalc:
         for i in self.condition:
             if '.' in i:
                 operator, value = tuple(i.split('.'))
-                if self.comparison_dict[operator](int(self.result), int(value)):
+                if self.comparison_dict[operator](float(self.result), int(value)):
                     self.price = self.condition[i]
                     break
         return self.price
 
-    def get_price_if_multiply(self):
-        multiplicator = float(self.price.replace('*', ''))
+    def get_price_if_multiply(self, condition):
+        multiplicator = float(condition.replace('*', ''))
         self.price = float(self.result) * multiplicator
         return self.price
 
@@ -121,14 +119,13 @@ class PriceMarkCalc:
                 self.get_price_if_complex_result()# done
 
         if '*' in str(self.price):
-            self.get_price_if_multiply()# done
+            self.price = self.get_price_if_multiply(self.price)# done
 
         if self.mark not in self.mark_dict:
-            self.mark = True if self.price >= 0 else False
+            self.mark = 'True' if self.price >= 0 else 'False'
         else:
             self.mark = self.mark_dict[self.mark]
 
-        print(self.price, self.mark)
         return self.price, self.mark
 
     def prepare_named_result(self, recipient_name): # результат по литере
@@ -147,7 +144,7 @@ class PriceMarkCalc:
         return self.result
 
 
-results = ['2', 1.0, 1, True, 'L1', 'L22:00', 'E1,L2', 'L']
+#results = ['2', 1.0, 1, True, 'L1', 'L22:00', 'E1,L2', 'L']
 
 # for i in results:
 #    cc = PriceMarkCalc(result=i)
@@ -156,11 +153,11 @@ results = ['2', 1.0, 1, True, 'L1', 'L22:00', 'E1,L2', 'L']
 #    print()
 
 # cc = PriceMarkCalc('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
-# cc = PriceMarkCalc('23:00', '{"<.22": "3*", "<.23": "2*", ">.23": 0}')
+cc = PriceMarkCalc('21:40', '{"<.22": "1.5*", "<.23": "0", ">.23": "-2*"}')
 # cc = PriceMarkCalc(4.0, '10*')
 # cc = PriceMarkCalc('1', '{1: 50, 0: 0}')
 # cc = PriceMarkCalc(result=True)
 # cc = PriceMarkCalc(4.0, '{">=.4": 50, "<.4": 0}')
-# print(cc.get_price())
+print(cc.get_price())
 
 

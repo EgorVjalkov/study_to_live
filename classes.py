@@ -3,10 +3,7 @@ from PriceMarkCalc import PriceMarkCalc
 import numpy as np
 pd.set_option('display.max.columns', None)
 
-# попробуй для каждой категории ввести дефолтное значение, из которого прочерки будут самозаполняться при инициации
-# проблемы в салькуляторе цены, т.к. замуть сранная с "-", надо сделать, чтоб если нет "-", по умолчанию он был
-# отрихтуй категори фрейм
-# оттестируй все категории в сравнении с старой методой
+# оттестируй каждую категорию по красоте, прайс, коэф, резулт, бонус и тотал. по0.5 за каждую
 
 
 class CompCoef:
@@ -33,7 +30,7 @@ class CompCoef:
 
         #print(counted_coef)
         if type(counted_coef) == str:
-            coef_value = PriceMarkCalc(coef, counted_coef).get_price_if_multiply()
+            coef_value = PriceMarkCalc(coef).get_price_if_multiply(counted_coef)
             return coef_value
         else:
             return counted_coef
@@ -62,15 +59,18 @@ class Recipient:
         self.mod_data[new_column_name] = column.map(extract_by_litera)
 
     def get_children_coef_col(self, KG_col):
-        def extract_KG_coefs(r_children, KG_coefs):
-            sum_coef = 0
-            if all([r_children, KG_coefs]):
-                KG_coefs_list = [float(CompCoef(i).severity_dict['sev']) for i in KG_coefs.split(', ') if i[0] in r_children]
-                sum_coef = sum(KG_coefs_list)
-            return sum_coef
+        def extract_KG_coefs(r_children, KG_coefs, d8):
+            if d8:
+                return 0
+            else:
+                sum_coef = 0
+                if all([r_children, KG_coefs]):
+                    KG_coefs_list = [float(CompCoef(i).severity_dict['sev']) for i in KG_coefs.split(', ') if i[0] in r_children]
+                    sum_coef = sum(KG_coefs_list)
+                return sum_coef
 
         self.mod_data['child_coef'] = self.mod_data['children'].map(len)
-        self.mod_data['KG_coef'] = list(map(extract_KG_coefs, self.mod_data['children'], KG_col))
+        self.mod_data['KG_coef'] = list(map(extract_KG_coefs, self.mod_data['children'], KG_col, self.mod_data['d8_coef']))
 
     def get_duty_coefficients_col(self):
         def extract_duty_coefs(duty):
@@ -95,7 +95,7 @@ class Recipient:
 
     def get_sleepless_col(self, vedomost):
         sleepless_col_name = self.private_position + ':siesta'
-        self.mod_data['sleep_coef'] = list(map(lambda i: True if i else False, vedomost[sleepless_col_name]))
+        self.mod_data['sleep_coef'] = list(map(lambda i: True if i != 'can`t' else False, vedomost[sleepless_col_name]))
 
     def get_r_positions_col(self):
         def extract_positions(children, home):
@@ -348,13 +348,14 @@ class CategoryData:
         if self.position not in positions:
             return {'price': 0, 'mark': mark, 'price_calc': 'not in positions'}
 
-        price_calc = {'price': self.price_frame['PRICE'], 'can`t': 0, 'wishn`t': 0}
+        price_calc = {'price': self.price_frame['PRICE'], 'can`t': 0, 'wishn`t': 0, '!': -50}
         if result not in price_calc:
+            print(result)
             price, mark = PriceMarkCalc(result, price_calc['price']).get_price()
         else:
             price = price_calc[result]
-            mark = result
-        print(price, mark)
+            mark = result if result != '!' else False
+        #print(price, mark, '\n end \n')
         price_calc = {k: price_calc[k] for k in price_calc if k not in ('can`t', 'wishn`t')}
         return {'price': price, 'mark': mark, 'price_calc': list(price_calc.values())}
 
@@ -364,16 +365,16 @@ class CategoryData:
                               self.mod_frame['positions']))
         self.cat_frame['price'] = [i.pop('price') for i in price_list]
         self.cat_frame['mark'] = [i.pop('mark') for i in price_list]
+
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'price_calc', self.price_frame['PRICE'])
-            #print(self.cat_frame)
-            #print(self.mod_frame[['zlata_mod', 'duty_mod', 'positions']])
-            #print(self.cat_frame)
-        print(self.cat_frame)
+        #print(self.cat_frame)
         return self.cat_frame
 
-    def count_a_modification(self, coefs): # сюда нужно интегрировать марки
-        mark = "True"
+    def count_a_modification(self, coefs, mark):
+        if mark not in ('True', 'False'):
+            return {'coef': 0}
+
         coef_dict = {}
         #print('coefs', coefs)
         for coef_name in coefs:
@@ -386,25 +387,20 @@ class CategoryData:
         coef_dict['coef'] = sum(coef_dict.values())
         return coef_dict
 
-    def total_count(self, coef):
-        #price = 50 # здесь нужно поэкспериментировать
-        price = 50
+    def total_count(self, price, coef):
         coef = abs(price) * coef
         price += coef
-        return coef, round(price, 2)
+        return round(coef, 2), round(price, 2)
 
     def add_coef_and_result_column(self, show_calculation=False):
-        coefs_list = list(map(self.count_a_modification, self.mod_frame['coefs'].copy()))
+        coefs_list = list(map(self.count_a_modification, self.mod_frame['coefs'].copy(), self.cat_frame['mark']))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
-        self.cat_frame['result'] = list(map(self.total_count, self.cat_frame['coef']))
-
-        for_self_control = pd.concat([self.mod_frame['coefs'], pd.Series(coefs_list, name='count'),
-                                      self.cat_frame['coef'], self.cat_frame['result']], axis='columns')
-        for_self_control.to_excel(f'output_files/{self.name}_testing_coef.xlsx')
-
+        result_list = list(map(self.total_count, self.cat_frame['price'], self.cat_frame['coef']))
+        self.cat_frame['mod'] = [i[0] for i in result_list]
+        self.cat_frame['result'] = [i[1] for i in result_list]
         if show_calculation:
-            self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'with_children', self.mod_frame['with_children'])
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
+
         return self.price_frame
 
 
@@ -413,7 +409,7 @@ class BonusFrame:
         self.name = price_frame.name
         self.logic = price_frame['logic']
         self.interval = price_frame['N']
-        self.bonus = price_frame['bonus']
+        self.bonus = float(price_frame['bonus'])
         self.mark_ser = pd.Series(cat_frame['mark'])
         all_True_exept_cant = lambda i: 'True' if i != 'can`t' else i
         self.max_bonus_ser = self.mark_ser.map(all_True_exept_cant)
@@ -433,6 +429,7 @@ class BonusFrame:
         for k in mark_dict:
             if mark_dict[k] == 'True':
                 if counter != self.interval:
+                    bonus_list[k] = mark_dict[k]
                     counter += 1
                 else:
                     bonus_list[k] = self.bonus
@@ -441,6 +438,7 @@ class BonusFrame:
                 # print(counter, interval,)
 
             elif mark_dict[k] == 'False':
+                bonus_list[k] = mark_dict[k]
                 counter = 1
         return bonus_list
 
@@ -456,8 +454,8 @@ class BonusFrame:
         return bonus_list
 
     def get_bonus_list_with_sum(self):
-        self.bonus_list = self.count_a_bonus()
-        max_bonus_list = self.count_a_bonus(self.max_bonus_ser)
+        self.bonus_list = [0 if type(i) == str else i for i in self.count_a_bonus()]
+        max_bonus_list = [0 if type(i) == str else i for i in self.count_a_bonus(self.max_bonus_ser)]
         bonus_count = len([i for i in self.bonus_list if i])
         max_bonus_count = len([i for i in max_bonus_list if i])
         true_percent = bonus_count / max_bonus_count
