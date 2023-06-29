@@ -89,21 +89,20 @@ class PriceMarkCalc:
 
     def get_price_if_multiply(self, condition):
         multiplicator = float(condition.replace('*', ''))
-        self.price = float(self.result) * multiplicator
-        return self.price
+        return float(self.result) * multiplicator
 
     def get_price_if_complex_result(self):
         key, value = self.result[0], self.result[1:]
         result_d_by_key = self.condition[key]
         for i in result_d_by_key:
             if value in i:
-                self.price = float(result_d_by_key[i])
+                self.condition = float(result_d_by_key[i])
         self.mark = key
-        return self.price, self.mark
+        return self.condition, self.mark
 
     def get_price(self):
         self.prepare_result()
-        print(self.result, self.condition)
+        #print(self.result, self.condition)
 
         if self.result in self.condition:
             self.price = self.condition[self.result]# done
@@ -111,7 +110,7 @@ class PriceMarkCalc:
         else:
             if self.comparison_flag:
                 if type(self.result) == datetime.datetime:
-                    self.get_price_if_datetime()
+                    self.get_price_if_datetime() # done
                 else:
                     self.get_price_if_comparison_logic()# done
 
@@ -153,11 +152,13 @@ class PriceMarkCalc:
 #    print()
 
 # cc = PriceMarkCalc('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
-cc = PriceMarkCalc('21:40', '{"<.22": "1.5*", "<.23": "0", ">.23": "-2*"}')
+# cc = PriceMarkCalc('21:40', '{"<.22": "1.5*", "<.23": "0", ">.23": "-2*"}')
 # cc = PriceMarkCalc(4.0, '10*')
+# cc = PriceMarkCalc('23:00', '{"<.22": "3*", "<.23": "2*", ">.23": 0}')
+# cc = PriceMarkCalc('4', '10*')
 # cc = PriceMarkCalc('1', '{1: 50, 0: 0}')
 # cc = PriceMarkCalc(result=True)
 # cc = PriceMarkCalc(4.0, '{">=.4": 50, "<.4": 0}')
-print(cc.get_price())
+# print(cc.get_price())
 
 

@@ -28,7 +28,7 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         r.get_children_coef_col(md.accessory['KG'])
         r.get_weak_coefficients_col(md.accessory['WEAK'])
         r.get_sleepless_col(md.vedomost)
-        print(r.mod_data)
+        # print(r.mod_data)
         r.get_r_positions_col()
         r.get_all_coefs_col()
         #for_self_control = r.mod_data.get(['positions', 'coefs'])

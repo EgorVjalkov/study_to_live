@@ -4,6 +4,7 @@ import numpy as np
 pd.set_option('display.max.columns', None)
 
 # оттестируй каждую категорию по красоте, прайс, коэф, резулт, бонус и тотал. по0.5 за каждую
+# в идеале перенеси тотал фрейм в пациента
 
 
 class CompCoef:
@@ -25,6 +26,7 @@ class CompCoef:
         counted_coef = self.coef_data
         if '{' in self.coef_data:
             counted_coef = eval(self.coef_data)[mark]
+            #print(counted_coef)
         elif '[' in self.coef_data:
             counted_coef = eval(self.coef_data)[int(coef)]
 
@@ -226,113 +228,6 @@ class MonthData:
         self.result_frame[name] = pd.concat([self.result_frame[name], day_sum_after_0_ser], axis=1)
 
 
-class AccessoryData:
-    def __init__(self, af, vedomost, recipients):
-        self.af = af
-        self.vedomost = vedomost
-        self.mods_frame = {}
-        self.positions_logic = {
-            'duty24': {'Lera': ['A', 'Z', 'H', 'L'], 'Egr': ['E']},
-            'duty24, M': {'Lera': ['A', 'Z', 'L'], 'Egr': ['E']},
-            'V': {'Lera': ['A', 'Z', 'L'], 'Egr': ['A', 'Z', 'E']},
-            'M': {'Lera': ['A', 'Z', 'L'], 'Egr': ['E', 'H']},
-            '': {'Lera': ['A', 'Z', 'H', 'L'], 'Egr': ['A', 'Z', 'H', 'E']}
-        }
-        self.children_positions = ('A', 'Z')
-        self.named_coefficients = {'Egr': ['DIF_DUTY', 'Egr_sleepless'], 'Lera': ['Lera_sleepless']}
-        self.recipients = recipients
-
-    def get_mods_frame(self):
-        self.mods_frame = pd.DataFrame(index=self.af.index)
-        self.mods_frame['duty'] = ['duty' + str(int(i)) if i else i for i in self.af['DUTY']]
-        self.mods_frame['zlata_mod'] = self.af['MOD']
-        self.mods_frame['weak_mod'] = ['WEAK' + str(int(i)) if i else i for i in self.af['WEAK']]
-        self.mods_frame['DIF_DUTY'] = [{'DIF_DUTY': str(int(i))} if i else i for i in self.af['DIF_DUTY']]
-
-        def get_sleepless_col(recipient, vedomost):
-            sleepless_ser_name = recipient[0].lower() + ':siesta'
-            sleepless_ser = list(map(lambda i: 'SLEEP' if i else False, vedomost[sleepless_ser_name]))
-            return pd.Series(sleepless_ser, name=f'{recipient}_sleepless')
-
-        def get_in_time_sleeptime_col(recipient, vedomost):
-            def hour_extraction(time):
-                hour = 0
-                if time:
-                    if ':' in time:
-                        hour = int(time.split(':')[0])
-                    else:
-                        hour = 21
-                return hour
-
-            sleep_time_ser_name = recipient[0].lower() + ':sleeptime'
-            sleeptime_ser = list(map(hour_extraction, vedomost[sleep_time_ser_name]))
-            before_0 = lambda i: 'True' if i > 20 else 'False'
-            sleeptime_ser = list(map(before_0, sleeptime_ser))
-            return pd.Series(sleeptime_ser, name=recipient + '_sleep_in_time')
-
-        for name in self.recipients:
-            self.mods_frame = pd.concat([self.mods_frame, get_sleepless_col(name, self.vedomost)], axis=1)
-            self.mods_frame = pd.concat([self.mods_frame, get_in_time_sleeptime_col(name, self.vedomost)], axis=1)
-
-        def f_for_positions(*mods):
-            #print(mods)
-            mods = ['' if i == 'duty8' else i for i in mods]
-            mods_key = ', '.join([i for i in mods if i])
-            if mods_key not in self.positions_logic:
-                if 'duty24' in mods_key:
-                    mods_key = 'duty24'
-                else:
-                    mods_key = ''
-            #print(mods_key)
-            return self.positions_logic[mods_key]
-        self.mods_frame['positions'] = list(map(f_for_positions,
-                                                self.mods_frame['duty'],
-                                                self.mods_frame['zlata_mod']))
-
-        def with_children(positions):
-            recipient_list = []
-            for r in positions:
-                pos = [i for i in positions[r] if i in self.children_positions]
-                if pos:
-                    recipient_list.append(r)
-            return recipient_list
-        self.mods_frame['with_children'] = list(map(with_children, self.mods_frame['positions']))
-
-        mods_for_coef = self.mods_frame.get([i for i in self.mods_frame.columns if 'mod' in i])
-        mods_for_coef = mods_for_coef.to_dict('index')
-        #print(mods_for_coef)
-        all_named_mods = []
-        x = [all_named_mods.extend(i) for i in self.named_coefficients.values()]
-        named_mods = self.mods_frame.get(all_named_mods).to_dict('index')
-        #print(named_mods)
-        # print(mods_for_coef)
-        # print(named_mods)
-# замуть в этой функции
-        def named_coefs(positions, duty, with_children, coef_dict, named_coefs):
-            new_coef_dict = {k: coef_dict.copy() for k in list(positions.keys())}
-            #print(new_coef_dict)
-            for r in new_coef_dict:
-                if r not in with_children:
-                    if duty == 'duty24':
-                        new_coef_dict[r].clear()
-                    else:
-                        del new_coef_dict[r]['weak_mod']
-                if duty == 'duty8':
-                    new_coef_dict[r].update({'duty': duty})
-                r_coefs = {k: named_coefs[k] for k in named_coefs if k in self.named_coefficients[r] if named_coefs[k]}
-                new_coef_dict[r].update(r_coefs)
-                new_coef_dict[r] = [i for i in list(new_coef_dict[r].values()) if i]
-
-            #print(new_coef_dict)
-            return new_coef_dict
-        self.mods_frame['named_coefs'] = list(map(named_coefs,
-                                                  self.mods_frame['positions'],
-                                                  self.mods_frame['duty'],
-                                                  self.mods_frame['with_children'],
-                                                  mods_for_coef.values(),
-                                                  named_mods.values()))
-
-
 class CategoryData:
     def __init__(self, cf, mf, pf, date_frame=''):
         self.name = cf.name
@@ -343,6 +238,7 @@ class CategoryData:
         self.mod_frame = mf
         #print(self.cat_frame)
 
+
     def find_a_price(self, result, positions):
         mark = 'can`t'
         if self.position not in positions:
@@ -350,7 +246,7 @@ class CategoryData:
 
         price_calc = {'price': self.price_frame['PRICE'], 'can`t': 0, 'wishn`t': 0, '!': -50}
         if result not in price_calc:
-            print(result)
+            #print(result)
             price, mark = PriceMarkCalc(result, price_calc['price']).get_price()
         else:
             price = price_calc[result]
@@ -371,12 +267,11 @@ class CategoryData:
         #print(self.cat_frame)
         return self.cat_frame
 
-    def count_a_modification(self, coefs, mark):
+    def count_a_modification(self, coefs, mark): # сюда нужно интегрировать марки
         if mark not in ('True', 'False'):
-            return {'coef': 0}
+            return {'coef': 0, 'mark': mark}
 
         coef_dict = {}
-        #print('coefs', coefs)
         for coef_name in coefs:
             coef = CompCoef(self.price_frame[coef_name])
             if coef.have_coef_data:
@@ -402,7 +297,6 @@ class CategoryData:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
 
         return self.price_frame
-
 
 class BonusFrame:
     def __init__(self, cat_frame, price_frame):
