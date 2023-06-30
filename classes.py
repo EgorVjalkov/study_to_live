@@ -317,14 +317,21 @@ class BonusFrame:
     def has_bonus_logic(self):
         flag = True if self.logic else False
         return flag
-
+# нихрена не понимаю как здесь сделать. хочу чтоб если комбо не может накопиться, оно бы делилось
     def every_n_give_a_bonus(self, mark_dict, bonus_list):
         counter = 1
         for k in mark_dict:
+            k_index = list(mark_dict.keys()).index(k)
+            print(k_index+self.interval, len(mark_dict))
             if mark_dict[k] == 'True':
                 if counter != self.interval:
-                    bonus_list[k] = mark_dict[k]
-                    counter += 1
+                    if k_index+self.interval > len(mark_dict):
+                        print('done')
+                        bonus_list[k] = round(self.bonus / self.interval)
+                        counter = 1
+                    else:
+                        bonus_list[k] = mark_dict[k]
+                        counter += 1
                 else:
                     bonus_list[k] = self.bonus
                     counter = 1
@@ -358,5 +365,3 @@ class BonusFrame:
         self.bonus_list.insert(-1, int(true_percent * 100))
 #        print('finish:', 'logic', self.bonus_logic, self.bonus_list)
         return self.bonus_list
-
-
