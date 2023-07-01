@@ -45,9 +45,7 @@ class Recipient:
         self.private_position = self.litera.lower()
         self.mod_data = date_frame.copy()
         self.cat_data = date_frame.copy()
-
-        self.positions = ['z', 'a', 'h', 'e', 'l']
-        self.coefficients = ['KG', 'KGD', 'g', 'd24', 'd8']
+        self.positions = ['a', 'z', 'h']
 
     def get_and_collect_r_name_col(self, column, new_column_name=''):
         def extract_by_litera(day):
@@ -60,19 +58,30 @@ class Recipient:
 
         self.mod_data[new_column_name] = column.map(extract_by_litera)
 
-    def get_children_coef_col(self, KG_col):
-        def extract_KG_coefs(r_children, KG_coefs, d8):
-            if d8:
-                return 0
-            else:
-                sum_coef = 0
-                if all([r_children, KG_coefs]):
-                    KG_coefs_list = [float(CompCoef(i).severity_dict['sev']) for i in KG_coefs.split(', ') if i[0] in r_children]
-                    sum_coef = sum(KG_coefs_list)
-                return sum_coef
+    def get_children_coef_cols(self, KG_col, weak_col):
+        def get_child_coefs(r_children, KG_coefs, weak_children, d8):
+            child_coef_dict = {'child_coef': 0, 'KG_coef': 0, 'weak_coef': 0}
+            if r_children:
+                child_coef_dict['child_coef'] = len(r_children)
+                if weak_children:
+                    r_weak_children_list = [i for i in weak_children if i in r_children]
+                    child_coef_dict['weak_coef'] = len(r_weak_children_list)
+                if d8:
+                    child_coef_dict = {name: child_coef_dict[name] / 2 for name in child_coef_dict}
+                else:
+                    if KG_coefs:
+                        KG_coefs_list = [float(CompCoef(i).severity_dict['sev'])
+                                         for i in KG_coefs.split(', ') if i[0] in r_children]
+                        child_coef_dict['KG_coef'] = sum(KG_coefs_list)
 
-        self.mod_data['child_coef'] = self.mod_data['children'].map(len)
-        self.mod_data['KG_coef'] = list(map(extract_KG_coefs, self.mod_data['children'], KG_col, self.mod_data['d8_coef']))
+            # print(r_children, weak_children, KG_coefs, d8)
+            # print(child_coef_dict)
+
+            return child_coef_dict
+
+        coefs_list = list(map(get_child_coefs, self.mod_data['children'], KG_col, weak_col, self.mod_data['d8_coef']))
+        for col_name in ['child_coef', 'KG_coef', 'weak_coef']:
+            self.mod_data[col_name] = [i[col_name] for i in coefs_list]
 
     def get_duty_coefficients_col(self):
         def extract_duty_coefs(duty):
@@ -268,10 +277,10 @@ class CategoryData:
         return self.cat_frame
 
     def count_a_modification(self, coefs, mark): # сюда нужно интегрировать марки
+        coef_dict = {'coef': 0}
         if mark not in ('True', 'False'):
-            return {'coef': 0, 'mark': mark}
+            return coef_dict
 
-        coef_dict = {}
         for coef_name in coefs:
             coef = CompCoef(self.price_frame[coef_name])
             if coef.have_coef_data:
@@ -302,7 +311,7 @@ class BonusFrame:
     def __init__(self, cat_frame, price_frame):
         self.name = price_frame.name
         self.logic = price_frame['logic']
-        self.interval = price_frame['N']
+        self.interval = int(price_frame['N'])
         self.bonus = float(price_frame['bonus'])
         self.mark_ser = pd.Series(cat_frame['mark'])
         all_True_exept_cant = lambda i: 'True' if i != 'can`t' else i
@@ -322,12 +331,10 @@ class BonusFrame:
         counter = 1
         for k in mark_dict:
             k_index = list(mark_dict.keys()).index(k)
-            print(k_index+self.interval, len(mark_dict))
             if mark_dict[k] == 'True':
-                if counter != self.interval:
-                    if k_index+self.interval > len(mark_dict):
-                        print('done')
-                        bonus_list[k] = round(self.bonus / self.interval)
+                if counter < self.interval:
+                    if k_index + (self.interval-counter+1) > len(mark_dict):
+                        bonus_list[k] = round(self.bonus / self.interval * counter)
                         counter = 1
                     else:
                         bonus_list[k] = mark_dict[k]
@@ -335,12 +342,11 @@ class BonusFrame:
                 else:
                     bonus_list[k] = self.bonus
                     counter = 1
-                    # print(bonus)
-                # print(counter, interval,)
 
             elif mark_dict[k] == 'False':
                 bonus_list[k] = mark_dict[k]
                 counter = 1
+
         return bonus_list
 
     def count_a_bonus(self, mark_ser=pd.Series()):
@@ -363,5 +369,4 @@ class BonusFrame:
 
         self.bonus_list.append(sum(self.bonus_list))
         self.bonus_list.insert(-1, int(true_percent * 100))
-#        print('finish:', 'logic', self.bonus_logic, self.bonus_list)
         return self.bonus_list
