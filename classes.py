@@ -43,9 +43,15 @@ class Recipient:
         self.r_name = name
         self.litera = name[0]
         self.private_position = self.litera.lower()
-        self.mod_data = date_frame.copy()
-        self.cat_data = date_frame.copy()
+        self.date_frame = date_frame.astype('str')
+        self.mod_data = self.date_frame.copy()
+        self.cat_data = self.date_frame.copy()
         self.positions = ['a', 'z', 'h']
+        limit = len(date_frame.index)
+
+        mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=[limit, limit+1])
+        self.result_frame = pd.concat([self.date_frame.copy(), mini_frame])
+        print(self.result_frame)
 
     def get_and_collect_r_name_col(self, column, new_column_name=''):
         def extract_by_litera(day):
@@ -70,8 +76,8 @@ class Recipient:
                     child_coef_dict = {name: child_coef_dict[name] / 2 for name in child_coef_dict}
                 else:
                     if KG_coefs:
-                        KG_coefs_list = [float(CompCoef(i).severity_dict['sev'])
-                                         for i in KG_coefs.split(', ') if i[0] in r_children]
+                        KG_l = KG_coefs.split(', ')
+                        KG_coefs_list = [float(CompCoef(i).severity_dict['sev']) for i in KG_l if i[0] in r_children]
                         child_coef_dict['KG_coef'] = sum(KG_coefs_list)
 
             # print(r_children, weak_children, KG_coefs, d8)
@@ -108,6 +114,20 @@ class Recipient:
         sleepless_col_name = self.private_position + ':siesta'
         self.mod_data['sleep_coef'] = list(map(lambda i: True if i != 'can`t' else False, vedomost[sleepless_col_name]))
 
+    def get_in_time_sleeptime_col(self, vedomost):
+        def hour_extraction(time):
+            hour = 0
+            if time != '!':
+                if ':' in time:
+                    hour = int(time.split(':')[0])
+                else:
+                    hour = 21
+            return hour
+
+        sleep_time_ser_name = self.private_position + ':sleeptime'
+        sleeptime_ser = pd.Series(list(map(hour_extraction, vedomost[sleep_time_ser_name])))
+        self.mod_data['sleep_in_time'] = sleeptime_ser.map(lambda i: 'True' if i > 20 else 'False')
+
     def get_r_positions_col(self):
         def extract_positions(children, home):
             positions = [i for i in list(children+home) if i in self.positions]
@@ -137,6 +157,14 @@ class Recipient:
                     self.cat_data[column] = categories[column]
         return self.cat_data
 
+    def collect_to_result_frame(self, result_column, bonus_column=()):
+        self.result_frame = pd.concat([self.result_frame, result_column], axis=1)
+        print(self.result_frame)
+        if bonus_column:
+            bonus_column = pd.Series(bonus_column, name=result_column.name+'_bonus')
+            self.result_frame = pd.concat([self.result_frame, bonus_column], axis=1)
+        return self.result_frame
+
 
 class MonthData:
     def __init__(self, path, recipients):
@@ -150,59 +178,6 @@ class MonthData:
         self.accessory = self.vedomost.get([i for i in self.vedomost.columns if i == i.upper() and i not in date_keys])
         self.date = self.vedomost.get(date_keys)
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
-
-        self.recipients = {k: self.date.copy() for k in recipients}
-
-        date_frame_for_result_frame = self.date.copy().astype('str')
-        mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=[self.limit, self.limit+1])
-        self.date_frame = pd.concat([date_frame_for_result_frame, mini_frame])
-        self.result_frame = {k: self.date_frame for k in recipients}
-
-    def get_named_vedomost(self, name):
-        private_positions = [i[0] for i in self.recipients]
-        for column in self.categories:
-            position = column[0].upper()
-            #print([i for i in self.categories[column] if type(i) == str and i[0] in private_positions])
-            if [i for i in self.categories[column] if type(i) == str and i[0] in private_positions]:
-                #print(24, column)
-                column_list = [PriceMarkCalc(result=i).prepare_named_result(name) for i in self.categories[column]]
-                #self.recipients[name] = self.recipients[name].join(pd.Series(self.categories[column], name=column))
-                #self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column+"named"))
-                self.recipients[name] = self.recipients[name].join(pd.Series(column_list, name=column))
-            else:
-                if name[0] == position or position not in private_positions:
-                    self.recipients[name] = self.recipients[name].join(self.categories[column])
-        #print(self.recipients[name])
-        return self.recipients
-
-    def get_result_column(self, column_name, mark_column=pd.Series(), result_column=pd.Series()):
-        def count_true_percent(mark_column):
-            not_cant_mark_list = [i for i in mark_column if i != 'can`t']
-            true_list = [i for i in mark_column if i == 'True']
-            percent = len(true_list) / len(not_cant_mark_list)
-            return int(percent * 100)
-
-        true_percent = count_true_percent(mark_column)
-        if result_column.empty:
-            mark_column = pd.concat([mark_column, pd.Series({self.limit: true_percent, self.limit+1: ''})], axis=0)
-            mark_column.name = column_name
-            return mark_column
-        else:
-            result = round(result_column.sum(), 2)
-            total_ser = pd.Series({self.limit: true_percent, self.limit+1: result})
-            result_column = pd.concat([result_column, total_ser], axis=0)
-            result_column.name = column_name
-            return result_column
-
-    def collect_to_result_frame(self, name, column_name, result_column, mark_column, bonus_column=()):
-        #print(self.result_frame[name])
-        new_column = self.get_result_column(column_name, mark_column, result_column)
-        self.result_frame[name] = pd.concat([self.result_frame[name], new_column], axis=1)
-        if bonus_column:
-            bonus_column = pd.Series(bonus_column, name=column_name+'_bonus')
-            self.result_frame[name] = pd.concat([self.result_frame[name], bonus_column], axis=1)
-        #print(self.result_frame[name])
-        return self.result_frame
 
     def get_day_sum_if_sleep_in_time(self, name, sleep_in_time_ser):
         def get_day_sum(day_row, sleep_in_time_flag=''):
@@ -246,7 +221,6 @@ class CategoryData:
         self.price_frame = pf[self.name]
         self.mod_frame = mf
         #print(self.cat_frame)
-
 
     def find_a_price(self, result, positions):
         mark = 'can`t'
@@ -307,6 +281,25 @@ class CategoryData:
 
         return self.price_frame
 
+    def get_result_col_with_statistic(self):
+        def count_true_percent(mark_column):
+            not_cant_mark_list = [i for i in mark_column if i != 'can`t']
+            true_list = [i for i in mark_column if i == 'True']
+            percent = len(true_list) / len(not_cant_mark_list)
+            return int(percent * 100)
+
+        true_percent = count_true_percent(self.cat_frame['mark'])
+        #if result_column.empty:
+        #    mark_column = pd.concat([mark_column, pd.Series({self.limit: true_percent, self.limit+1: ''})], axis=0)
+        #    mark_column.name = column_name
+        #    return mark_column
+        # else:
+        index_limit = len(self.cat_frame.index)
+        result = round(self.cat_frame['result'].sum(), 2)
+        statistic_app = pd.Series({index_limit: true_percent, index_limit+1: result})
+        result_column = pd.concat([self.cat_frame['result'], statistic_app], axis=0)
+        return result_column
+
 class BonusFrame:
     def __init__(self, cat_frame, price_frame):
         self.name = price_frame.name
@@ -360,7 +353,7 @@ class BonusFrame:
 
         return bonus_list
 
-    def get_bonus_list_with_sum(self):
+    def get_bonus_list_with_statistic(self):
         self.bonus_list = [0 if type(i) == str else i for i in self.count_a_bonus()]
         max_bonus_list = [0 if type(i) == str else i for i in self.count_a_bonus(self.max_bonus_ser)]
         bonus_count = len([i for i in self.bonus_list if i])

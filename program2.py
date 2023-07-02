@@ -32,9 +32,11 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         # print(r.mod_data)
         r.get_r_positions_col()
         r.get_all_coefs_col()
+        r.get_in_time_sleeptime_col(md.vedomost)
         # for_self_control = r.mod_data.get(['positions', 'coefs'])
         # for_self_control.to_excel(f'output_files/{month}/{r_name}_self_control_NEW.xlsx')
         r.get_r_vedomost(recipients, md.categories)
+        #print(r.mod_data)
         for column in r.cat_data:
             if column.islower():
                 column = 'e:dev'
@@ -45,11 +47,12 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
                 if bonus_column.has_bonus_logic():
                     cd.cat_frame['bonus'] = bonus_column.count_a_bonus()
                     # result_dict[column+'_bonus'] = cd.cat_frame['bonus'].sum()
-                    bc_with_sum = bonus_column.get_bonus_list_with_sum()
+                    bc_with_statistic = bonus_column.get_bonus_list_with_statistic()
                 else:
-                    bc_with_sum = ()
+                    bc_with_statistic = ()
                 cd.cat_frame.to_excel(f'output_files/{r_name}_{cd.name}_testing.xlsx')
-                md.collect_to_result_frame(r.r_name, column, cd.cat_frame['result'], cd.cat_frame['mark'], bc_with_sum)
+
+                r.collect_to_result_frame(cd.get_result_col_with_statistic(), bc_with_statistic)
                 break
         md.result_frame[r_name].set_index('DATE').to_excel(f'output_files/{month}/{r_name}/{r_name}_total.xlsx')
         #break
