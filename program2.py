@@ -18,7 +18,7 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         except FileExistsError:
             break
 
-    md = cl.MonthData(path_to_file, recipients)
+    md = cl.MonthData(path_to_file)
     for r_name in recipients:
         r = cl.Recipient(r_name, md.date)
         r.get_and_collect_r_name_col(md.accessory['COM'], 'children')
@@ -32,14 +32,13 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         # print(r.mod_data)
         r.get_r_positions_col()
         r.get_all_coefs_col()
-        r.get_in_time_sleeptime_col(md.vedomost)
         # for_self_control = r.mod_data.get(['positions', 'coefs'])
         # for_self_control.to_excel(f'output_files/{month}/{r_name}_self_control_NEW.xlsx')
         r.get_r_vedomost(recipients, md.categories)
         #print(r.mod_data)
         for column in r.cat_data:
             if column.islower():
-                column = 'e:dev'
+                #column = 'a:titi'
                 cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
                 cd.add_price_column(show_calculation=show_calc)
                 cd.add_coef_and_result_column(show_calculation=show_calc)
@@ -50,10 +49,8 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
                     bc_with_statistic = bonus_column.get_bonus_list_with_statistic()
                 else:
                     bc_with_statistic = ()
-                cd.cat_frame.to_excel(f'output_files/{r_name}_{cd.name}_testing.xlsx')
-
                 r.collect_to_result_frame(cd.get_result_col_with_statistic(), bc_with_statistic)
-                break
-        md.result_frame[r_name].set_index('DATE').to_excel(f'output_files/{month}/{r_name}/{r_name}_total.xlsx')
+                cd.get_ready_and_save_to_excel(md.date, f'output_files/{r_name}_{cd.name}_testing.xlsx')
+                #break
+        r.get_day_sum_if_sleep_in_time_and_save((f'output_files/{month}/{r_name}/{r_name}_total.xlsx'))
         #break
-

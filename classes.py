@@ -5,6 +5,10 @@ pd.set_option('display.max.columns', None)
 
 # оттестируй каждую категорию по красоте, прайс, коэф, резулт, бонус и тотал. по0.5 за каждую
 # в идеале перенеси тотал фрейм в пациента
+# сделай общую ф для подстееф статистики
+
+def count_a_statistic():
+    pass
 
 
 class CompCoef:
@@ -51,7 +55,6 @@ class Recipient:
 
         mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=[limit, limit+1])
         self.result_frame = pd.concat([self.date_frame.copy(), mini_frame])
-        print(self.result_frame)
 
     def get_and_collect_r_name_col(self, column, new_column_name=''):
         def extract_by_litera(day):
@@ -114,20 +117,6 @@ class Recipient:
         sleepless_col_name = self.private_position + ':siesta'
         self.mod_data['sleep_coef'] = list(map(lambda i: True if i != 'can`t' else False, vedomost[sleepless_col_name]))
 
-    def get_in_time_sleeptime_col(self, vedomost):
-        def hour_extraction(time):
-            hour = 0
-            if time != '!':
-                if ':' in time:
-                    hour = int(time.split(':')[0])
-                else:
-                    hour = 21
-            return hour
-
-        sleep_time_ser_name = self.private_position + ':sleeptime'
-        sleeptime_ser = pd.Series(list(map(hour_extraction, vedomost[sleep_time_ser_name])))
-        self.mod_data['sleep_in_time'] = sleeptime_ser.map(lambda i: 'True' if i > 20 else 'False')
-
     def get_r_positions_col(self):
         def extract_positions(children, home):
             positions = [i for i in list(children+home) if i in self.positions]
@@ -159,15 +148,61 @@ class Recipient:
 
     def collect_to_result_frame(self, result_column, bonus_column=()):
         self.result_frame = pd.concat([self.result_frame, result_column], axis=1)
-        print(self.result_frame)
         if bonus_column:
             bonus_column = pd.Series(bonus_column, name=result_column.name+'_bonus')
             self.result_frame = pd.concat([self.result_frame, bonus_column], axis=1)
-        return self.result_frame
+
+    def get_in_time_sleeptime_ser(self):
+        def hour_extraction(time):
+            hour = 0
+            if time != '!':
+                if ':' in time:
+                    hour = int(time.split(':')[0])
+                else:
+                    hour = 21
+            return hour
+
+        sleep_time_ser_name = self.private_position + ':sleeptime'
+        sleeptime_list = list(map(hour_extraction, self.cat_data[sleep_time_ser_name]))
+        sleeptime_list = list(map(lambda i: 'True' if i > 20 else 'False', sleeptime_list))
+        percent = len([i for i in sleeptime_list if i == 'True']) / len(sleeptime_list)
+        sleeptime_list.extend([round(percent, 2), ''])
+        return pd.Series(sleeptime_list, name='sleep_in_time')
+
+    def get_day_sum_if_sleep_in_time_and_save(self, path):
+        def get_day_sum(day_row, sleep_in_time_flag=''):
+            percent_row_cell = day_row.pop('DAY')
+            print(day_row)
+            if sleep_in_time_flag:
+                if sleep_in_time_flag == 'False':
+                    day_row = {i: day_row[i] if day_row[i] < 0 else 0 for i in day_row if 'bonus' not in i}
+                    day_bonus = {i: day_row[i] for i in day_row if 'bonus' in i}
+                    day_row.update(day_bonus)
+            if percent_row_cell == 'done_percent':
+                return np.mean(np.array(list(day_row.values())))
+            else:
+                return round(sum(day_row.values()), 2)
+
+        r_categories = [i for i in self.result_frame.columns if i.islower() or i == 'DAY']
+        only_categories_frame = self.result_frame[r_categories].copy()
+
+        default_sum_list = list(map(get_day_sum, only_categories_frame.to_dict('index').values()))
+        self.result_frame['day_sum'] = default_sum_list
+
+        sleep_in_time_ser = self.get_in_time_sleeptime_ser()
+        self.result_frame = pd.concat([self.result_frame, sleep_in_time_ser], axis=1)
+
+        sum_after_0_list = list(map(get_day_sum, only_categories_frame.to_dict('index').values(), sleep_in_time_ser))
+        sum_after_0_list = sum_after_0_list[:-2] # статистику пресчитаем отдельно
+        day_sum_after_0 = round(sum(sum_after_0_list), 2)
+        done_percent_after_0 = round(day_sum_after_0/default_sum_list[-1], 2)
+        sum_after_0_list.extend([done_percent_after_0, day_sum_after_0])
+        self.result_frame['day_sum_in_time'] = sum_after_0_list
+        self.result_frame.set_index('DATE').to_excel(path)
 
 
 class MonthData:
-    def __init__(self, path, recipients):
+    def __init__(self, path):
         vedomost = pd.read_excel(path, sheet_name='vedomost', dtype='object').fillna(False)
         self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
         self.limit = len([i for i in vedomost['DONE'].to_list() if i])
@@ -179,38 +214,6 @@ class MonthData:
         self.date = self.vedomost.get(date_keys)
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
 
-    def get_day_sum_if_sleep_in_time(self, name, sleep_in_time_ser):
-        def get_day_sum(day_row, sleep_in_time_flag=''):
-            percent_row_cell = day_row.pop('DAY')
-            #print(day_row)
-            if sleep_in_time_flag:
-                if sleep_in_time_flag == 'False':
-                    day_row = {i: day_row[i] if day_row[i] < 0 else 0 for i in day_row if 'bonus' not in i}
-                    day_bonus = {i: day_row[i] for i in day_row if 'bonus' in i}
-                    day_row.update(day_bonus)
-            if percent_row_cell == 'done_percent':
-                return np.mean(np.array(list(day_row.values())))
-            else:
-                return round(sum(day_row.values()), 2)
-
-        categories = [i for i in self.result_frame[name].columns if i.islower() or i == 'DAY']
-        only_categories_frame = self.result_frame[name][categories].copy()
-
-        default_sum = pd.Series(list(map(get_day_sum, only_categories_frame.to_dict('index').values())), name='day_sum')
-        self.result_frame[name] = pd.concat([self.result_frame[name], default_sum], axis=1)
-
-        sleep_in_time_ser = self.get_result_column(sleep_in_time_ser.name, sleep_in_time_ser)
-        self.result_frame[name] = pd.concat([self.result_frame[name], sleep_in_time_ser], axis=1)
-
-        day_sum_after_0_ser = list(map(get_day_sum, only_categories_frame.to_dict('index').values(), sleep_in_time_ser))
-        day_sum_after_0_ser = pd.Series(day_sum_after_0_ser[:-2]) # статистику пресчитаем отдельно
-        sum_after_0 = round(day_sum_after_0_ser.sum(), 2)
-        done_percent_after_0 = round(sum_after_0/default_sum[self.limit+1], 2) * 100
-        total_statistic = pd.Series({self.limit: done_percent_after_0, self.limit+1: sum_after_0})
-        day_sum_after_0_ser = pd.concat([day_sum_after_0_ser, total_statistic], axis=0)
-        day_sum_after_0_ser.name = 'day_sum_in_time'
-        self.result_frame[name] = pd.concat([self.result_frame[name], day_sum_after_0_ser], axis=1)
-
 
 class CategoryData:
     def __init__(self, cf, mf, pf, date_frame=''):
@@ -220,7 +223,7 @@ class CategoryData:
         self.position = self.name[0]
         self.price_frame = pf[self.name]
         self.mod_frame = mf
-        #print(self.cat_frame)
+        print(self.cat_frame)
 
     def find_a_price(self, result, positions):
         mark = 'can`t'
@@ -281,12 +284,16 @@ class CategoryData:
 
         return self.price_frame
 
+    def get_ready_and_save_to_excel(self, date_frame, path):
+        self.cat_frame = pd.concat([date_frame, self.cat_frame], axis='columns')
+        self.cat_frame.set_index('DATE').to_excel(path)
+
     def get_result_col_with_statistic(self):
         def count_true_percent(mark_column):
             not_cant_mark_list = [i for i in mark_column if i != 'can`t']
             true_list = [i for i in mark_column if i == 'True']
             percent = len(true_list) / len(not_cant_mark_list)
-            return int(percent * 100)
+            return round(percent, 2)
 
         true_percent = count_true_percent(self.cat_frame['mark'])
         #if result_column.empty:
@@ -298,7 +305,9 @@ class CategoryData:
         result = round(self.cat_frame['result'].sum(), 2)
         statistic_app = pd.Series({index_limit: true_percent, index_limit+1: result})
         result_column = pd.concat([self.cat_frame['result'], statistic_app], axis=0)
+        result_column.name = self.name
         return result_column
+
 
 class BonusFrame:
     def __init__(self, cat_frame, price_frame):
@@ -319,7 +328,7 @@ class BonusFrame:
     def has_bonus_logic(self):
         flag = True if self.logic else False
         return flag
-# нихрена не понимаю как здесь сделать. хочу чтоб если комбо не может накопиться, оно бы делилось
+
     def every_n_give_a_bonus(self, mark_dict, bonus_list):
         counter = 1
         for k in mark_dict:
@@ -358,8 +367,8 @@ class BonusFrame:
         max_bonus_list = [0 if type(i) == str else i for i in self.count_a_bonus(self.max_bonus_ser)]
         bonus_count = len([i for i in self.bonus_list if i])
         max_bonus_count = len([i for i in max_bonus_list if i])
-        true_percent = bonus_count / max_bonus_count
+        true_percent = round(bonus_count / max_bonus_count, 2)
 
         self.bonus_list.append(sum(self.bonus_list))
-        self.bonus_list.insert(-1, int(true_percent * 100))
+        self.bonus_list.insert(-1, true_percent)
         return self.bonus_list
