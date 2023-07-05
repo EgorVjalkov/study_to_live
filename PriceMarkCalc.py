@@ -134,7 +134,7 @@ class PriceMarkCalc:
                 if i[0].isupper():
                     if i[0] == recipient_name[0]:
                         if len(i) == 1:
-                            self.result = 'True'
+                            self.result = '+'
                         else:
                             self.result = i[1:] if i[1:].isdigit() else i[1:]
                         break

@@ -7,6 +7,7 @@ pd.set_option('display.max.columns', None)
 # в идеале перенеси тотал фрейм в пациента
 # сделай общую ф для подстееф статистики
 
+
 def count_a_statistic():
     pass
 
@@ -104,16 +105,10 @@ class Recipient:
         self.mod_data['d24_coef'] = [i[1] if 'd24' in i else '' for i in duty_coef_list]
         self.mod_data['d8_coef'] = [i[1] if 'd8' in i else '' for i in duty_coef_list]
 
-    def get_weak_coefficients_col(self, weak_col):
-        def count_weak_num(r_children, weak_children):
-            r_weak_list = []
-            if all([r_children, weak_children]):
-                r_weak_list = [i for i in weak_children if i in r_children]
-            return len(r_weak_list)
+    def get_place_coefficients_col(self):
+        self.mod_data['dacha_coef'] = self.mod_data['place'].map(lambda i: i == 'd')
 
-        self.mod_data['weak_coef'] = list(map(count_weak_num, self.mod_data['children'], weak_col))
-
-    def get_sleepless_col(self, vedomost):
+    def get_sleepless_coef_col(self, vedomost):
         sleepless_col_name = self.private_position + ':siesta'
         self.mod_data['sleep_coef'] = list(map(lambda i: True if i != 'can`t' else False, vedomost[sleepless_col_name]))
 
@@ -123,7 +118,7 @@ class Recipient:
             positions.append(self.private_position)
             return positions
 
-        self.mod_data['positions'] = list(map(extract_positions, self.mod_data['children'], self.mod_data['home']))
+        self.mod_data['positions'] = list(map(extract_positions, self.mod_data['children'], self.mod_data['place']))
 
     def get_all_coefs_col(self):
         def get_coef_dict(row_of_coefs):
@@ -172,7 +167,7 @@ class Recipient:
     def get_day_sum_if_sleep_in_time_and_save(self, path):
         def get_day_sum(day_row, sleep_in_time_flag=''):
             percent_row_cell = day_row.pop('DAY')
-            print(day_row)
+            #print(day_row)
             if sleep_in_time_flag:
                 if sleep_in_time_flag == 'False':
                     day_row = {i: day_row[i] if day_row[i] < 0 else 0 for i in day_row if 'bonus' not in i}
@@ -203,7 +198,7 @@ class Recipient:
 
 class MonthData:
     def __init__(self, path):
-        vedomost = pd.read_excel(path, sheet_name='vedomost', dtype='object').fillna(False)
+        vedomost = pd.read_excel(path, sheet_name='vedomost', dtype='object')
         self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
         self.limit = len([i for i in vedomost['DONE'].to_list() if i])
         self.vedomost = vedomost[0:self.limit]
@@ -218,12 +213,11 @@ class MonthData:
 class CategoryData:
     def __init__(self, cf, mf, pf, date_frame=''):
         self.name = cf.name
-        change_dict = {'T': '+', False: '-'}
+        change_dict = {'T': '+'}
         self.cat_frame = pd.DataFrame([change_dict[i] if i in change_dict else i for i in cf], columns=[self.name], dtype='str')
         self.position = self.name[0]
         self.price_frame = pf[self.name]
         self.mod_frame = mf
-        print(self.cat_frame)
 
     def find_a_price(self, result, positions):
         mark = 'can`t'
