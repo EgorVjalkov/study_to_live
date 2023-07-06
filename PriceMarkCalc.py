@@ -1,6 +1,7 @@
 import datetime
 from random import choice
 
+
 class PriceMarkCalc:
     def __init__(self, result='', condition='', date=''):
         self.comparison_dict = {'<': lambda r, y: r < y,
@@ -19,14 +20,14 @@ class PriceMarkCalc:
 
         self.result = result
         self.condition = condition
-        self.price = 0
 
+        self.price = 0.0
         self.mark = result
         self.mark_dict = {'+': 'True', '-': 'False', '0': 'False'}
 
         self.date = datetime.date.today() if date == 'DATE' or not date else date
 
-        # print(self.result, type(result), self.condition_for_price, type(self.condition_for_price))
+        #print(self.result, type(result), self.condition)
 
     def prepare_result(self):
         if ':' in self.result:
@@ -94,11 +95,12 @@ class PriceMarkCalc:
     def get_price_if_complex_result(self):
         key, value = self.result[0], self.result[1:]
         result_d_by_key = self.condition[key]
+        print(result_d_by_key)
         for i in result_d_by_key:
             if value in i:
-                self.condition = float(result_d_by_key[i])
+                self.price = float(result_d_by_key[i])
         self.mark = key
-        return self.condition, self.mark
+        return self.price, self.mark
 
     def get_price(self):
         self.prepare_result()
@@ -125,6 +127,7 @@ class PriceMarkCalc:
         else:
             self.mark = self.mark_dict[self.mark]
 
+        print(self.price, self.mark)
         return self.price, self.mark
 
     def prepare_named_result(self, recipient_name): # результат по литере

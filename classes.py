@@ -50,7 +50,7 @@ class Recipient:
         self.private_position = self.litera.lower()
         self.date_frame = date_frame.astype('str')
         self.mod_data = self.date_frame.copy()
-        self.cat_data = self.date_frame.copy()
+        self.cat_data = pd.DataFrame(index=date_frame.index)
         self.positions = ['a', 'z', 'h']
         limit = len(date_frame.index)
 
@@ -141,6 +141,15 @@ class Recipient:
                     self.cat_data[column] = categories[column]
         return self.cat_data
 
+    def filter_category(self, categories=(), positions=()):
+        if categories:
+            filtered = [i for i in self.cat_data if i in categories]
+        elif positions:
+            filtered = [i for i in self.cat_data if i[0] in positions]
+        else:
+            filtered = self.cat_data.columns
+        return self.cat_data[filtered]
+
     def collect_to_result_frame(self, result_column, bonus_column=()):
         self.result_frame = pd.concat([self.result_frame, result_column], axis=1)
         if bonus_column:
@@ -190,7 +199,11 @@ class Recipient:
         sum_after_0_list = list(map(get_day_sum, only_categories_frame.to_dict('index').values(), sleep_in_time_ser))
         sum_after_0_list = sum_after_0_list[:-2] # статистику пресчитаем отдельно
         day_sum_after_0 = round(sum(sum_after_0_list), 2)
-        done_percent_after_0 = round(day_sum_after_0/default_sum_list[-1], 2)
+        if not day_sum_after_0:
+            done_percent_after_0 = 0.0
+        else:
+            done_percent_after_0 = round(day_sum_after_0/default_sum_list[-1], 2)
+
         sum_after_0_list.extend([done_percent_after_0, day_sum_after_0])
         self.result_frame['day_sum_in_time'] = sum_after_0_list
         self.result_frame.set_index('DATE').to_excel(path)
