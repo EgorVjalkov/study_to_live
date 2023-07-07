@@ -4,8 +4,8 @@ import numpy as np
 pd.set_option('display.max.columns', None)
 
 # оттестируй каждую категорию по красоте, прайс, коэф, резулт, бонус и тотал. по0.5 за каждую
-# в идеале перенеси тотал фрейм в пациента
 # сделай общую ф для подстееф статистики
+# сделвй ф для фильтрации за 200р с коэфами категориями и т.д.
 
 
 def count_a_statistic():
@@ -52,9 +52,8 @@ class Recipient:
         self.mod_data = self.date_frame.copy()
         self.cat_data = pd.DataFrame(index=date_frame.index)
         self.positions = ['a', 'z', 'h']
-        limit = len(date_frame.index)
-
-        mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=[limit, limit+1])
+        self.limit = len(date_frame.index)
+        mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=[self.limit, self.limit+1])
         self.result_frame = pd.concat([self.date_frame.copy(), mini_frame])
 
     def get_and_collect_r_name_col(self, column, new_column_name=''):
@@ -141,15 +140,6 @@ class Recipient:
                     self.cat_data[column] = categories[column]
         return self.cat_data
 
-    def filter_category(self, categories=(), positions=()):
-        if categories:
-            filtered = [i for i in self.cat_data if i in categories]
-        elif positions:
-            filtered = [i for i in self.cat_data if i[0] in positions]
-        else:
-            filtered = self.cat_data.columns
-        return self.cat_data[filtered]
-
     def collect_to_result_frame(self, result_column, bonus_column=()):
         self.result_frame = pd.concat([self.result_frame, result_column], axis=1)
         if bonus_column:
@@ -172,6 +162,10 @@ class Recipient:
         percent = len([i for i in sleeptime_list if i == 'True']) / len(sleeptime_list)
         sleeptime_list.extend([round(percent, 2), ''])
         return pd.Series(sleeptime_list, name='sleep_in_time')
+
+    def get_result_frame_after_filter(self, filtered):
+        self.result_frame = filtered
+        return self.result_frame
 
     def get_day_sum_if_sleep_in_time_and_save(self, path):
         def get_day_sum(day_row, sleep_in_time_flag=''):
@@ -206,6 +200,7 @@ class Recipient:
 
         sum_after_0_list.extend([done_percent_after_0, day_sum_after_0])
         self.result_frame['day_sum_in_time'] = sum_after_0_list
+        self.result_frame.insert(2, 'coefs', self.mod_data['coefs'])
         self.result_frame.set_index('DATE').to_excel(path)
 
 

@@ -95,7 +95,7 @@ class PriceMarkCalc:
     def get_price_if_complex_result(self):
         key, value = self.result[0], self.result[1:]
         result_d_by_key = self.condition[key]
-        print(result_d_by_key)
+        #print(result_d_by_key)
         for i in result_d_by_key:
             if value in i:
                 self.price = float(result_d_by_key[i])
@@ -127,7 +127,7 @@ class PriceMarkCalc:
         else:
             self.mark = self.mark_dict[self.mark]
 
-        print(self.price, self.mark)
+        #print(self.price, self.mark)
         return self.price, self.mark
 
     def prepare_named_result(self, recipient_name): # результат по литере
