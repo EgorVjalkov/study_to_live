@@ -24,8 +24,6 @@ class InnerIterObject:
         if filter_logic == 'negative':
             filtered = prefilter
 
-        print(self.type)
-        print(type(filtered))
         if self.type == pandas.core.frame.DataFrame and type(filtered) == list:
             filtered = {i.name: i for i in filtered}
             filtered = pd.DataFrame(filtered)

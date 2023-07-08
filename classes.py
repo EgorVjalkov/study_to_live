@@ -1,6 +1,6 @@
 import pandas as pd
-from PriceMarkCalc import PriceMarkCalc
 import numpy as np
+from PriceMarkCalc import PriceMarkCalc
 pd.set_option('display.max.columns', None)
 
 # оттестируй каждую категорию по красоте, прайс, коэф, резулт, бонус и тотал. по0.5 за каждую
@@ -202,6 +202,19 @@ class Recipient:
         self.result_frame['day_sum_in_time'] = sum_after_0_list
         self.result_frame.insert(2, 'coefs', self.mod_data['coefs'])
         self.result_frame.set_index('DATE').to_excel(path)
+
+    def create_frame(self, df):
+        filtered = pd.Series(df['day_sum'].to_list())
+        day_sum_without_statistic = filtered[:-2]
+        mean = round(day_sum_without_statistic.mean(), 2)
+        day_sum_without_statistic_dict = day_sum_without_statistic.to_dict()
+        more_then_mean_index = [i for i in day_sum_without_statistic_dict if day_sum_without_statistic_dict[i] > mean]
+        more_then_mean_frame = df.filter(items=more_then_mean_index, axis=0)
+        return more_then_mean_frame
+
+        #more_then_mean = pd.Series(day_sum_without_statistic > mean)
+        #more_then_mean_index = [i[0] for i in enumerate(more_then_mean) in i]
+        #print(more_then_mean)
 
 
 class MonthData:
