@@ -203,18 +203,15 @@ class Recipient:
         self.result_frame.insert(2, 'coefs', self.mod_data['coefs'])
         self.result_frame.set_index('DATE').to_excel(path)
 
-    def create_frame(self, df):
-        filtered = pd.Series(df['day_sum'].to_list())
-        day_sum_without_statistic = filtered[:-2]
-        mean = round(day_sum_without_statistic.mean(), 2)
-        day_sum_without_statistic_dict = day_sum_without_statistic.to_dict()
-        more_then_mean_index = [i for i in day_sum_without_statistic_dict if day_sum_without_statistic_dict[i] > mean]
-        more_then_mean_frame = df.filter(items=more_then_mean_index, axis=0)
-        return more_then_mean_frame
-
-        #more_then_mean = pd.Series(day_sum_without_statistic > mean)
-        #more_then_mean_index = [i[0] for i in enumerate(more_then_mean) in i]
-        #print(more_then_mean)
+    def get_n_index_list(self, df, column_n_name, comparison_func, _filter='mean', with_statistic=False):
+        column_n = pd.Series(df[column_n_name].to_dict())
+        if with_statistic:
+            column_n = column_n.head(len(column_n)-2)
+        if _filter == 'mean':
+            _filter = round(column_n.mean(), 2)
+        column_n_dict = column_n.to_dict()
+        true_index = [i for i in column_n_dict if comparison_func(column_n_dict[i], _filter)]
+        return true_index
 
 
 class MonthData:
