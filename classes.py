@@ -203,16 +203,6 @@ class Recipient:
         self.result_frame.insert(2, 'coefs', self.mod_data['coefs'])
         self.result_frame.set_index('DATE').to_excel(path)
 
-    def get_n_index_list(self, df, column_n_name, comparison_func, _filter='mean', with_statistic=False):
-        column_n = pd.Series(df[column_n_name].to_dict())
-        if with_statistic:
-            column_n = column_n.head(len(column_n)-2)
-        if _filter == 'mean':
-            _filter = round(column_n.mean(), 2)
-        column_n_dict = column_n.to_dict()
-        true_index = [i for i in column_n_dict if comparison_func(column_n_dict[i], _filter)]
-        return true_index
-
 
 class MonthData:
     def __init__(self, path):

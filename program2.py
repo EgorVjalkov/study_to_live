@@ -2,7 +2,7 @@ import classes as cl
 import os
 import pandas as pd
 from testing import does_need_correction
-from statistic import InnerIterObject
+from analytic_utilities import Filtered
 
 
 recipients = ['Egr', 'Lera']
@@ -37,7 +37,7 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         # for_self_control = r.mod_data.get(['positions', 'coefs'])
         # for_self_control.to_excel(f'output_files/{month}/{r_name}_self_control_NEW.xlsx')
         r.get_r_vedomost(recipients, md.categories)
-        filtered_cat_frame = InnerIterObject(r.cat_data).filter(positions=[])
+        filtered_cat_frame = Filtered(r.cat_data).column_filter(positions=[])
         #print(filtered_cat_frame)
         if not filtered_cat_frame.empty:
             for column in filtered_cat_frame:
@@ -56,7 +56,7 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
                     bc_with_statistic = ()
                 r.collect_to_result_frame(cd.get_result_col_with_statistic(), bc_with_statistic)
                 cd.get_ready_and_save_to_excel(md.date, f'output_files/{month}/{r_name}/{cd.name}.xlsx')
-            filtered = InnerIterObject(r.result_frame).filter(filter_logic='negative', name_part='_bonus')
+            filtered = Filtered(r.result_frame).column_filter(filter_logic='negative', name_part='_bonus')
             r.get_result_frame_after_filter(filtered)
             r.get_day_sum_if_sleep_in_time_and_save(f'output_files/{month}/{r_name}/{r_name}_total.xlsx')
             index2 = r.get_n_index_list(r.result_frame, 'day_sum', lambda i, e: i > e, _filter=400, with_statistic=True)
