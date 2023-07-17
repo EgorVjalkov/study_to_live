@@ -37,15 +37,15 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
         # for_self_control = r.mod_data.get(['positions', 'coefs'])
         # for_self_control.to_excel(f'output_files/{month}/{r_name}_self_control_NEW.xlsx')
         r.get_r_vedomost(recipients, md.categories)
-        filtered_cat_frame = Filtered(r.cat_data).filtration('positions', ['a'])
-        #print(filtered_cat_frame)
-        if not filtered_cat_frame.empty:
-            for column in filtered_cat_frame:
+        fltred = Filtered(r.cat_data).filtration('columns', ['a:bed'], filter_logic='pos')
+        if not fltred.empty:
+            for column in fltred:
                 cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
                 cd.add_price_column(show_calculation=show_calc)
                 cd.add_coef_and_result_column(show_calculation=show_calc)
-                #index_coef = r.get_n_index_list(cd.cat_frame, 'coef', lambda i, e: i > e)
-                #filtered = cd.cat_frame.filter(items=index_coef, axis=0)
+                filtered = Filtered(cd.cat_frame).filtration('part', 'True', by_column='mark')
+                present = 0
+                #print(filtered)
                 #index1 = r.get_n_index_list(filtered, 'result', lambda i, e: i > e, _filter=0)
                 #print(cd.cat_frame.filter(items=index1, axis=0))
                 bonus_column = cl.BonusFrame(cd.cat_frame, cd.price_frame)
@@ -55,7 +55,7 @@ if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
                 else:
                     bc_with_statistic = ()
                 r.collect_to_result_frame(cd.get_result_col_with_statistic(), bc_with_statistic)
-                print(r.result_frame)
+                #print(r.result_frame)
                 #cd.get_ready_and_save_to_excel(md.date, f'output_files/{month}/{r_name}/{cd.name}.xlsx')
             #filtered = Filtered(r.result_frame).column_filter(filter_logic='negative', name_part='_bonus')
             #r.get_result_frame_after_filter(filtered)

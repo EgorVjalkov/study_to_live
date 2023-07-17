@@ -1,7 +1,5 @@
 import pandas as pd
-import pandas.core.frame
-# доработай. функция должна возрващать какую-то область, хоть индекс, хоть категорию
-# декларируй ф для фильтрации
+from statistics import mean
 
 
 class Filtered:
@@ -37,28 +35,28 @@ class Filtered:
         return axis_dict[axis]
 
     def filtration_by_column(self, column_n_name, filter_func, value):
-        column_n = pd.Series(self.object[column_n_name].to_dict())
+        column_n_dict = self.object[column_n_name].to_dict()
+        print(column_n_dict)
         if value == 'mean':
-            value = round(column_n.mean(), 2)
-        column_n_dict = column_n.to_dict()
-        filtered_keys = [i for i in column_n_dict if filter_func(i, value)]
+            values_above_zero = list(filter(lambda i: i >= 0, column_n_dict.values()))
+            value = round(mean(values_above_zero), 2)
+            print(value)
+            #value = mean(column_n_dict.values())
+        filtered_keys = [i for i in column_n_dict if filter_func(column_n_dict[i], value)]
+        print(filtered_keys)
         return filtered_keys
 
-    def filtration(self, filter_in_str, value, axis='columns', filter_logic='pos', column_n_name=''):
+    def filtration(self, filter_in_str, value, axis='columns', filter_logic='pos', by_column=''):
         filter_func = self.get_filter_func(filter_in_str)
-        if column_n_name:
-            self.filtered_keys = self.filtration_by_column(column_n_name, filter_func, value)
+        if by_column:
+            axis = 'index'
+            self.filtered_keys = self.filtration_by_column(by_column, filter_func, value)
         else:
-            prefilter_keys = list(self.get_obj_axis(axis))
-            print(prefilter_keys)
-            # здесь проблемма
-            filtered_keys = [prefilter_keys.pop(i) for i in prefilter_keys if filter_func(i, value)]
-            logic_dict = {'pos': filtered_keys, 'neg': prefilter_keys}
+            prefilter_dict = dict(enumerate(self.get_obj_axis(axis)))
+            logic_dict = {'pos': [prefilter_dict[i] for i in prefilter_dict if filter_func(prefilter_dict[i], value)],
+                          'neg': [prefilter_dict[i] for i in prefilter_dict if not filter_func(prefilter_dict[i], value)]}
             self.filtered_keys = logic_dict[filter_logic]
-        return self.filtered_keys
+        return self.object.filter(items=self.filtered_keys, axis=axis)
 
     def presentation_by_keys(self, new_object=pd.DataFrame()):
-        if not new_object.empty:
-            return new_object.filter(items=self.filtered_keys)
-        else:
-            return self.object.filter(items=self.filtered_keys)
+        return new_object.filter(items=self.filtered_keys)
