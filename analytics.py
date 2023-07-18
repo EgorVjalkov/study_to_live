@@ -1,9 +1,17 @@
 import pandas as pd
-from program2 import recipients, month
+import program2 as prog2
+from analytic_utilities import FrameForAnalyse
 
 
-for r_name in recipients:
-    path_to_output = f'output_files/{month}/{r_name}'
+for r_name in prog2.recipients:
+    path_to_output = f'output_files/{prog2.month}/{r_name}'
     path_to_total = path_to_output + f'/{r_name}_total.xlsx'
-    result_frame = pd.read_excel(path_to_total)
-    print(result_frame.index())
+    while True:
+        try:
+            result_frame = FrameForAnalyse(path_to_total)
+            break
+        except FileNotFoundError:
+            prog2.main()
+
+    filtered = result_frame.filtration('part', 'bonus')
+    print(filtered)

@@ -200,7 +200,7 @@ class Recipient:
 
         sum_after_0_list.extend([done_percent_after_0, day_sum_after_0])
         self.result_frame['day_sum_in_time'] = sum_after_0_list
-        self.result_frame.insert(2, 'coefs', self.mod_data['coefs'])
+        #self.result_frame.insert(2, 'coefs', self.mod_data['coefs'])
         self.result_frame.set_index('DATE').to_excel(path)
 
 
