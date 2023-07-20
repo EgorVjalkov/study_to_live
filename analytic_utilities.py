@@ -3,13 +3,11 @@ from statistics import mean
 
 
 class FrameForAnalyse:
-    def __init__(self, path='', df=pd.DataFrame(), with_statistic=False):
+    def __init__(self, path='', df=pd.DataFrame()):
         if path:
             self.object = pd.read_excel(path)
         else:
             self.object = df.copy()
-        if with_statistic:
-            self.object = self.object.head(len(self.object)-2)
 
         self.axis = ''
         self.filtered_keys = []
@@ -17,6 +15,10 @@ class FrameForAnalyse:
     @property
     def df(self):
         return self.object
+
+    @df.setter
+    def df(self, modified_df):
+        self.object = modified_df
 
     @property
     def filters_dict(self):
@@ -29,39 +31,50 @@ class FrameForAnalyse:
                 'positions': lambda i, pos: i[0] in pos
                 }
 
-    def get_filter_func(self, filter_in_str):
-        return self.filters_dict[filter_in_str]
+    def get_frame_by_flag(self, with_statistic_flag=True):
+        if not with_statistic_flag:
+            self.df = self.df[:len(self.df)-2]
+        return self.df
 
-    def get_obj_axis(self, axis):
+    def get_filter_func(self, _filter):
+        return self.filters_dict[_filter]
+
+    def get_axis_for_fltrtn(self, axis):
         axis_dict = {
             'index': self.object.index,
             'columns': self.object.columns
         }
         return axis_dict[axis]
 
-    def filtration_by_column(self, column_n_name, filter_func, value):
-        column_n_dict = self.object[column_n_name].to_dict()
-        print(column_n_dict)
-        if value == 'mean':
-            values_above_zero = list(filter(lambda i: i >= 0, column_n_dict.values()))
-            value = round(mean(values_above_zero), 2)
-            #value = mean(column_n_dict.values())
-        filtered_keys = [i for i in column_n_dict if filter_func(column_n_dict[i], value)]
-        print(filtered_keys)
-        return filtered_keys
-
-    def filtration(self, filter_in_str, value, axis='columns', filter_logic='pos', by_column=''):
-        self.axis = axis
-        filter_func = self.get_filter_func(filter_in_str)
+    def filtration(self, _filters_d, axis='columns', filter_logic='pos', by_column=''):
         if by_column:
             self.axis = 'index'
-            self.filtered_keys = self.filtration_by_column(by_column, filter_func, value)
+            prefilter_dict = self.object[by_column].to_dict()
         else:
-            prefilter_dict = dict(enumerate(self.get_obj_axis(axis)))
-            logic_dict = {'pos': [prefilter_dict[i] for i in prefilter_dict if filter_func(prefilter_dict[i], value)],
-                          'neg': [prefilter_dict[i] for i in prefilter_dict if not filter_func(prefilter_dict[i], value)]}
+            self.axis = axis
+            prefilter_dict = dict(enumerate(self.get_axis_for_fltrtn(axis)))
+
+        for fltr in _filters_d:
+            filter_func = self.get_filter_func(fltr)
+            value = _filters_d[fltr]
+            if value == 'mean':
+                value = self.above_zero_mean(prefilter_dict)
+
+            el_changer = lambda i: i if by_column else prefilter_dict[i]
+            logic_dict = {'pos': [el_changer(i) for i in prefilter_dict if filter_func(prefilter_dict[i], value)],
+                          'neg': [el_changer(i) for i in prefilter_dict if not filter_func(prefilter_dict[i], value)]}
+
             self.filtered_keys = logic_dict[filter_logic]
+            print(self.filtered_keys)
+
         return self.object.filter(items=self.filtered_keys, axis=self.axis)
 
-    def presentation_by_keys(self, new_object=pd.DataFrame()):
-        return new_object.filter(items=self.filtered_keys, axis=self.axis)
+    def presentation_by_keys(self, other_df=pd.DataFrame()):
+        if other_df.empty:
+            return self.object.filter
+        else:
+            return other_df.filter(items=self.filtered_keys, axis=self.axis)
+
+    def above_zero_mean(self, prefilter_d):
+        values_above_zero = list(filter(lambda i: i >= 0, prefilter_d.values()))
+        return round(mean(values_above_zero), 2)
