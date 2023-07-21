@@ -5,12 +5,15 @@ from statistics import mean
 class FrameForAnalyse:
     def __init__(self, path='', df=pd.DataFrame()):
         if path:
-            self.object = pd.read_excel(path)
+            self.father_object = pd.read_excel(path)
         else:
-            self.object = df.copy()
+            self.father_object = df
 
-        self.axis = ''
-        self.filtered_keys = []
+        self.object = self.father_object.copy()
+        # self.object['DATE'] = self.object['DATE'].convert_dtypes('str')
+        # print(self.object['DATE'].dtypes)
+        self.axis = 'columns'
+        self.items = []
 
     @property
     def df(self):
@@ -31,28 +34,29 @@ class FrameForAnalyse:
                 'positions': lambda i, pos: i[0] in pos
                 }
 
-    def get_frame_by_flag(self, with_statistic_flag=True):
-        if not with_statistic_flag:
-            self.df = self.df[:len(self.df)-2]
-        return self.df
+    def get_items_by_axis(self):
+        axis_dict = {
+            'index': self.father_object.index,
+            'columns': self.father_object.columns
+        }
+        return axis_dict[self.axis]
 
     def get_filter_func(self, _filter):
         return self.filters_dict[_filter]
 
-    def get_axis_for_fltrtn(self, axis):
-        axis_dict = {
-            'index': self.object.index,
-            'columns': self.object.columns
-        }
-        return axis_dict[axis]
+    def behavior(self, by_column='', by_row=0):
+        pass
 
-    def filtration(self, _filters_d, axis='columns', filter_logic='pos', by_column=''):
+    def filtration(self, _filters_d, by_column='', by_row=0, filter_logic='pos'):
         if by_column:
             self.axis = 'index'
             prefilter_dict = self.object[by_column].to_dict()
+        elif by_row:
+            self.axis = 'columns'
+            prefilter_dict = pd.Series(self.object[by_row:by_row+1].values)
+            print(prefilter_dict)
         else:
-            self.axis = axis
-            prefilter_dict = dict(enumerate(self.get_axis_for_fltrtn(axis)))
+            prefilter_dict = dict(enumerate(self.get_items_by_axis()))
 
         for fltr in _filters_d:
             filter_func = self.get_filter_func(fltr)
@@ -60,20 +64,16 @@ class FrameForAnalyse:
             if value == 'mean':
                 value = self.above_zero_mean(prefilter_dict)
 
-            el_changer = lambda i: i if by_column else prefilter_dict[i]
+            el_changer = lambda i: i if any((by_column, by_row)) else prefilter_dict[i]
             logic_dict = {'pos': [el_changer(i) for i in prefilter_dict if filter_func(prefilter_dict[i], value)],
                           'neg': [el_changer(i) for i in prefilter_dict if not filter_func(prefilter_dict[i], value)]}
 
-            self.filtered_keys = logic_dict[filter_logic]
-            print(self.filtered_keys)
+            self.items = logic_dict[filter_logic]
 
-        return self.object.filter(items=self.filtered_keys, axis=self.axis)
+        return self.df.filter(items=self.items, axis=self.axis)
 
-    def presentation_by_keys(self, other_df=pd.DataFrame()):
-        if other_df.empty:
-            return self.object.filter
-        else:
-            return other_df.filter(items=self.filtered_keys, axis=self.axis)
+    def presentation_by_keys(self, other_df):
+        return other_df.filter(items=self.items, axis=self.axis)
 
     def above_zero_mean(self, prefilter_d):
         values_above_zero = list(filter(lambda i: i >= 0, prefilter_d.values()))
