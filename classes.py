@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import os
 from PriceMarkCalc import PriceMarkCalc
 pd.set_option('display.max.columns', None)
 
@@ -51,10 +52,16 @@ class Recipient:
         self.date_frame = date_frame.astype('str')
         self.mod_data = self.date_frame.copy()
         self.cat_data = pd.DataFrame(index=date_frame.index)
-        self.positions = ['a', 'z', 'h']
+        self.positions = ['a', 'z', 'h', 'f']
         self.limit = len(date_frame.index)
         mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=[self.limit, self.limit+1])
         self.result_frame = pd.concat([self.date_frame.copy(), mini_frame])
+
+    def create_output_dir(self, path):
+        try:
+            os.mkdir(f'{path}/{self.r_name}')
+        except FileExistsError:
+            pass
 
     def get_and_collect_r_name_col(self, column, new_column_name=''):
         def extract_by_litera(day):
@@ -66,6 +73,11 @@ class Recipient:
                 return ''
 
         self.mod_data[new_column_name] = column.map(extract_by_litera)
+
+    def get_family_col(self):
+        def is_family(r_children):
+            return 'f' if r_children else ''
+        self.mod_data['family'] = self.mod_data['children'].map(is_family)
 
     def get_children_coef_cols(self, KG_col, weak_col):
         def get_child_coefs(r_children, KG_coefs, weak_children, d8):
@@ -112,12 +124,13 @@ class Recipient:
         self.mod_data['sleep_coef'] = list(map(lambda i: True if i != 'can`t' else False, vedomost[sleepless_col_name]))
 
     def get_r_positions_col(self):
-        def extract_positions(children, home):
-            positions = [i for i in list(children+home) if i in self.positions]
+        def extract_positions(children, place, family):
+            positions = [i for i in list(children+place+family) if i in self.positions]
             positions.append(self.private_position)
             return positions
 
-        self.mod_data['positions'] = list(map(extract_positions, self.mod_data['children'], self.mod_data['place']))
+        self.mod_data['positions'] = list(map(extract_positions,
+                                              self.mod_data['children'], self.mod_data['place'], self.mod_data['family']))
 
     def get_all_coefs_col(self):
         def get_coef_dict(row_of_coefs):
@@ -208,8 +221,9 @@ class MonthData:
     def __init__(self, path):
         vedomost = pd.read_excel(path, sheet_name='vedomost', dtype='object')
         self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
-        self.limit = len([i for i in vedomost['DONE'].to_list() if i])
-        self.vedomost = vedomost[0:self.limit]
+        self.limit = len([i for i in vedomost['DONE'].to_list() if i == 'Y'])
+        vedomost = vedomost[0:self.limit]
+        self.vedomost = vedomost.replace('CAN`T', 'can`t')
         del self.vedomost['DONE']
 
         date_keys = ['DATE', 'DAY']

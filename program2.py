@@ -1,11 +1,10 @@
 import classes as cl
-import os
 import pandas as pd
 from testing import does_need_correction
 from analytic_utilities import FrameForAnalyse
 
 recipients = ['Egr', 'Lera']
-month = "jun23NEW_VERSION"
+month = "jul23"
 
 path_to_file = f'months/{month}/{month}.xlsx'
 show_calc = True
@@ -14,18 +13,14 @@ show_calc = True
 def main():
     if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
 
-        while True:
-            try:
-                os.mkdir(f'output_files/{month}')
-            except FileExistsError:
-                break
-
         md = cl.MonthData(path_to_file)
         for r_name in recipients:
             r = cl.Recipient(r_name, md.date)
+            r.create_output_dir(f'output_files/{month}')
             r.get_and_collect_r_name_col(md.accessory['COM'], 'children')
             r.get_and_collect_r_name_col(md.accessory['PLACE'], 'place')
             r.get_and_collect_r_name_col(md.accessory['DUTY'], 'duty')
+            r.get_family_col()
             r.get_duty_coefficients_col()
             r.get_children_coef_cols(md.accessory['KG'], md.accessory['WEAK'])
             r.get_place_coefficients_col()
@@ -34,10 +29,9 @@ def main():
             r.get_all_coefs_col()
             r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
             r.get_r_vedomost(recipients, md.categories)
-            fltred = FrameForAnalyse(r.cat_data).filtration('columns', [], filter_logic='neg')
-            if not fltred.empty:
-                for column in fltred:
-                    cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
+            for column in r.cat_data:
+                cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
+                try:
                     cd.add_price_column(show_calculation=show_calc)
                     cd.add_coef_and_result_column(show_calculation=show_calc)
                     bonus_column = cl.BonusFrame(cd.cat_frame, cd.price_frame)
@@ -46,9 +40,11 @@ def main():
                         bc_with_statistic = bonus_column.get_bonus_list_with_statistic()
                     else:
                         bc_with_statistic = ()
-                    r.collect_to_result_frame(cd.get_result_col_with_statistic(), bc_with_statistic)
-                    cd.get_ready_and_save_to_excel(md.date, f'output_files/{month}/{r_name}/{cd.name}.xlsx')
-                r.get_day_sum_if_sleep_in_time_and_save(f'output_files/{month}/{r_name}/{r_name}_total.xlsx')
+                except ValueError:
+                    print(cd.cat_frame)
+                r.collect_to_result_frame(cd.get_result_col_with_statistic(), bc_with_statistic)
+                cd.get_ready_and_save_to_excel(md.date, f'output_files/{month}/{r_name}/{cd.name}.xlsx')
+            r.get_day_sum_if_sleep_in_time_and_save(f'output_files/{month}/{r_name}/{r_name}_total.xlsx')
 
 
 if __name__ == '__main__':
