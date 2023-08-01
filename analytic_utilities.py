@@ -14,6 +14,9 @@ class FrameForAnalyse:
         # print(self.object['DATE'].dtypes)
         self.axis = 'columns'
         self.items = []
+        self.date = ['DATE', 'DAY']
+        self.cat_statistic = len(self.father_object) - 2
+        self.row_statistic = ['day_sum', 'sleep_in_time', 'day_sum_in_time']
 
     @property
     def df(self):
@@ -34,6 +37,18 @@ class FrameForAnalyse:
                 'positions': lambda i, pos: i[0] in pos
                 }
 
+    def extract_statistic(self, behavior=('date', 'cat', 'row')):
+        for i in behavior:
+            if i == 'date':
+                self.date, self.df = self.df[self.date], self.df[[i for i in self.df if i not in self.date]]
+            if i == 'cat':
+                self.cat_statistic, self.df = self.df[self.cat_statistic:], self.df[:self.cat_statistic]
+            if i == 'row':
+                self.row_statistic, self.df = (
+                    self.df[self.row_statistic], self.df[[i for i in self.df if i not in self.row_statistic]])
+        return self.df, self.cat_statistic, self.row_statistic
+
+
     def get_items_by_axis(self):
         axis_dict = {
             'index': self.father_object.index,
@@ -53,8 +68,7 @@ class FrameForAnalyse:
             prefilter_dict = self.object[by_column].to_dict()
         elif by_row:
             self.axis = 'columns'
-            prefilter_dict = pd.Series(self.object[by_row:by_row+1].values)
-            print(prefilter_dict)
+            prefilter_dict = self.object[by_row:by_row+1].to_dict('row')[0]
         else:
             prefilter_dict = dict(enumerate(self.get_items_by_axis()))
 

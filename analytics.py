@@ -16,17 +16,18 @@ for r_name in recp:
     while True:
         try:
             frame_filtered = FrameForAnalyse(path_to_total)
+            frame_filtered.extract_statistic()
             break
         except FileNotFoundError:
             prog2.main()
 
-    frame_filtered.filtration({'part': ':', 'positions': ['a']})
+    frame_filtered.df = frame_filtered.filtration({'part': ':', 'positions': ['a']})
     cat_name_list = frame_filtered.items
     #frame_filtered.get_frame_by_flag(with_statistic_flag=False)
     x = frame_filtered.filtration({'>': 'mean'}, by_row=2)
     print(frame_filtered.object)
     print(frame_filtered.df)
-    print(x)
+    print('x', x)
     print(frame_filtered.presentation_by_keys(frame_filtered.df))
 
     for cf in cat_name_list:

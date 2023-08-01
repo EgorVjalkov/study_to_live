@@ -57,11 +57,13 @@ class Recipient:
         mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=[self.limit, self.limit+1])
         self.result_frame = pd.concat([self.date_frame.copy(), mini_frame])
 
-    def create_output_dir(self, path):
-        try:
-            os.mkdir(f'{path}/{self.r_name}')
-        except FileExistsError:
-            pass
+    def create_output_dir(self, path_to_output, month):
+        paths = [f'{path_to_output}/{month}', f'{path_to_output}/{month}/{self.r_name}']
+        for p in paths:
+            try:
+                os.mkdir(p)
+            except FileExistsError:
+                pass
 
     def get_and_collect_r_name_col(self, column, new_column_name=''):
         def extract_by_litera(day):

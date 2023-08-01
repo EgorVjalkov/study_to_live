@@ -16,7 +16,7 @@ def main():
         md = cl.MonthData(path_to_file)
         for r_name in recipients:
             r = cl.Recipient(r_name, md.date)
-            r.create_output_dir(f'output_files/{month}')
+            r.create_output_dir(f'output_files', month)
             r.get_and_collect_r_name_col(md.accessory['COM'], 'children')
             r.get_and_collect_r_name_col(md.accessory['PLACE'], 'place')
             r.get_and_collect_r_name_col(md.accessory['DUTY'], 'duty')
@@ -31,17 +31,14 @@ def main():
             r.get_r_vedomost(recipients, md.categories)
             for column in r.cat_data:
                 cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
-                try:
-                    cd.add_price_column(show_calculation=show_calc)
-                    cd.add_coef_and_result_column(show_calculation=show_calc)
-                    bonus_column = cl.BonusFrame(cd.cat_frame, cd.price_frame)
-                    if bonus_column.has_bonus_logic():
-                        cd.cat_frame['bonus'] = bonus_column.count_a_bonus()
-                        bc_with_statistic = bonus_column.get_bonus_list_with_statistic()
-                    else:
-                        bc_with_statistic = ()
-                except ValueError:
-                    print(cd.cat_frame)
+                cd.add_price_column(show_calculation=show_calc)
+                cd.add_coef_and_result_column(show_calculation=show_calc)
+                bonus_column = cl.BonusFrame(cd.cat_frame, cd.price_frame)
+                if bonus_column.has_bonus_logic():
+                    cd.cat_frame['bonus'] = bonus_column.count_a_bonus()
+                    bc_with_statistic = bonus_column.get_bonus_list_with_statistic()
+                else:
+                    bc_with_statistic = ()
                 r.collect_to_result_frame(cd.get_result_col_with_statistic(), bc_with_statistic)
                 cd.get_ready_and_save_to_excel(md.date, f'output_files/{month}/{r_name}/{cd.name}.xlsx')
             r.get_day_sum_if_sleep_in_time_and_save(f'output_files/{month}/{r_name}/{r_name}_total.xlsx')
