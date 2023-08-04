@@ -5,7 +5,7 @@ from statistics import mean
 class FrameForAnalyse:
     def __init__(self, path='', df=pd.DataFrame()):
         if path:
-            self.father_object = pd.read_excel(path)
+            self.father_object = pd.read_excel(path).fillna('')
         else:
             self.father_object = df
 
@@ -33,12 +33,13 @@ class FrameForAnalyse:
                 '<=': lambda i, fltr: int(i) <= fltr,
                 '>=': lambda i, fltr: int(i) >= fltr,
                 '>': lambda i, fltr: int(i) > fltr,
+                '=': lambda i, fltr: i == fltr,
                 'part': lambda i, prt: prt in i,
                 'columns': lambda i, clmns: i in clmns,
                 'positions': lambda i, pos: i[0] in pos
                 }
 
-    def extract_statistic(self, behavior=('date', 'cat', 'row')):
+    def extract_statistic(self, behavior=('date', 'row', 'cat')):
         for i in behavior:
             if i == 'date':
                 self.date = self.df[self.date][0:self.cat_statistic]
@@ -67,11 +68,11 @@ class FrameForAnalyse:
         if by_column:
             self.axis = 'index'
             prefilter_dict = self.df[by_column].to_dict()
-            print(prefilter_dict)
         elif by_row:
             self.axis = 'columns'
-            prefilter_dict = self.df[by_row:by_row+1].to_dict('row')[0]
+            prefilter_dict = self.df.filter(items=[by_row], axis='index').to_dict('index')[by_row]
         else:
+            self.axis = 'columns'
             prefilter_dict = dict(enumerate(self.get_items_by_axis()))
 
         for fltr in _filters_d:

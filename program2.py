@@ -29,6 +29,8 @@ def main():
             r.get_all_coefs_col()
             r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
             r.get_r_vedomost(recipients, md.categories)
+            fltr = FrameForAnalyse(df=r.cat_data)
+            #filtered = fltr.filtration({'columns': 'z:sleeptime'})
             for column in r.cat_data:
                 cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
                 cd.add_price_column(show_calculation=show_calc)

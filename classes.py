@@ -254,8 +254,8 @@ class CategoryData:
             price, mark = PriceMarkCalc(result, price_calc['price']).get_price()
         else:
             price = price_calc[result]
-            mark = result if result != '!' else False
-        #print(price, mark, '\n end \n')
+            mark = result if result != '!' else 'wishn`t'
+        #print(result, price, mark, '\n end \n')
         price_calc = {k: price_calc[k] for k in price_calc if k not in ('can`t', 'wishn`t')}
         return {'price': price, 'mark': mark, 'price_calc': list(price_calc.values())}
 
@@ -294,6 +294,7 @@ class CategoryData:
     def add_coef_and_result_column(self, show_calculation=False):
         coefs_list = list(map(self.count_a_modification, self.mod_frame['coefs'].copy(), self.cat_frame['mark']))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
+        #print(self.cat_frame)
         result_list = list(map(self.total_count, self.cat_frame['price'], self.cat_frame['coef']))
         self.cat_frame['mod'] = [i[0] for i in result_list]
         self.cat_frame['result'] = [i[1] for i in result_list]
