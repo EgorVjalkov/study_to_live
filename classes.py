@@ -250,7 +250,7 @@ class CategoryData:
 
         price_calc = {'price': self.price_frame['PRICE'], 'can`t': 0, 'wishn`t': 0, '!': -50}
         if result not in price_calc:
-            #print(result)
+            print(result)
             price, mark = PriceMarkCalc(result, price_calc['price']).get_price()
         else:
             price = price_calc[result]
@@ -260,6 +260,7 @@ class CategoryData:
         return {'price': price, 'mark': mark, 'price_calc': list(price_calc.values())}
 
     def add_price_column(self, show_calculation=False):
+        #print(self.name)
         price_list = list(map(self.find_a_price,
                               self.cat_frame[self.name],
                               self.mod_frame['positions']))
@@ -386,7 +387,10 @@ class BonusFrame:
         max_bonus_list = [0 if type(i) == str else i for i in self.count_a_bonus(self.max_bonus_ser)]
         bonus_count = len([i for i in self.bonus_list if i])
         max_bonus_count = len([i for i in max_bonus_list if i])
-        true_percent = round(bonus_count / max_bonus_count, 2)
+        try:
+            true_percent = round(bonus_count / max_bonus_count, 2)
+        except ZeroDivisionError:
+            true_percent = 0
 
         self.bonus_list.append(sum(self.bonus_list))
         self.bonus_list.insert(-1, true_percent)

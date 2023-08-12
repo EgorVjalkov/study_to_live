@@ -61,21 +61,28 @@ class PriceMarkCalc:
 
                     inner_condition = self.comparison_dict[comparison_operator](self.result, comparison_value)
                     if inner_condition:
-                        if type(self.condition[k]) == int:
-                            self.price += self.condition[k]
+                        price_modifier = self.condition[k]
+                        if '+' in price_modifier:
+                            price_modifier = price_modifier.split('+')
+                            self.price += float(price_modifier[0])
+                            per_minute_cond = price_modifier[1]
+                        elif type(self.condition[k]) == int:
+                            self.price += price_modifier
+                            per_minute_cond = 0
                         else:
-                            if not delta:
-                                if comparison_value > self.result:
-                                    delta = (comparison_value - self.result).seconds / 60
-                                else:
-                                    delta = (self.result - comparison_value).seconds / 60
+                            per_minute_cond = price_modifier
+
+                        if not delta:
+                            if comparison_value > self.result:
+                                delta = (comparison_value - self.result).seconds / 60
                             else:
-                                delta = 60
-                            multiplic = float(self.condition[k].replace('*', ''))
-                            self.price += delta * multiplic
-                            #print(delta)
-                        #print(k, self.condition[k], inner_condition, self.price, '\n')
-# limiting
+                                delta = (self.result - comparison_value).seconds / 60
+                        else:
+                            delta = 60
+                        multiplic = float(per_minute_cond.replace('*', ''))
+                        self.price += delta * multiplic
+                        print(k, self.condition[k], inner_condition, self.price, '\n')
+    # limiting
                     self.price = 200 if self.price > 200 else self.price
         return self.price
 
