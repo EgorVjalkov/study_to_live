@@ -69,11 +69,16 @@ class Recipient:
         def extract_by_litera(day):
             if day:
                 day = day.split(', ')
-                day = [i[1:] if len(i) > 1 else '' for i in day if i[0] == self.litera]
-                return ''.join(day)
-            else:
-                return ''
-
+                day = [i if len(i) > 1 else '' for i in day if i[0] == self.litera]
+                if day:
+                    if '/' in day[0]:
+                        day = [i[1:] for i in day[0].split('/')]
+                    else:
+                        day = day[0][1:]
+                    return day
+                else:
+                    return ''
+# нада попробовать сделать опять через делитель, типа если в place 2 елемента, токажыдй по 0,5 чрез умножение коефов
         self.mod_data[new_column_name] = column.map(extract_by_litera)
 
     def get_family_col(self):
