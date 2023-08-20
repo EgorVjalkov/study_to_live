@@ -39,7 +39,7 @@ class FrameForAnalyse:
                 'positions': lambda i, pos: i[0] in pos
                 }
 
-    def extract_statistic(self, behavior=('date', 'row', 'cat')):
+    def extract_statistic(self, behavior=('date', 'cat', 'row')):
         for i in behavior:
             if i == 'date':
                 self.date = self.df[self.date][0:self.cat_statistic]

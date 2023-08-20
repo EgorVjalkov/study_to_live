@@ -3,8 +3,11 @@ import program2 as prog2
 from analytic_utilities import FrameForAnalyse
 
 recp = ['Lera']
-refresh_flag = False
+refresh_flag = True
 #recp = prog2.recipients
+# могет луче сразу по колонне фильтровать, а потом просто строить фрейм по индесу
+# да, а фильтрация возращать будет айтемы, по которым и будем фильтровать любые фрейма
+# с отрезком статистики: важно резать только лишь предметный объект, т.е. день или категорию
 
 for r_name in recp:
     path_to_output = f'output_files/{prog2.month}/{r_name}'
@@ -16,27 +19,18 @@ for r_name in recp:
 
     frame_filtered = FrameForAnalyse(path_to_total)
     frame_filtered.extract_statistic()
+    categories = frame_filtered.filtration({'part': 'bonus'}, filter_logic='neg')
 
-    frame_filtered.df = frame_filtered.cat_statistic
-    filtered_columns = frame_filtered.filtration({'>': 0}, by_row=32)
-    total = frame_filtered.presentation_by_keys(frame_filtered.father_object)
-    frame_filtered.df = mods_frame
-    frame_filtered.df = frame_filtered.filtration({'=': 1}, by_column='dacha_coef')
-    dacha_2child = frame_filtered.filtration({'=': 2}, by_column='child_coef')
-    total_dacha = frame_filtered.presentation_by_keys(frame_filtered.father_object)
-    frame_filtered.df = total_dacha
-    frame_filtered.df = frame_filtered.filtration({'<': 'mean'}, by_column='day_sum')
-    dacha_2child_index = frame_filtered.items
+    frame_filtered.df = frame_filtered.row_statistic
 
-    day = frame_filtered.filtration({'positions': ['a']})
-    print(day)
+    above_mean_total = frame_filtered.filtration({'>': 'mean'}, by_column='day_sum')
+    above_mean_items = frame_filtered.items
 
-    for cf in day:
+    for cf in categories:
         cat_frame = pd.read_excel(path_to_output+f'/{cf}.xlsx')
+
         cf = frame_filtered.presentation_by_keys(cat_frame)
         print(cf)
-   #     # print(cf.df)
-   #     break
 
     #print(cat_name_list)
 #sum_ = frame_filtered.presentation_by_keys(frame_filtered.df)

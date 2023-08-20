@@ -250,7 +250,7 @@ class CategoryData:
 
         price_calc = {'price': self.price_frame['PRICE'], 'can`t': 0, 'wishn`t': 0, '!': -50}
         if result not in price_calc:
-            print(result)
+            #print(result)
             price, mark = PriceMarkCalc(result, price_calc['price']).get_price()
         else:
             price = price_calc[result]
@@ -287,8 +287,11 @@ class CategoryData:
         coef_dict['coef'] = sum(coef_dict.values())
         return coef_dict
 
-    def total_count(self, price, coef):
-        coef = abs(price) * coef
+    def total_count(self, price, coef, mark):
+        if mark == 'True' and coef >= 0.5 and price == 0:
+            coef = abs(50) * coef
+        else:
+            coef = abs(price) * coef
         price += coef
         return round(coef, 2), round(price, 2)
 
@@ -296,7 +299,7 @@ class CategoryData:
         coefs_list = list(map(self.count_a_modification, self.mod_frame['coefs'].copy(), self.cat_frame['mark']))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
         #print(self.cat_frame)
-        result_list = list(map(self.total_count, self.cat_frame['price'], self.cat_frame['coef']))
+        result_list = list(map(self.total_count, self.cat_frame['price'], self.cat_frame['coef'], self.cat_frame['mark']))
         self.cat_frame['mod'] = [i[0] for i in result_list]
         self.cat_frame['result'] = [i[1] for i in result_list]
         if show_calculation:

@@ -47,7 +47,6 @@ class PriceMarkCalc:
         return self.result
 
     def get_price_if_datetime(self):
-        delta = 0
         for k in self.condition:
             if '.' in k:
                 inner_condition = k.split('.')
@@ -60,15 +59,18 @@ class PriceMarkCalc:
                     #print(self.result, comparison_value)
 
                     inner_condition = self.comparison_dict[comparison_operator](self.result, comparison_value)
+                    delta = 0
+
                     if inner_condition:
                         price_modifier = self.condition[k]
-                        if '+' in price_modifier:
+                        #print(comparison_operator, comparison_value, price_modifier)
+                        if type(price_modifier) == int:
+                            self.price += price_modifier
+                            per_minute_cond = '0*'
+                        elif '+' in price_modifier:
                             price_modifier = price_modifier.split('+')
                             self.price += float(price_modifier[0])
                             per_minute_cond = price_modifier[1]
-                        elif type(self.condition[k]) == int:
-                            self.price += price_modifier
-                            per_minute_cond = 0
                         else:
                             per_minute_cond = price_modifier
 
@@ -79,9 +81,10 @@ class PriceMarkCalc:
                                 delta = (self.result - comparison_value).seconds / 60
                         else:
                             delta = 60
+
                         multiplic = float(per_minute_cond.replace('*', ''))
                         self.price += delta * multiplic
-                        print(k, self.condition[k], inner_condition, self.price, '\n')
+                        #print(k, self.condition[k], inner_condition, self.price, '\n')
     # limiting
                     self.price = 200 if self.price > 200 else self.price
         return self.price
@@ -162,13 +165,13 @@ class PriceMarkCalc:
 #    print()
 
 # cc = PriceMarkCalc('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
-# cc = PriceMarkCalc('21:40', '{"<.22": "1.5*", "<.23": "0", ">.23": "-2*"}')
+#cc = PriceMarkCalc('21:20', '{"<.22": "30+0.5*", "<.23": 0, ">.23": "-2*"}')
 # cc = PriceMarkCalc(4.0, '10*')
 # cc = PriceMarkCalc('23:00', '{"<.22": "3*", "<.23": "2*", ">.23": 0}')
 # cc = PriceMarkCalc('4', '10*')
 # cc = PriceMarkCalc('1', '{1: 50, 0: 0}')
 # cc = PriceMarkCalc(result=True)
 # cc = PriceMarkCalc(4.0, '{">=.4": 50, "<.4": 0}')
-# print(cc.get_price())
+#print(cc.get_price())
 
 
