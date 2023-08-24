@@ -19,7 +19,6 @@ def main():
             r.create_output_dir(f'output_files', month)
             r.get_and_collect_r_name_col(md.accessory['COM'], 'children')
             r.get_and_collect_r_name_col(md.accessory['PLACE'], 'place')
-            #print(r.mod_data)
             r.get_and_collect_r_name_col(md.accessory['DUTY'], 'duty')
             r.get_family_col()
             r.get_duty_coefficients_col()

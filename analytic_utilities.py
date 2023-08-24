@@ -12,8 +12,7 @@ class FrameForAnalyse:
         self.object = self.father_object.copy()
         # self.object['DATE'] = self.object['DATE'].convert_dtypes('str')
         # print(self.object['DATE'].dtypes)
-        self.axis = 'columns'
-        self.items = []
+        self.default_items = list(self.object.columns)
 
         self.date = ['DATE', 'DAY']
         self.cat_statistic = len(self.father_object) - 2
@@ -39,58 +38,38 @@ class FrameForAnalyse:
                 'positions': lambda i, pos: i[0] in pos
                 }
 
-    def extract_statistic(self, behavior=('date', 'cat', 'row')):
-        for i in behavior:
-            if i == 'date':
-                self.date = self.df[self.date][0:self.cat_statistic]
-                self.df = self.df[[i for i in self.df if i not in self.date]]
-            if i == 'cat':
-                self.cat_statistic, self.df = self.df[self.cat_statistic:], self.df[:self.cat_statistic]
-            if i == 'row':
-                self.row_statistic, self.df = (
-                    self.df[self.row_statistic], self.df[[i for i in self.df if i not in self.row_statistic]])
-        return self.df, self.cat_statistic, self.row_statistic
-
-    def get_items_by_axis(self):
-        axis_dict = {
-            'index': self.father_object.index,
-            'columns': self.father_object.columns
-        }
-        return axis_dict[self.axis]
-
     def get_filter_func(self, _filter):
         return self.filters_dict[_filter]
 
-    def behavior(self, by_column='', by_row=0):
-        pass
+    @property
+    def items(self):
+        return self.default_items
 
-    def filtration(self, _filters_d, by_column='', by_row=0, filter_logic='pos'):
-        if by_column:
-            self.axis = 'index'
-            prefilter_dict = self.df[by_column].to_dict()
-        elif by_row:
-            self.axis = 'columns'
-            prefilter_dict = self.df.filter(items=[by_row], axis='index').to_dict('index')[by_row]
-        else:
-            self.axis = 'columns'
-            prefilter_dict = dict(enumerate(self.get_items_by_axis()))
+    @items.setter
+    def items(self, iter_object):
+        self.default_items = iter_object
 
-        for fltr in _filters_d:
+    def filtration(self, filters_dict, filter_logic='pos'):
+        dict_object = pd.Series(self.items).to_dict()
+        for fltr in filters_dict:
             filter_func = self.get_filter_func(fltr)
-            value = _filters_d[fltr]
+            value = filters_dict[fltr]
             if value == 'mean':
-                value = self.above_zero_mean(prefilter_dict)
+                value = self.above_zero_mean(dict_object)
 
-            el_changer = lambda i: i if any((by_column, by_row)) else prefilter_dict[i]
             if filter_logic == 'pos':
-                self.items = [el_changer(i) for i in prefilter_dict if filter_func(prefilter_dict[i], value)]
+                self.items = [i for i in dict_object if filter_func(dict_object[i], value)]
             elif filter_logic == 'neg':
-                self.items = [el_changer(i) for i in prefilter_dict if not filter_func(prefilter_dict[i], value)]
+                self.items = [i for i in dict_object if not filter_func(dict_object[i], value)]
 
-        return self.df.filter(items=self.items, axis=self.axis)
+            if type(self.items) == list:
+                self.items = [dict_object[i] for i in self.items]
 
-    def presentation_by_keys(self, other_df):
-        return other_df.filter(items=self.items, axis=self.axis)
+        return self.items
+
+    def extract_statistic(self):
+        self.filtration({'columns': self.date+self.row_statistic}, filter_logic='neg')
+        return self.items
 
     def above_zero_mean(self, prefilter_d):
         values_above_zero = list(filter(lambda i: i >= 0, prefilter_d.values()))
