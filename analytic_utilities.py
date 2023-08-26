@@ -17,6 +17,7 @@ class FrameForAnalyse:
         self.date = ['DATE', 'DAY']
         self.cat_statistic = len(self.father_object) - 2
         self.row_statistic = ['day_sum', 'sleep_in_time', 'day_sum_in_time']
+        self.extracted = []
 
     @property
     def df(self):
@@ -49,11 +50,13 @@ class FrameForAnalyse:
     def items(self, iter_object):
         self.default_items = iter_object
 
-    def filtration(self, filters_dict, filter_logic='pos'):
-        dict_object = pd.Series(self.items).to_dict()
-        for fltr in filters_dict:
-            filter_func = self.get_filter_func(fltr)
-            value = filters_dict[fltr]
+    def filtration(self, filters_list, stat_extr=()):
+        if stat_extr:
+            self.items, self.extracted = self.extract_statistic(stat_extr)
+        for fltr in filters_list:
+            dict_object = pd.Series(self.items).to_dict()
+            fltr_type, value, filter_logic = fltr[0], fltr[1], fltr[2]
+            filter_func = self.get_filter_func(fltr_type)
             if value == 'mean':
                 value = self.above_zero_mean(dict_object)
 
@@ -67,9 +70,15 @@ class FrameForAnalyse:
 
         return self.items
 
-    def extract_statistic(self):
-        self.filtration({'columns': self.date+self.row_statistic}, filter_logic='neg')
-        return self.items
+    def extract_statistic(self, behavior):
+        if 'date' in behavior:
+            self.filtration([('columns', self.date, 'neg')])
+        if 'row' in behavior:
+            self.filtration([('columns', self.row_statistic, 'neg')])
+        if 'cat' in behavior:
+            self.items = self.items[:self.cat_statistic]
+
+        return self.items, self.extracted
 
     def above_zero_mean(self, prefilter_d):
         values_above_zero = list(filter(lambda i: i >= 0, prefilter_d.values()))

@@ -5,7 +5,7 @@ from analytic_utilities import FrameForAnalyse
 recp = ['Lera']
 refresh_flag = False
 #recp = prog2.recipients
-# замуть с резкой статистики. перед погдотовкой объекта к фильтрации
+# карочи надо снова делать презентацию фрейма и чтоб туды можно было заплюсить статку, например которую отфильтровало
 
 for r_name in recp:
     path_to_output = f'output_files/{prog2.month}/{r_name}'
@@ -16,13 +16,13 @@ for r_name in recp:
         prog2.main()
 
     frame_filtered = FrameForAnalyse(path_to_total)
-    frame_filtered.extract_statistic()
-    categories = frame_filtered.filtration({'part': 'bonus'}, filter_logic='neg')
+    categories = frame_filtered.filtration([('part', 'bonus', 'neg'), ('part', 'a:', 'pos')], stat_extr='row')
     categories = frame_filtered.df.filter(items=categories, axis=1)
+    print(categories)
 
-    frame_filtered.items = frame_filtered.object['day_sum']
-    frame_filtered.extract_statistic()
-    print(frame_filtered.items)
+    #frame_filtered.items = frame_filtered.object['day_sum']
+    #frame_filtered.extract_statistic('cat')
+    #print(frame_filtered.items)
 
     # frame_filtered.df = frame_filtered.row_statistic
 
