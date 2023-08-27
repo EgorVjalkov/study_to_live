@@ -2,10 +2,11 @@ import pandas as pd
 import program2 as prog2
 from analytic_utilities import FrameForAnalyse
 
-recp = ['Lera']
+recp = ['Egr']
 refresh_flag = False
 #recp = prog2.recipients
-# карочи надо снова делать презентацию фрейма и чтоб туды можно было заплюсить статку, например которую отфильтровало
+# еще ечть идейка фильтрованный фрейм перезапустить
+# придумай как сделать экстракт если фильтр идет не по колоннам а по индексу, скажем по статке, и здесь мешает дата и задник
 
 for r_name in recp:
     path_to_output = f'output_files/{prog2.month}/{r_name}'
@@ -16,13 +17,21 @@ for r_name in recp:
         prog2.main()
 
     frame_filtered = FrameForAnalyse(path_to_total)
-    categories = frame_filtered.filtration([('part', 'bonus', 'neg'), ('part', 'a:', 'pos')], stat_extr='row')
-    categories = frame_filtered.df.filter(items=categories, axis=1)
-    print(categories)
+    frame_filtered.filtration([('part', 'bonus', 'neg'), ('part', ':', 'pos')])
+    categories = frame_filtered.present_by_items(frame_filtered.df, remove_stat=False)
 
-    #frame_filtered.items = frame_filtered.object['day_sum']
-    #frame_filtered.extract_statistic('cat')
-    #print(frame_filtered.items)
+    frame_filtered.items = frame_filtered.df['day_sum'].to_list()
+    days_above_mean = frame_filtered.filtration([('>', 'mean', 'pos')], behavior='index_values')
+    print(frame_filtered.items)
+
+    frame_filtered.items = categories.tail(1).to_dict('records')[0]
+    frame_filtered.filtration([('>', 'mean', 'pos')], behavior='rows_values')
+    cats_above_mean = frame_filtered.present_by_items(categories)
+    print(cats_above_mean)
+
+    cats_above_mean = frame_filtered.present_by_items(cats_above_mean, by_previos_conditions=days_above_mean)
+    print(cats_above_mean)
+
 
     # frame_filtered.df = frame_filtered.row_statistic
 

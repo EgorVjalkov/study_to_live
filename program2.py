@@ -35,6 +35,7 @@ def main():
             # for column in filtered:
             for column in r.cat_data:
                 cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
+                print(cd.name)
                 cd.add_price_column(show_calculation=show_calc)
                 cd.add_coef_and_result_column(show_calculation=show_calc)
                 bonus_column = cl.BonusFrame(cd.cat_frame, cd.price_frame)
