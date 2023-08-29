@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 from PriceMarkCalc import PriceMarkCalc
+import analytic_utilities as au
 pd.set_option('display.max.columns', None)
 
 # оттестируй каждую категорию по красоте, прайс, коэф, резулт, бонус и тотал. по0.5 за каждую
@@ -188,19 +189,22 @@ class Recipient:
             #print(day_row)
             if sleep_in_time_flag:
                 if sleep_in_time_flag == 'False':
-                    day_row = {i: day_row[i] if day_row[i] < 0 else 0 for i in day_row if 'bonus' not in i}
-                    day_bonus = {i: day_row[i] for i in day_row if 'bonus' in i}
-                    day_row.update(day_bonus)
+                    day_row = {i: day_row[i] if day_row[i] < 0 else 0 for i in day_row}
             if percent_row_cell == 'done_percent':
-                return np.mean(np.array(list(day_row.values())))
+                return round(np.mean(np.array(list(day_row.values()))), 2)
             else:
                 return round(sum(day_row.values()), 2)
 
-        r_categories = [i for i in self.result_frame.columns if i.islower() or i == 'DAY']
-        only_categories_frame = self.result_frame[r_categories].copy()
-
+        frame_filtered = au.FrameForAnalyse(df=self.result_frame)
+        frame_filtered.filtration([('part', 'bonus', 'neg'), ('part', 'DATE', 'neg')])
+        only_categories_frame = frame_filtered.present_by_items(frame_filtered.df)
         default_sum_list = list(map(get_day_sum, only_categories_frame.to_dict('index').values()))
-        self.result_frame['day_sum'] = default_sum_list
+        self.result_frame['cat_day_sum'] = default_sum_list
+
+        frame_filtered.items = list(frame_filtered.df.columns)
+        frame_filtered.filtration([('part', 'bonus', 'pos')])
+        bonus_frame = pd.concat([self.result_frame['DAY'], frame_filtered.present_by_items(frame_filtered.df)], axis=1)
+        self.result_frame['day_bonus'] = list(map(get_day_sum, bonus_frame.to_dict('index').values()))
 
         sleep_in_time_ser = self.get_in_time_sleeptime_ser()
         self.result_frame = pd.concat([self.result_frame, sleep_in_time_ser], axis=1)
@@ -288,7 +292,7 @@ class CategoryData:
         return coef_dict
 
     def total_count(self, price, coef, mark):
-        if mark == 'True' and coef >= 0.5 and price == 0:
+        if mark == 'True' and coef > 0.5 and price == 0:
             coef = abs(50) * coef
         else:
             coef = abs(price) * coef

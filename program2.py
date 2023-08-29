@@ -29,13 +29,12 @@ def main():
             r.get_all_coefs_col()
             r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
             r.get_r_vedomost(recipients, md.categories)
-            #print(r.mod_data)
-            fltr = FrameForAnalyse(df=r.cat_data)
-            # filtered = fltr.filtration({'columns': ['e:sleeptime', 'l:sleeptime']})
-            # for column in filtered:
+            # fltr = FrameForAnalyse(df=r.cat_data)
+            # fltr.filtration([('part', 'a:sleeptime', 'pos')])
+            # for column in fltr.items:
             for column in r.cat_data:
                 cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
-                print(cd.name)
+                #print(cd.name)
                 cd.add_price_column(show_calculation=show_calc)
                 cd.add_coef_and_result_column(show_calculation=show_calc)
                 bonus_column = cl.BonusFrame(cd.cat_frame, cd.price_frame)

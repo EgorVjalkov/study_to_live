@@ -1,12 +1,14 @@
 import pandas as pd
 import program2 as prog2
+import classes as cl
 from analytic_utilities import FrameForAnalyse
 
 recp = ['Egr']
-refresh_flag = False
+refresh_flag = True
+md = cl.MonthData(prog2.path_to_file)
 #recp = prog2.recipients
-# еще ечть идейка фильтрованный фрейм перезапустить
 # придумай как сделать экстракт если фильтр идет не по колоннам а по индексу, скажем по статке, и здесь мешает дата и задник
+# калькулятор на время надо пересматривать, тестить, кажет херь
 
 for r_name in recp:
     path_to_output = f'output_files/{prog2.month}/{r_name}'
@@ -20,20 +22,28 @@ for r_name in recp:
     frame_filtered.filtration([('part', 'bonus', 'neg'), ('part', ':', 'pos')])
     categories = frame_filtered.present_by_items(frame_filtered.df, remove_stat=False)
 
-    frame_filtered.items = frame_filtered.df['day_sum'].to_list()
+    frame_filtered.filtration([('part', 'bonus', 'pos')])
+    bonus_frame = frame_filtered.present_by_items(frame_filtered.df)
+
+    frame_filtered.items = frame_filtered.df['cat_day_sum'].to_list()
     days_above_mean = frame_filtered.filtration([('>', 'mean', 'pos')], behavior='index_values')
-    print(frame_filtered.items)
 
     frame_filtered.items = categories.tail(1).to_dict('records')[0]
     frame_filtered.filtration([('>', 'mean', 'pos')], behavior='rows_values')
     cats_above_mean = frame_filtered.present_by_items(categories)
-    print(cats_above_mean)
 
-    cats_above_mean = frame_filtered.present_by_items(cats_above_mean, by_previos_conditions=days_above_mean)
-    print(cats_above_mean)
+    for i in cats_above_mean.columns:
+        cat_frame = pd.read_excel(path_to_output+f'/{i}.xlsx')
+        frame_filtered.items = list(cat_frame.columns)
+        frame_filtered.filtration([('columns', ['DATE', 'DAY', 'mark'], 'neg')])
+        cat_frame = frame_filtered.present_by_items(cat_frame)
+        cat_frame_with_acc = pd.concat([md.date, md.accessory, cat_frame, frame_filtered.df['cat_day_sum']], axis=1)
+        cat_frame_with_acc = frame_filtered.present_by_items(cat_frame_with_acc, by_previos_conditions=days_above_mean)
+        #print(cat_frame_with_acc)
+        cat_frame_with_acc.to_excel(f'{path_to_output}/___test_{i}.xlsx')
 
 
-    # frame_filtered.df = frame_filtered.row_statistic
+# frame_filtered.df = frame_filtered.row_statistic
 
     # above_mean_total = frame_filtered.filtration({'>': 'mean'}, by_column='day_sum')
     # above_mean_items = frame_filtered.items

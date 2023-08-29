@@ -165,7 +165,8 @@ class PriceMarkCalc:
 #    print()
 
 # cc = PriceMarkCalc('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
-#cc = PriceMarkCalc('21:20', '{"<.22": "30+0.5*", "<.23": 0, ">.23": "-2*"}')
+#cc = PriceMarkCalc('21:50', '{"<.22": "20+1*", "<.23": 0, ">=.23": "-2*"}')
+#cc = PriceMarkCalc('22:40', '{"<.22": "20+1*", ">=.22": "-0.5*", ">.23": "-2*"}')
 # cc = PriceMarkCalc(4.0, '10*')
 # cc = PriceMarkCalc('23:00', '{"<.22": "3*", "<.23": "2*", ">.23": 0}')
 # cc = PriceMarkCalc('4', '10*')
