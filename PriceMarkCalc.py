@@ -1,5 +1,4 @@
 import datetime
-from random import choice
 
 
 class PriceMarkCalc:
@@ -7,7 +6,9 @@ class PriceMarkCalc:
         self.comparison_dict = {'<': lambda r, y: r < y,
                                 '<=': lambda r, y: r <= y,
                                 '>=': lambda r, y: r >= y,
-                                '>': lambda r, y: r > y}
+                                '>': lambda r, y: r > y,
+                                '!=': lambda r, y: r != y,
+                                '=': lambda r, y: r == y}
 
         if '{' in condition:
             for operator in self.comparison_dict:
@@ -22,8 +23,6 @@ class PriceMarkCalc:
         self.condition = condition
 
         self.price = 0.0
-        self.mark = result
-        self.mark_dict = {'+': 'True', '-': 'False', '0': 'False'}
 
         self.date = datetime.date.today() if date == 'DATE' or not date else date
 
@@ -109,8 +108,7 @@ class PriceMarkCalc:
         for i in result_d_by_key:
             if value in i:
                 self.price = float(result_d_by_key[i])
-        self.mark = key
-        return self.price, self.mark
+        return self.price
 
     def get_price(self):
         self.prepare_result()
@@ -132,13 +130,7 @@ class PriceMarkCalc:
         if '*' in str(self.price):
             self.price = self.get_price_if_multiply(self.price)# done
 
-        if self.mark not in self.mark_dict:
-            self.mark = 'True' if self.price >= 0 else 'False'
-        else:
-            self.mark = self.mark_dict[self.mark]
-
-        #print(self.price, self.mark)
-        return self.price, self.mark
+        return self.price
 
     def prepare_named_result(self, recipient_name): # результат по литере
         if type(self.result) == str:

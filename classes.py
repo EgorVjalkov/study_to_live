@@ -254,14 +254,18 @@ class CategoryData:
 
         price_calc = {'price': self.price_frame['PRICE'], 'can`t': 0, 'wishn`t': 0, '!': -50}
         if result not in price_calc:
-            #print(result)
-            price, mark = PriceMarkCalc(result, price_calc['price']).get_price()
+            price = PriceMarkCalc(result, price_calc['price']).get_price()
         else:
             price = price_calc[result]
-            mark = result if result != '!' else 'wishn`t'
-        #print(result, price, mark, '\n end \n')
+
+        true_condition = eval(str(price)+self.price_frame["True"])
+        print(true_condition)
+        mark = 'True' if true_condition else 'False'
+
+        print(result, price, mark, '\n end \n')
         price_calc = {k: price_calc[k] for k in price_calc if k not in ('can`t', 'wishn`t')}
         return {'price': price, 'mark': mark, 'price_calc': list(price_calc.values())}
+
 
     def add_price_column(self, show_calculation=False):
         #print(self.name)

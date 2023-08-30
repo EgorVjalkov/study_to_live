@@ -8,7 +8,6 @@ refresh_flag = True
 md = cl.MonthData(prog2.path_to_file)
 #recp = prog2.recipients
 # придумай как сделать экстракт если фильтр идет не по колоннам а по индексу, скажем по статке, и здесь мешает дата и задник
-# калькулятор на время надо пересматривать, тестить, кажет херь
 
 for r_name in recp:
     path_to_output = f'output_files/{prog2.month}/{r_name}'
