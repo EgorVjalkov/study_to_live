@@ -259,10 +259,10 @@ class CategoryData:
             price = price_calc[result]
 
         true_condition = eval(str(price)+self.price_frame["True"])
-        print(true_condition)
+        #print(true_condition)
         mark = 'True' if true_condition else 'False'
 
-        print(result, price, mark, '\n end \n')
+        #print(result, price, mark, '\n end \n')
         price_calc = {k: price_calc[k] for k in price_calc if k not in ('can`t', 'wishn`t')}
         return {'price': price, 'mark': mark, 'price_calc': list(price_calc.values())}
 
@@ -296,10 +296,10 @@ class CategoryData:
         return coef_dict
 
     def total_count(self, price, coef, mark):
-        if mark == 'True' and coef > 0.5 and price == 0:
-            coef = abs(50) * coef
-        else:
-            coef = abs(price) * coef
+        # if mark == 'True' and coef > 0.5 and price == 0:
+        #     coef = abs(50) * coef
+        # else:
+        coef = abs(price) * coef
         price += coef
         return round(coef, 2), round(price, 2)
 
@@ -327,11 +327,6 @@ class CategoryData:
             return round(percent, 2)
 
         true_percent = count_true_percent(self.cat_frame['mark'])
-        #if result_column.empty:
-        #    mark_column = pd.concat([mark_column, pd.Series({self.limit: true_percent, self.limit+1: ''})], axis=0)
-        #    mark_column.name = column_name
-        #    return mark_column
-        # else:
         index_limit = len(self.cat_frame.index)
         result = round(self.cat_frame['result'].sum(), 2)
         statistic_app = pd.Series({index_limit: true_percent, index_limit+1: result})

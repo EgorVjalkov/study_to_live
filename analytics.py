@@ -25,19 +25,31 @@ for r_name in recp:
     bonus_frame = frame_filtered.present_by_items(frame_filtered.df)
 
     frame_filtered.items = frame_filtered.df['cat_day_sum'].to_list()
-    days_above_mean = frame_filtered.filtration([('>', 'mean', 'pos')], behavior='index_values')
+    days_above_mean = frame_filtered.filtration([('>', 'mean', 'pos')], behavior='rows_values')
 
     frame_filtered.items = categories.tail(1).to_dict('records')[0]
-    frame_filtered.filtration([('>', 'mean', 'pos')], behavior='rows_values')
-    cats_above_mean = frame_filtered.present_by_items(categories)
+    cats_by_sum = frame_filtered.filtration([('<', 'mean', 'pos')], behavior='rows_values')
 
-    for i in cats_above_mean.columns:
+    limit = len(categories)
+    done_percent_frame = categories[limit-2:limit-1]
+    done_percent = done_percent_frame[cats_by_sum['items']].to_dict('records')[0]
+    frame_filtered.items = done_percent
+    cats_by_done_per = frame_filtered.filtration([('<=', 0.7, 'pos')], behavior='rows_values')
+    print(cats_by_done_per)
+
+    # price_fltrd = frame_filtered.present_by_items(md.prices, by_previos_conditions=cats_by_done_per)
+    # price_fltrd.to_excel(f'{path_to_output}/___test_prices.xlsx')
+
+    #print(cats_above_mean)
+
+    for i in cats_by_done_per['items']:
+    #for i in cats_by_cat_sum.columns:
         cat_frame = pd.read_excel(path_to_output+f'/{i}.xlsx')
         frame_filtered.items = list(cat_frame.columns)
-        frame_filtered.filtration([('columns', ['DATE', 'DAY', 'mark'], 'neg')])
+        frame_filtered.filtration([('columns', ['DATE', 'DAY'], 'neg')])
         cat_frame = frame_filtered.present_by_items(cat_frame)
-        cat_frame_with_acc = pd.concat([md.date, md.accessory, cat_frame, frame_filtered.df['cat_day_sum']], axis=1)
-        cat_frame_with_acc = frame_filtered.present_by_items(cat_frame_with_acc, by_previos_conditions=days_above_mean)
+        cat_frame_with_acc = pd.concat([md.date, md.accessory, md.vedomost[i], cat_frame, frame_filtered.df['cat_day_sum']], axis=1)
+        #cat_frame_with_acc = frame_filtered.present_by_items(cat_frame_with_acc, by_previos_conditions=days_above_mean)
         #print(cat_frame_with_acc)
         cat_frame_with_acc.to_excel(f'{path_to_output}/___test_{i}.xlsx')
 

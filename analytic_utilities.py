@@ -27,10 +27,10 @@ class FrameForAnalyse:
 
     @property
     def filters_dict(self):
-        return {'<': lambda i, fltr: int(i) < fltr,
-                '<=': lambda i, fltr: int(i) <= fltr,
-                '>=': lambda i, fltr: int(i) >= fltr,
-                '>': lambda i, fltr: int(i) > fltr,
+        return {'<': lambda i, fltr: float(i) < fltr,
+                '<=': lambda i, fltr: float(i) <= fltr,
+                '>=': lambda i, fltr: float(i) >= fltr,
+                '>': lambda i, fltr: float(i) > fltr,
                 '=': lambda i, fltr: i == fltr,
                 'part': lambda i, prt: prt in i,
                 'columns': lambda i, clmns: i in clmns,
