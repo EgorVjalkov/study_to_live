@@ -1,10 +1,9 @@
 import telebot
 from telebot import types
+from My_token import TOKEN
 
 
 DAYZ = ['1.09.2013', '2.09.2023']
-TOKEN = '6456866792:AAEXkQ5ZfrEj-WMRVJPr-StkOpJkUJWIMIA'
-ADMIN_ID = '831647128'
 
 bot = telebot.TeleBot(TOKEN)
 
