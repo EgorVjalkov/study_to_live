@@ -14,6 +14,8 @@ def main():
     if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
 
         md = cl.MonthData(path_to_file)
+        md.get_frames_for_working()
+        md.fill_na()
         for r_name in recipients:
             r = cl.Recipient(r_name, md.date)
             r.create_output_dir(f'output_files', month)

@@ -1,3 +1,4 @@
+import datetime
 import pandas as pd
 import numpy as np
 import os
@@ -225,17 +226,32 @@ class Recipient:
 
 class MonthData:
     def __init__(self, path):
-        vedomost = pd.read_excel(path, sheet_name='vedomost', dtype='object')
+        self.vedomost = pd.read_excel(path, sheet_name='vedomost', dtype='object').replace('CAN`T', 'can`t')
         self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
-        self.limit = len([i for i in vedomost['DONE'].to_list() if i == 'Y'])
-        vedomost = vedomost[0:self.limit]
-        self.vedomost = vedomost.replace('CAN`T', 'can`t')
-        del self.vedomost['DONE']
+        self.accessory = pd.DataFrame()
+        self.categories = pd.DataFrame()
+        self.date = pd.DataFrame()
 
+    def get_frames_for_working(self, limiting='DONE'):
+        if limiting == 'DONE':
+            limit = len([i for i in self.vedomost['DONE'].to_list() if i == 'Y'])
+        elif limiting == 'DATE':
+            today = datetime.date.today()
+            limit = len([i for i in self.vedomost['DATE'].to_list() if i.date() <= today])
+        else:
+            limit = len(self.vedomost)
+
+        self.vedomost = self.vedomost[:limit]
+        del self.vedomost['DONE']
         date_keys = ['DATE', 'DAY']
         self.accessory = self.vedomost.get([i for i in self.vedomost.columns if i == i.upper() and i not in date_keys])
         self.date = self.vedomost.get(date_keys)
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
+
+        return self.date, self.accessory, self.categories
+
+    def fill_na(self):
+        return self.accessory.fillna('-'), self.categories.fillna('!')
 
 
 class CategoryData:
