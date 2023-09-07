@@ -6,14 +6,6 @@ from PriceMarkCalc import PriceMarkCalc
 import analytic_utilities as au
 pd.set_option('display.max.columns', None)
 
-# оттестируй каждую категорию по красоте, прайс, коэф, резулт, бонус и тотал. по0.5 за каждую
-# сделай общую ф для подстееф статистики
-# сделвй ф для фильтрации за 200р с коэфами категориями и т.д.
-
-
-def count_a_statistic():
-    pass
-
 
 class CompCoef:
     def __init__(self, coef_data):
@@ -47,7 +39,7 @@ class CompCoef:
 
 
 class Recipient:
-    def __init__(self, name, date_frame):
+    def __init__(self, name, date_frame=pd.DataFrame()):
         self.r_name = name
         self.litera = name[0]
         self.private_position = self.litera.lower()
@@ -227,22 +219,25 @@ class Recipient:
 class MonthData:
     def __init__(self, path):
         self.vedomost = pd.read_excel(path, sheet_name='vedomost', dtype='object').replace('CAN`T', 'can`t')
+        self.vedomost['DATE'] = [i.date() for i in self.vedomost['DATE']]
+        #self.vedomost['DATE'].astype('str')
         self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
         self.accessory = pd.DataFrame()
         self.categories = pd.DataFrame()
         self.date = pd.DataFrame()
 
-    def get_frames_for_working(self, limiting='DONE'):
-        if limiting == 'DONE':
-            limit = len([i for i in self.vedomost['DONE'].to_list() if i == 'Y'])
-        elif limiting == 'DATE':
+    def get_frames_for_working(self, limiting='for count'):
+        start = 0
+        finish = len(self.vedomost)
+        if limiting == 'for count':
+            finish = len([i for i in self.vedomost['DONE'].to_list() if pd.notna(i)])
+        elif limiting == 'for filling':
             today = datetime.date.today()
-            limit = len([i for i in self.vedomost['DATE'].to_list() if i.date() <= today])
-        else:
-            limit = len(self.vedomost)
-
-        self.vedomost = self.vedomost[:limit]
+            start = len([i for i in self.vedomost['DONE'].to_list() if pd.notna(i)])
+            finish = len([i for i in self.vedomost['DATE'].to_list() if i <= today])
+        self.vedomost = self.vedomost[start:finish]
         del self.vedomost['DONE']
+
         date_keys = ['DATE', 'DAY']
         self.accessory = self.vedomost.get([i for i in self.vedomost.columns if i == i.upper() and i not in date_keys])
         self.date = self.vedomost.get(date_keys)

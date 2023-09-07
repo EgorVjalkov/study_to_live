@@ -34,7 +34,8 @@ class FrameForAnalyse:
                 '=': lambda i, fltr: i == fltr,
                 'part': lambda i, prt: prt in i,
                 'columns': lambda i, clmns: i in clmns,
-                'positions': lambda i, pos: i[0] in pos
+                'positions': lambda i, pos: i[0] in pos,
+                'nan': lambda i, fltr: pd.isna(i)
                 }
 
     def get_filter_func(self, _filter):
@@ -44,23 +45,24 @@ class FrameForAnalyse:
     def praparation_dict(self):
         return {'columns': {'axis': 1, 'extr': ()},
                 'index_values': {'axis': 0, 'extr': list(self.df.index[len(self.df)-2:])},
-                'rows_values': {'axis': 1, 'extr': ['DATE', 'DAY', 'day_sum', 'sleep_in_time', 'day_sum_in_time']}
+                'row_values': {'axis': 1, 'extr': ['DATE', 'DAY', 'day_sum', 'sleep_in_time', 'day_sum_in_time']}
                 }
 
     def extract_statistic(self, instructions):
-        if type(self.items) == list:
-            self.items = pd.Series(self.items).to_dict()
         self.items = {i: self.items[i] for i in self.items if i not in instructions}
         return self.items
 
-    def change_axis_and_prepare_items(self, behavior):
+    def change_axis_and_prepare_items(self, behavior, stat_extr):
         beh_from_dict = self.praparation_dict[behavior]
         self.axis = beh_from_dict['axis']
-        self.extract_statistic(beh_from_dict['extr'])
+        if type(self.items) == list:
+            self.items = pd.Series(self.items).to_dict()
+        if stat_extr:
+            self.extract_statistic(beh_from_dict['extr'])
         return self.axis, self.items
 
-    def filtration(self, filters_list, behavior='columns'):
-        self.change_axis_and_prepare_items(behavior)
+    def filtration(self, filters_list, behavior='columns', stat_extraction=False):
+        self.change_axis_and_prepare_items(behavior, stat_extraction)
 
         for fltr in filters_list:
             dict_object = self.items
@@ -68,6 +70,8 @@ class FrameForAnalyse:
             filter_func = self.get_filter_func(fltr_type)
             if value == 'mean':
                 value = self.above_zero_mean(dict_object)
+
+            #key_value_changer = lambda k, v: k if behavior == 'columns' else v
 
             if filter_logic == 'pos':
                 self.items = {i: dict_object[i] for i in dict_object if filter_func(dict_object[i], value)}
