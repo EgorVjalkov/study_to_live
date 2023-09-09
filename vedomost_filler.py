@@ -2,8 +2,8 @@ import pandas as pd
 import datetime
 import classes as cl
 from analytic_utilities import FrameForAnalyse
-# сделай возможеость заполнять логику только для себя, остальное позволь заполнять жене
-# сейчас нужно опрелеиться с правали на заполнение категорий
+# сделал фильтрацию на уровне ведомостей, теперь каждых может заполнить то чтопо его рангу.
+# Теперь нужно включать кнопочки с датами, добавить описание в каждую катеорию, о чем и как заполнять
 
 MONTH = 'sep23'
 recipients = ['Egr', 'Lera']
@@ -21,6 +21,8 @@ class VedomostFiller:
         self.categories = md.categories
         self.date = md.date
 
+        self.ff = FrameForAnalyse(df=self.vedomost)
+
         self.recipient = recipient
 
         self.day_rows_dict = {}
@@ -29,34 +31,30 @@ class VedomostFiller:
     def admin(self):
         return True if self.recipient == 'Egr' else False
 
-    @property
-    #
-    def r_positions(self):
+    def get_r_vedomost(self):
         r = cl.Recipient(self.recipient, self.date)
         r.positions.append(r.private_position)
-        return r.positions
-
-    def get_recipient_rules(self):
-        if not self.admin:
-            self.columns_for_filling = []
+        self.ff.items = list(self.categories.columns)
+        self.ff.filtration([('positions', r.positions, 'pos')])
+        self.categories = self.ff.present_by_items(self.categories)
+        if self.admin:
+            self.vedomost = pd.concat([self.date, self.accessory, self.categories], axis=1)
+        else:
+            self.vedomost = pd.concat([self.date, self.categories], axis=1)
+        return self.vedomost
 
     def get_rows_for_filling(self):
-        ff = FrameForAnalyse(df=self.vedomost)
-        day_rows_for_filling = ff.df.to_dict('index')
+        day_rows_for_filling = self.get_r_vedomost().to_dict('index')
         for day_index in day_rows_for_filling:
-            ff.items = day_rows_for_filling[day_index]
-            ff.filtration([('nan', 'nan', 'pos')], behavior='row_values')
-            # можно бы тут подумать как сократить эти строки и улучшить свою ф фильтрации
-            ff.items = list(ff.items.keys())
-            ff.filtration([('positions', self.r_positions, 'pos')], behavior='columns')
-            if ff.items:
-                self.day_rows_dict[day_index] = ff.items
+            self.ff.items = day_rows_for_filling[day_index]
+            self.ff.filtration([('nan', 'nan', 'pos')], behavior='row_values')
+            if self.ff.items:
+                self.day_rows_dict[day_index] = self.ff.items
 
 
-filler = VedomostFiller(path, 'Egr')
-filler.get_rows_for_filling()
-print(filler.r_positions)
-print(filler.day_rows_dict)
+filler = VedomostFiller(path, 'Lera')
+filler.get_r_vedomost()
+print(filler.vedomost)
 
 
 
