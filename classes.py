@@ -221,7 +221,7 @@ class MonthData:
         self.vedomost = pd.read_excel(path, sheet_name='vedomost', dtype='object').replace('CAN`T', 'can`t')
         self.vedomost['DATE'] = [i.date() for i in self.vedomost['DATE']]
         #self.vedomost['DATE'].astype('str')
-        self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
+        self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna('')
         self.accessory = pd.DataFrame()
         self.categories = pd.DataFrame()
         self.date = pd.DataFrame()
