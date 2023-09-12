@@ -66,6 +66,7 @@ class FrameForAnalyse:
 
         for fltr in filters_list:
             dict_object = self.items
+            print(dict_object)
             fltr_type, value, filter_logic = fltr[0], fltr[1], fltr[2]
             filter_func = self.get_filter_func(fltr_type)
             if value == 'mean':

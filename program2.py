@@ -4,7 +4,7 @@ from testing import does_need_correction
 from analytic_utilities import FrameForAnalyse
 
 recipients = ['Egr', 'Lera']
-month = "aug23"
+month = "sep23"
 
 path_to_file = f'months/{month}/{month}.xlsx'
 show_calc = True
@@ -36,7 +36,7 @@ def main():
             # for column in fltr.items:
             for column in r.cat_data:
                 cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
-                #print(cd.name)
+                print(cd.name)
                 cd.add_price_column(show_calculation=show_calc)
                 #print(cd.cat_frame)
                 cd.add_coef_and_result_column(show_calculation=show_calc)
