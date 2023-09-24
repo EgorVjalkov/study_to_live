@@ -1,64 +1,79 @@
-import telebot
-from telebot import types
+import pandas as pd
 from My_token import TOKEN
 import vedomost_filler as vfill
 # https://habr.com/ru/articles/580408/
+# не понимаю почему не доходит до необходимого, замуть какаято с хэндлерами
+
+
+class FillerBot:
+    def __init__(self, path_to_vedomost, user_dict):
+        self.bot = telebot.TeleBot(TOKEN)
+        self.filler_prog = vfill.VedomostFiller(path_to_vedomost)
+        self.user_name_dict = user_dict
+
+        self.days_for_filling = {}
+
+        self.default_day_frame = pd.DataFrame()
+
+        self.cell = ''
+
+    @property
+    def day_frame(self):
+        return self.default_day_frame
+
+    @day_frame.setter
+    def day_frame(self, day_frame):
+        self.default_day_frame = day_frame
+
 
 month = 'sep23'
 path = f'months/{month}/{month}.xlsx'
+username_dict = {'Jegor': 'Egr'}
 
-filler = vfill.VedomostFiller(path, 'Lera')
-days_for_filling = filler.get_dates_for_filling()
-# нужно по другому представить дату, типа для понятливого чтения, нужно так же ее тудым сюдым конвертить
-
-bot = telebot.TeleBot(TOKEN)
-
-name = None
-username = None
+filler_bot = FillerBot(path, username_dict)
 
 
-@bot.message_handler(commands=['start'])
-def start_message(message):
-    global name, username
-    name = message.from_user.first_name
-    username = message.from_user.username
-    bot.send_message(message.chat.id, 'Привет!')
+@filler_bot.bot.message_handler(commands=['start'], content_types=['text'])
+def start_and_change_a_date(message):
+    r_name = filler_bot.user_name_dict[message.from_user.first_name]
+    filler_bot.filler_prog.r_name = r_name
+    filler_bot.filler_prog.get_r_vedomost()
+    filler_bot.days_for_filling = filler_bot.filler_prog.get_dates_for_filling()
 
-
-@bot.message_handler(commands=['button'])
-def change_a_date(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    for i in days_for_filling:
+    for i in filler_bot.days_for_filling:
         b = types.KeyboardButton(i)
         markup.add(b)
-    bot.send_message(message.chat.id, 'Выбери дату из списка', reply_markup=markup)
+    filler_bot.bot.send_message(message.chat.id, 'Превет! Выбери дату из списка', reply_markup=markup)
+    while True:
+        if message.text in filler_bot.days_for_filling:
+            filler_bot.day_frame = filler_bot.days_for_filling[message.text]
+            for cell in filler_bot.day_frame.columns:
+                print(cell)
+                mark = filler_bot.day_frame[cell].to_list()[0]
+                row_index = filler_bot.day_frame.index[0]
+                if pd.isna(mark):
+                    cell_description = filler_bot.filler_prog.get_cell_description(cell)
+                    descr_message = cell_description['description']
+                    hint_message = cell_description['hint']
+                    filler_bot.bot.send_message(message.chat.id, descr_message)
+                    if hint_message:
+                        filler_bot.bot.send_message(message.chat.id, hint_message)
 
 
-@bot.message_handler(content_types=['text'])
-def message_reply(message):
-    if message.text in days_for_filling:
-        bot.send_message(message.chat.id, f'заполняем {message}')
-        filler.fill_the_day_row(message.text)
+def change_by_message(message, variants_dict):
+    answer = message.text
+    if answer in variants_dict:
+        filler_bot.bot.send_message(message.chat.id, f'Вы выбрали {answer}')
+        return variants_dict[answer]
+
+        #print(cat_description['description'])
+        #if cat_description['hint']:
+        #    print(cat_description['hint'])
+        #print()
+        # здесь пока только тип заполняемого, именно тут интегрируется бот с его кнопками и т.д.
+        #filler_bot.day_frame.loc[row_index, cell] = cell_description['type']
+        # сделать нужно филлерчек
 
 
-#def get_text_message(message):
-#    change_a_date(message)
-#    container['date'] = message
-#    for q in descriptions:
-#        answer_a_question(message, q)
-#
-#
-
-
-def answer_a_question(message, q):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    answers = variants[q]
-    for a in answers:
-        b = types.KeyboardButton(a)
-        markup.add(b)
-    bot.send_message(message.chat.id, text=descriptions[q])
-    container[q] = message.text
-
-
-bot.polling()
-print(container)
+filler_bot.bot.polling()

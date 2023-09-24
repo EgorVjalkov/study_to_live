@@ -8,7 +8,7 @@ from analytic_utilities import FrameForAnalyse
 
 
 class VedomostFiller:
-    def __init__(self, path_to_file, recipient):
+    def __init__(self, path_to_file, recipient=''):
         md = cl.MonthData(path_to_file)
         md.get_frames_for_working(limiting='for filling')
 
@@ -22,11 +22,17 @@ class VedomostFiller:
 
         self.recipient = recipient
 
-        self.day_rows_dict = {}
-
     @property
     def admin(self):
         return True if self.recipient == 'Egr' else False
+
+    @property
+    def r_name(self):
+        return self.recipient
+
+    @r_name.setter
+    def r_name(self, name):
+        self.recipient = name
 
     def get_r_vedomost(self):
         r = cl.Recipient(self.recipient, self.date)
@@ -40,30 +46,34 @@ class VedomostFiller:
             self.vedomost = pd.concat([self.date, self.categories], axis=1)
         return self.vedomost
 
-    def get_cat_description(self, cat_name):
+    def get_cell_description(self, cat_name):
         return self.prices[cat_name].filter(items=['description', 'hint', 'type', 'solid'], axis=0)
 
     def get_dates_for_filling(self):
         days_for_filling = self.vedomost['DATE'].to_list()
+        days_for_filling = {datetime.date.strftime(i, '%d.%m.%y'): i for i in days_for_filling}
         return days_for_filling
 
-    def fill_the_day_row(self, date):
+    def change_the_day_row(self, date):
         self.ff.items = self.vedomost['DATE'].to_dict()
         self.ff.filtration([('=', date, 'pos')], behavior='index_values')
         day_frame = self.ff.present_by_items(self.vedomost)
-        row_index = day_frame.index.to_list()[0]
-        for cat in day_frame.columns:
-            mark = day_frame[cat].to_list()[0]
-            if pd.isna(mark):
-                pass
-                cat_description = self.get_cat_description(cat)
-                #print(cat_description['description'])
-                #if cat_description['hint']:
-                #    print(cat_description['hint'])
-                #print()
-                # здесь пока только тип заполняемого, именно тут интегрируется бот с его кнопками и т.д.
-                day_frame.loc[row_index, cat] = cat_description['type']
-                # сделать нужно филлерчек
+        return day_frame
+
+    #def fill_the_cell(self):
+    #    for cell in self.day_frame:
+    #        mark = self.day_frame[cell].to_list()[0]
+    #        if pd.isna(mark):
+    #            print(mark)
+    #            pass
+    #            cat_description = self.get_cat_description(cat)
+    #            #print(cat_description['description'])
+    #            #if cat_description['hint']:
+    #            #    print(cat_description['hint'])
+    #            #print()
+    #            # здесь пока только тип заполняемого, именно тут интегрируется бот с его кнопками и т.д.
+    #            day_frame.loc[row_index, cat] = cat_description['type']
+    #            # сделать нужно филлерчек
 
 
 if __name__ == '__main__':
@@ -71,7 +81,6 @@ if __name__ == '__main__':
     path = f'months/{month}/{month}.xlsx'
     filler = VedomostFiller(path, 'Lera')
     li = filler.get_dates_for_filling()
-    filler.fill_the_day_row(li[0])
 
 
 
