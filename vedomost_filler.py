@@ -77,6 +77,7 @@ class VedomostFiller:
 
 
 if __name__ == '__main__':
+    print(1 // 4)
     month = 'sep23'
     path = f'months/{month}/{month}.xlsx'
     filler = VedomostFiller(path, 'Lera')

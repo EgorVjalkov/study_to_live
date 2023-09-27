@@ -8,6 +8,7 @@ import logging
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
 from aiogram.filters import CommandObject
+from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 
 logging.basicConfig(level=logging.INFO)
@@ -48,16 +49,18 @@ async def cmd_start_and_get_r_vedomost(message: types.Message):
     name = message.from_user.first_name
     filler_bot.filler_prog.r_name = filler_bot.user_name_dict[name]
     filler_bot.filler_prog.get_r_vedomost()
-    await message.answer("Привет! Формирую ведомость")
-
     dayz_list = filler_bot.filler_prog.get_dates_for_filling()
-    dayz_kb = [types.KeyboardButton(text=i) for i in dayz_list]
-    dayz_kb = [dayz_kb]
-        
-    keyboard = types.ReplyKeyboardMarkup(keyboard=dayz_kb,
-                                         resize_keyboard=True,
-                                         input_field_placeholder='Выберите дату')
-    await message.answer("Дата?", reply_markup=keyboard)
+
+    if dayz_list:
+        await message.answer("Привет! Формирую ведомость")
+        builder = ReplyKeyboardBuilder()
+        for day in dayz_list:
+            builder.add(types.KeyboardButton(text=day))
+        builder.adjust(4)
+        await message.answer("Дата?", reply_markup=builder.as_markup(resize_keyboard=True,
+                                                                     input_field_placeholder="Выберите дату"))
+    else:
+        await message.answer("Привет! Все заполнено!")
 
 
 async def cmd_t1(message: types.Message):
