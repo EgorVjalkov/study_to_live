@@ -58,33 +58,47 @@ async def cmd_start_and_get_r_vedomost(message: types.Message):
             builder.add(types.KeyboardButton(text=day))
         builder.adjust(4)
         await message.answer("Дата?", reply_markup=builder.as_markup(resize_keyboard=True,
-                                                                     input_field_placeholder="Выберите дату"))
+                                                                     input_field_placeholder="Выберите дату",
+                                                                     ))
     else:
         await message.answer("Привет! Все заполнено!")
 
 
-async def cmd_t1(message: types.Message):
-    await message.reply("тест1")
-
-
-async def cmd_t2(message: types.Message):
-    await message.reply("теcт2")
-
-
-@filler_bot.dp.message(Command("name"))
-async def cmd_name(message: types.Message, command: CommandObject):
-    list_ = [1, 2]
-    if command.args:
-        list_.append(command.args)
-        await message.reply(f'{list_}')
+async def get_a_cell_keyboard(message: types.Message):
+    if not filler_bot.day_frame.empty:
+        # почемуто не работает комада /fill
+        # нужно сделать клаву в области интересов филлер бота. так можно будет исключать из нее кнопки
+        builder = ReplyKeyboardBuilder()
+        for cell in filler_bot.day_frame.columns:
+            builder.add(types.KeyboardButton(text=cell))
+        builder.adjust(4)
+        await message.answer("Выберите категорию для заполнения",
+                             reply_markup=builder.as_markup(resize_keyboard=True))
     else:
-        await message.answer("укажи имя по сле команды /name")
+        await message.reply("Сначала нужно выбрать дату!")
+
+
+@filler_bot.dp.message(F.text)
+async def change_a_date(message: types.Message):
+    if message.text in filler_bot.filler_prog.days_for_filling:
+        filler_bot.day_frame = filler_bot.filler_prog.change_the_day_row(
+            filler_bot.filler_prog.days_for_filling[message.text])
+        await message.reply(f"Принято. Чтоб передать данные, дайте команду /fill",
+                            reply_markup=types.ReplyKeyboardRemove())
+
+
+
+
+@filler_bot.dp.message(F.text)
+async def fill_a_cell(message: types.Message):
+    if not filler_bot.day_frame.empty:
+        if message.text in filler_bot.day_frame.columns:
+            pass
 
 
 async def main():
-    filler_bot.dp.message.register(cmd_t1, Command("test1"))
-    filler_bot.dp.message.register(cmd_t2, Command("test2"))
     await filler_bot.dp.start_polling(filler_bot.bot)
+    filler_bot.dp.message.register(get_a_cell_keyboard, Command("fill"))
 
 
 if __name__ == '__main__':

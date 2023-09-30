@@ -22,6 +22,8 @@ class VedomostFiller:
 
         self.recipient = recipient
 
+        self.days_for_filling = {}
+
     @property
     def admin(self):
         return True if self.recipient == 'Egr' else False
@@ -51,8 +53,8 @@ class VedomostFiller:
 
     def get_dates_for_filling(self):
         days_for_filling = self.vedomost['DATE'].to_list()
-        days_for_filling = {datetime.date.strftime(i, '%d.%m.%y'): i for i in days_for_filling}
-        return days_for_filling
+        self.days_for_filling = {datetime.date.strftime(i, '%d.%m.%y'): i for i in days_for_filling}
+        return self.days_for_filling
 
     def change_the_day_row(self, date):
         self.ff.items = self.vedomost['DATE'].to_dict()
