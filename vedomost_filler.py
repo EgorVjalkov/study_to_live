@@ -62,8 +62,7 @@ class VedomostFiller:
         day_frame = self.ff.present_by_items(self.vedomost)
         return day_frame
 
-    #def fill_the_cell(self):
-    #    for cell in self.day_frame:
+
     #        mark = self.day_frame[cell].to_list()[0]
     #        if pd.isna(mark):
     #            print(mark)
@@ -84,6 +83,7 @@ if __name__ == '__main__':
     path = f'months/{month}/{month}.xlsx'
     filler = VedomostFiller(path, 'Lera')
     li = filler.get_dates_for_filling()
+
 
 
 

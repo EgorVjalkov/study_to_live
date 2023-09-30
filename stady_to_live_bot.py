@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import vedomost_filler as vfill
 from datetime import datetime
 
@@ -25,8 +26,7 @@ class FillerBot:
         self.days_for_filling = {}
 
         self.default_day_frame = pd.DataFrame()
-
-        self.cell = ''
+        self.keys = []
 
     @property
     def day_frame(self):
@@ -36,12 +36,22 @@ class FillerBot:
     def day_frame(self, day_frame):
         self.default_day_frame = day_frame
 
+    def get_categories_keyboard(self):
+        index = self.day_frame.index[0]
+        self.filler_prog.ff.items = self.day_frame.to_dict('index')[index]
+        self.filler_prog.ff.filtration([('nan', 'nan', 'pos')], behavior='row_values')
+        self.keys = list(self.filler_prog.ff.items.keys())
+        return self.keys
+
 
 month = 'sep23'
 path = f'months/{month}/{month}.xlsx'
 username_dict = {'Jegor': 'Egr'}
 
 filler_bot = FillerBot(path, username_dict)
+#filler_bot.day_frame = pd.DataFrame({1: {'1': np.nan, '2': np.nan, '3': 'bar'}})
+#filler_bot.day_frame = filler_bot.day_frame.T
+#keys = filler_bot.get_categories_keyboard()
 
 
 @filler_bot.dp.message(Command("start"))
@@ -67,13 +77,10 @@ async def cmd_start_and_get_r_vedomost(message: types.Message):
 @filler_bot.dp.message(Command("fill"))
 async def get_a_cell_keyboard(message: types.Message):
     if not filler_bot.day_frame.empty:
-        # почемуто не работает комада /fill
-        # нужно сделать клаву в области интересов филлер бота. так можно будет исключать из нее кнопки
+        keys = filler_bot.get_categories_keyboard()
         builder = ReplyKeyboardBuilder()
-        for cell in filler_bot.day_frame.columns:
-            mark = filler_bot.day_frame[cell].to_list()[0]
-            if pd.isna(mark):
-                builder.add(types.KeyboardButton(text=cell))
+        for key in keys:
+            builder.add(types.KeyboardButton(text=key))
         builder.adjust(4)
         await message.answer("Выберите категорию для заполнения",
                              reply_markup=builder.as_markup(resize_keyboard=True))
@@ -88,8 +95,6 @@ async def change_a_date(message: types.Message):
             filler_bot.filler_prog.days_for_filling[message.text])
         await message.reply(f"Принято. Чтоб передать данные, дайте команду /fill",
                             reply_markup=types.ReplyKeyboardRemove())
-
-
 
 
 @filler_bot.dp.message(F.text)
