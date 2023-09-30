@@ -64,18 +64,21 @@ async def cmd_start_and_get_r_vedomost(message: types.Message):
         await message.answer("Привет! Все заполнено!")
 
 
+@filler_bot.dp.message(Command("fill"))
 async def get_a_cell_keyboard(message: types.Message):
     if not filler_bot.day_frame.empty:
         # почемуто не работает комада /fill
         # нужно сделать клаву в области интересов филлер бота. так можно будет исключать из нее кнопки
         builder = ReplyKeyboardBuilder()
         for cell in filler_bot.day_frame.columns:
-            builder.add(types.KeyboardButton(text=cell))
+            mark = filler_bot.day_frame[cell].to_list()[0]
+            if pd.isna(mark):
+                builder.add(types.KeyboardButton(text=cell))
         builder.adjust(4)
         await message.answer("Выберите категорию для заполнения",
                              reply_markup=builder.as_markup(resize_keyboard=True))
     else:
-        await message.reply("Сначала нужно выбрать дату!")
+        await message.reply("Сначала нужно выбрать дату! Дайте команду /start")
 
 
 @filler_bot.dp.message(F.text)
@@ -97,8 +100,8 @@ async def fill_a_cell(message: types.Message):
 
 
 async def main():
-    await filler_bot.dp.start_polling(filler_bot.bot)
     filler_bot.dp.message.register(get_a_cell_keyboard, Command("fill"))
+    await filler_bot.dp.start_polling(filler_bot.bot)
 
 
 if __name__ == '__main__':
