@@ -4,10 +4,9 @@ import classes as cl
 from analytic_utilities import FrameForAnalyse
 
 recp = ['Egr']
-refresh_flag = True
+refresh_flag = False
 md = cl.MonthData(prog2.path_to_file)
 #recp = prog2.recipients
-# придумай как сделать экстракт если фильтр идет не по колоннам а по индексу, скажем по статке, и здесь мешает дата и задник
 
 for r_name in recp:
     path_to_output = f'output_files/{prog2.month}/{r_name}'
