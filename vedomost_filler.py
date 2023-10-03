@@ -23,6 +23,8 @@ class VedomostFiller:
         self.recipient = recipient
 
         self.days_for_filling = {}
+        self.day_frame = pd.DataFrame()
+        self.non_filled_categories = []
 
     @property
     def admin(self):
@@ -59,9 +61,15 @@ class VedomostFiller:
     def change_the_day_row(self, date):
         self.ff.items = self.vedomost['DATE'].to_dict()
         self.ff.filtration([('=', date, 'pos')], behavior='index_values')
-        day_frame = self.ff.present_by_items(self.vedomost)
-        return day_frame
+        self.day_frame = self.ff.present_by_items(self.vedomost)
+        return self.day_frame
 
+    def get_non_filled_categories(self):
+        index = self.day_frame.index[0]
+        self.ff.items = self.day_frame.to_dict('index')[index]
+        self.ff.filtration([('nan', 'nan', 'pos')], behavior='row_values')
+        self.non_filled_categories = list(self.ff.items)
+        return self.non_filled_categories
 
     #        mark = self.day_frame[cell].to_list()[0]
     #        if pd.isna(mark):
