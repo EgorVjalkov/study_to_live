@@ -25,6 +25,7 @@ class VedomostFiller:
         self.days_for_filling = {}
         self.day_frame = pd.DataFrame()
         self.non_filled_categories = []
+        self.filled = {}
 
     @property
     def admin(self):
@@ -51,7 +52,14 @@ class VedomostFiller:
         return self.vedomost
 
     def get_cell_description(self, cat_name):
-        return self.prices[cat_name].filter(items=['description', 'hint', 'type', 'solid'], axis=0)
+        cat_data = self.prices[cat_name]
+        description = cat_data.filter(items=['description', 'hint', 'type', 'solid'], axis=0)
+        if 'range' in description['type']:
+            description['keys'] = eval(description['type'])
+            print(description['keys'])
+        elif description['type'] == 'dict':
+            description['keys'] = list(eval(cat_data['PRICE']).keys())
+        return description
 
     def get_dates_for_filling(self):
         days_for_filling = self.vedomost['DATE'].to_list()
@@ -87,10 +95,14 @@ class VedomostFiller:
 
 if __name__ == '__main__':
     print(1 // 4)
-    month = 'sep23'
+    month = 'oct23'
     path = f'months/{month}/{month}.xlsx'
-    filler = VedomostFiller(path, 'Lera')
+    filler = VedomostFiller(path, 'Egr')
     li = filler.get_dates_for_filling()
+    dddd = filler.get_cell_description('z:stroll')
+    answer = [i for i in dddd[['description', 'hint']] if i]
+    answer = '\n'.join(answer)
+    print(answer)
 
 
 

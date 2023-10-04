@@ -1,7 +1,9 @@
+import time
+
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import Message, KeyboardButton, ReplyKeyboardRemove
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram.types import Message, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardButton, CallbackQuery
+from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 from bot_main import filler, username_dict
 
@@ -64,17 +66,40 @@ async def get_a_cell_keyboard(message: Message):
         await message.reply("Сначала нужно выбрать дату! Дайте команду /start")
 
 
+def get_filling_inline(inline, cat_data):
+    for i in cat_data['keys']:
+        inline.add(InlineKeyboardButton(text=str(i), callback_data=f'num_{i}'))
+    inline.add(InlineKeyboardButton(text='не мог', callback_data=f'num_{i}'))
+    inline.add(InlineKeyboardButton(text='забыл', callback_data=f'num_{i}'))
+    # надо красивое тут сдлать!
+    inline.adjust(5)
+    return inline
+
+
 @router2.message(F.text.func(lambda text: text in filler.non_filled_categories))
 async def change_a_category(message: Message):
     if filler.non_filled_categories:
-        cat_info_dict = filler.get_cell_description(message.text)
-        if cat_info_dict['hint']:
-            answer = f'{cat_info_dict["description"]}\n{cat_info_dict["hint"]}'
+        cat_name = message.text
+
+        cat_info_ser = filler.get_cell_description(cat_name)
+        answer = [i for i in cat_info_ser[['description', 'hint']] if i]
+        answer = '\n'.join(answer)
+        if answer:
+            await message.reply(answer, reply_markup=ReplyKeyboardRemove())
         else:
-            answer = f'{cat_info_dict["description"]}'
-        await message.reply(answer, reply_markup=ReplyKeyboardRemove())
+            ReplyKeyboardRemove()
+
+        if 'keys' in cat_info_ser:
+            filler.filled[cat_name] = None
+            callback = InlineKeyboardBuilder()
+            callback = get_filling_inline(callback, cat_info_ser)
+            await message.answer(f"Заполняем {cat_name}", reply_markup=callback.as_markup())
+        else:
+            await message.answer(f"Не могу заполнить {cat_name}")
 
         filler.non_filled_categories.remove(message.text)
+        time.sleep(3.0)
+        # здесь хотелочь бы при наличии отклика на колбэк вернуть новую клаву
 
         kb = ReplyKeyboardBuilder()
         keyboard = get_categories_keyboard(kb, filler.non_filled_categories)
@@ -83,4 +108,17 @@ async def change_a_category(message: Message):
         await message.reply('Все заполнено!', reply_markup=ReplyKeyboardRemove())
 
 
+@router2.callback_query(F.data.contains('num_'))
+async def fill_a_cell(callback: CallbackQuery):
+    for i in filler.filled:
+        if not filler.filled[i]:
+            cat_name = i
+            cat_value = callback.data.split('_')[1]
+            if cat_value == 'не мог':
+                cat_value = 'can`t'
+            elif cat_value == 'забыл':
+                cat_value = '!'
+            filler.filled[cat_name] = cat_value
 
+            await callback.answer(f"Вы заполнили {cat_name}")
+    print(filler.filled)
