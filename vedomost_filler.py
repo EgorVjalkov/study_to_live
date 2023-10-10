@@ -8,9 +8,12 @@ from analytic_utilities import FrameForAnalyse
 
 
 class VedomostFiller:
-    def __init__(self, path_to_file, recipient=''):
-        md = cl.MonthData(path_to_file)
+    def __init__(self, month, recipient=''):
+        path_to_dir = f'months/{month}/'
+        md = cl.MonthData(path=f'{path_to_dir}/{month}.xlsx')
         md.get_frames_for_working(limiting='for filling')
+
+        self.path_to_filled = f'{path_to_dir}/filled_by_bot.xlsx'
 
         self.vedomost = md.vedomost
         self.accessory = md.accessory
@@ -24,6 +27,7 @@ class VedomostFiller:
 
         self.days_for_filling = {}
         self.day_frame = pd.DataFrame()
+        self.day_frame_index = 0
         self.non_filled_categories = []
         self.filled = {}
 
@@ -70,34 +74,46 @@ class VedomostFiller:
         self.ff.items = self.vedomost['DATE'].to_dict()
         self.ff.filtration([('=', date, 'pos')], behavior='index_values')
         self.day_frame = self.ff.present_by_items(self.vedomost)
+        self.day_frame_index = self.day_frame.index[0]
         return self.day_frame
 
     def get_non_filled_categories(self):
-        index = self.day_frame.index[0]
-        self.ff.items = self.day_frame.to_dict('index')[index]
+        self.ff.items = self.day_frame.to_dict('index')[self.day_frame_index]
         self.ff.filtration([('nan', 'nan', 'pos')], behavior='row_values')
         self.non_filled_categories = list(self.ff.items)
         return self.non_filled_categories
 
-    #        mark = self.day_frame[cell].to_list()[0]
-    #        if pd.isna(mark):
-    #            print(mark)
-    #            pass
-    #            cat_description = self.get_cat_description(cat)
-    #            #print(cat_description['description'])
-    #            #if cat_description['hint']:
-    #            #    print(cat_description['hint'])
-    #            #print()
-    #            # здесь пока только тип заполняемого, именно тут интегрируется бот с его кнопками и т.д.
-    #            day_frame.loc[row_index, cat] = cat_description['type']
-    #            # сделать нужно филлерчек
+    def add_a_cell(self, cat_name):
+        self.filled[cat_name] = None
+
+    def fill_a_cell(self, value):
+        for cat_name in self.filled:
+            if not self.filled[cat_name]:
+                if value == 'не мог':
+                    value = 'can`t'
+                elif value == 'забыл':
+                    value = '!'
+                self.filled[cat_name] = value
+                return cat_name
+
+    def is_day_filled(self):
+        print(self.non_filled_categories)
+        if self.non_filled_categories:
+            return False
+        else:
+            return True
+
+    def save_day_data(self):
+        for cat in self.filled:
+            self.vedomost.loc[self.day_frame_index, cat] = self.filled[cat]
+        print(self.vedomost)
+        #self.vedomost.to_excel(path=f'{self.path_to_filled})', sheet_name='vedomost')
 
 
 if __name__ == '__main__':
     print(1 // 4)
     month = 'oct23'
-    path = f'months/{month}/{month}.xlsx'
-    filler = VedomostFiller(path, 'Egr')
+    filler = VedomostFiller(month, 'Egr')
     li = filler.get_dates_for_filling()
     dddd = filler.get_cell_description('z:stroll')
     answer = [i for i in dddd[['description', 'hint']] if i]

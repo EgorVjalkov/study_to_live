@@ -1,22 +1,25 @@
-import time
+import vedomost_filler as vfill
 
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardButton, CallbackQuery
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
-from bot_main import filler, username_dict
+from bot_main import month, username_dict
 
 
+filler = None # временная мера
 router = Router()
 # надо потестироваь на предмет асинхронности, почитать всякое про асунх
 # запуск filler должен быть асинхронным!!!!
+# попарввь range c пылесосом. поправь answer если пусто, сделай тормозок в меню с кнопами, в т.ч. хендлер на очистку non_filled
 
 
 @router.message(Command("start"))
 async def cmd_start_and_get_r_vedomost(message: Message):
+    global filler
+    filler = vfill.VedomostFiller(month)
     filler.r_name = username_dict[message.from_user.first_name]
-    print(filler.r_name)
     filler.get_r_vedomost()
     dayz_list = filler.get_dates_for_filling()
 
@@ -52,6 +55,7 @@ def get_categories_keyboard(keyboard, cat_list):
 
 
 @router2.message(Command("fill"))
+# и тут вилка. с акттивацией команды /fill начинает заново все заполнять
 async def get_a_cell_keyboard(message: Message):
     if not filler.day_frame.empty:
         filler.get_non_filled_categories()
@@ -67,58 +71,64 @@ async def get_a_cell_keyboard(message: Message):
 
 
 def get_filling_inline(inline, cat_data):
-    for i in cat_data['keys']:
-        inline.add(InlineKeyboardButton(text=str(i), callback_data=f'num_{i}'))
-    inline.add(InlineKeyboardButton(text='не мог', callback_data=f'num_{i}'))
-    inline.add(InlineKeyboardButton(text='забыл', callback_data=f'num_{i}'))
+    if 'keys' in cat_data:
+        keys = [InlineKeyboardButton(text=str(i), callback_data=f'fill_{i}') for i in cat_data['keys']]
+        inline.row(*keys)
+    inline.row(InlineKeyboardButton(text='не мог', callback_data='fill_не мог'),
+               InlineKeyboardButton(text='забыл', callback_data='fill_забыл'))
     # надо красивое тут сдлать!
-    inline.adjust(5)
     return inline
 
 
 @router2.message(F.text.func(lambda text: text in filler.non_filled_categories))
 async def change_a_category(message: Message):
+    # как убрать клаву без сообщения???? можно размутиться с удалением сообщения
+    # https://ru.stackoverflow.com/questions/1497723/%D0%9A%D0%B0%D0%BA-%D1%83%D0%B1%D1%80%D0%B0%D1%82%D1%8C-%D0%BA%D0%BB%D0%B0%D0%B2%D0%B8%D0%B0%D1%82%D1%83%D1%80%D1%83-%D0%B1%D0%BE%D1%82%D0%B0-aiogram
     if filler.non_filled_categories:
         cat_name = message.text
 
         cat_info_ser = filler.get_cell_description(cat_name)
         answer = [i for i in cat_info_ser[['description', 'hint']] if i]
+        if 'time' in cat_info_ser['type']:
+            answer.append("Напишите сообщение в формате: чч:мм или нaжмите кнопку на экране")
+
         answer = '\n'.join(answer)
-        if answer:
-            await message.reply(answer, reply_markup=ReplyKeyboardRemove())
-        else:
-            ReplyKeyboardRemove()
 
-        if 'keys' in cat_info_ser:
-            filler.filled[cat_name] = None
-            callback = InlineKeyboardBuilder()
-            callback = get_filling_inline(callback, cat_info_ser)
-            await message.answer(f"Заполняем {cat_name}", reply_markup=callback.as_markup())
-        else:
-            await message.answer(f"Не могу заполнить {cat_name}")
+        callback = InlineKeyboardBuilder()
+        callback = get_filling_inline(callback, cat_info_ser)
+        await message.answer(answer, reply_markup=callback.as_markup())
 
+        filler.filled[cat_name] = None
         filler.non_filled_categories.remove(message.text)
-        time.sleep(3.0)
-        # здесь хотелочь бы при наличии отклика на колбэк вернуть новую клаву
 
         kb = ReplyKeyboardBuilder()
         keyboard = get_categories_keyboard(kb, filler.non_filled_categories)
+
+        #здесь хотелочь бы при наличии отклика на колбэк вернуть новую клаву Надо мутить с асинхронью
         await message.answer("Следующая категория?", reply_markup=keyboard)
     else:
         await message.reply('Все заполнено!', reply_markup=ReplyKeyboardRemove())
 
 
-@router2.callback_query(F.data.contains('num_'))
-async def fill_a_cell(callback: CallbackQuery):
-    for i in filler.filled:
-        if not filler.filled[i]:
-            cat_name = i
-            cat_value = callback.data.split('_')[1]
-            if cat_value == 'не мог':
-                cat_value = 'can`t'
-            elif cat_value == 'забыл':
-                cat_value = '!'
-            filler.filled[cat_name] = cat_value
+router3 = Router()
 
-            await callback.answer(f"Вы заполнили {cat_name}")
+
+@router3.callback_query(F.data.contains('fill_'))
+async def fill_a_cell(callback: CallbackQuery):
+    cat_value = callback.data.split('_')[1]
+    filled_cat = filler.fill_a_cell(cat_value)
     print(filler.filled)
+    if filler.is_day_filled():
+        filler.save_day_data()
+    await callback.answer(f"Вы заполнили {filled_cat}")
+
+
+@router3.message(F.text.func(lambda text: ':' in text))
+async def fill_a_cell_with_time(message: Message):
+    filled_cat = filler.fill_a_cell(message.text)
+    print(filler.filled)
+    if filled_cat:
+        if filler.is_day_filled():
+            filler.save_day_data()
+        await message.answer(f"Вы заполнили {filled_cat}")
+
