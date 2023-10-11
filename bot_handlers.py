@@ -1,24 +1,21 @@
-import vedomost_filler as vfill
-
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardButton, CallbackQuery
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
-from bot_main import month, username_dict
+from bot_main import filler, username_dict
 
 
-filler = None # временная мера
 router = Router()
 # надо потестироваь на предмет асинхронности, почитать всякое про асунх
 # запуск filler должен быть асинхронным!!!!
-# попарввь range c пылесосом. поправь answer если пусто, сделай тормозок в меню с кнопами, в т.ч. хендлер на очистку non_filled
+# подумай как очистить все поля и заново перезапустить филлер
+# доделай с solid категориями
 
 
 @router.message(Command("start"))
 async def cmd_start_and_get_r_vedomost(message: Message):
-    global filler
-    filler = vfill.VedomostFiller(month)
+    filler.restart()
     filler.r_name = username_dict[message.from_user.first_name]
     filler.get_r_vedomost()
     dayz_list = filler.get_dates_for_filling()
@@ -50,6 +47,7 @@ router2 = Router()
 def get_categories_keyboard(keyboard, cat_list):
     for key in cat_list:
         keyboard.add(KeyboardButton(text=key))
+    keyboard.add(KeyboardButton(text='завершить заполнение'))
     keyboard.adjust(4)
     return keyboard.as_markup(resize_keyboard=True)
 
@@ -93,6 +91,8 @@ async def change_a_category(message: Message):
             answer.append("Напишите сообщение в формате: чч:мм или нaжмите кнопку на экране")
 
         answer = '\n'.join(answer)
+        if not answer:
+            answer = 'Нажмите кнопку на экране'
 
         callback = InlineKeyboardBuilder()
         callback = get_filling_inline(callback, cat_info_ser)
@@ -108,6 +108,18 @@ async def change_a_category(message: Message):
         await message.answer("Следующая категория?", reply_markup=keyboard)
     else:
         await message.reply('Все заполнено!', reply_markup=ReplyKeyboardRemove())
+
+
+@router2.message(F.text == 'завершить заполнение')
+async def abort_filling_by_message(message: Message):
+    filled_in_str = ', '.join(list(filler.filled.keys()))
+    if filled_in_str:
+        answer = f'Вы заполнили {filled_in_str}'
+    else:
+        answer = 'Вы ничего не заполнили'
+
+    filler.save_day_data()
+    await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
 
 
 router3 = Router()

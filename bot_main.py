@@ -1,3 +1,5 @@
+import vedomost_filler as vfill
+
 from My_token import TOKEN
 import asyncio
 import logging
@@ -22,5 +24,7 @@ month = 'oct23'
 username_dict = {'Jegor': 'Egr', 'Валерия': 'Lera'}
 
 if __name__ == '__main__':
+    filler = vfill.VedomostFiller(month)
     asyncio.run(main())
-
+else:
+    filler = vfill.VedomostFiller(month)

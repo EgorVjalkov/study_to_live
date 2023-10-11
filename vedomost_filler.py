@@ -15,16 +15,17 @@ class VedomostFiller:
 
         self.path_to_filled = f'{path_to_dir}/filled_by_bot.xlsx'
 
-        self.vedomost = md.vedomost
+        self.r_vedomost = md.vedomost
         self.accessory = md.accessory
         self.categories = md.categories
         self.date = md.date
         self.prices = md.prices
 
-        self.ff = FrameForAnalyse(df=self.vedomost)
+        self.ff = FrameForAnalyse(df=self.r_vedomost)
 
+        # поле переменных для работы функций
         self.recipient = recipient
-
+        self.r_vedomost = pd.DataFrame()
         self.days_for_filling = {}
         self.day_frame = pd.DataFrame()
         self.day_frame_index = 0
@@ -43,6 +44,14 @@ class VedomostFiller:
     def r_name(self, name):
         self.recipient = name
 
+    def restart(self):
+        self.recipient = ''
+        self.r_vedomost = pd.DataFrame()
+        self.day_frame = pd.DataFrame()
+        self.day_frame_index = 0
+        self.non_filled_categories = []
+        self.filled = {}
+
     def get_r_vedomost(self):
         r = cl.Recipient(self.recipient, self.date)
         r.positions.append(r.private_position)
@@ -50,30 +59,29 @@ class VedomostFiller:
         self.ff.filtration([('positions', r.positions, 'pos')])
         self.categories = self.ff.present_by_items(self.categories)
         if self.admin:
-            self.vedomost = pd.concat([self.date, self.accessory, self.categories], axis=1)
+            self.r_vedomost = pd.concat([self.date, self.accessory, self.categories], axis=1)
         else:
-            self.vedomost = pd.concat([self.date, self.categories], axis=1)
-        return self.vedomost
+            self.r_vedomost = pd.concat([self.date, self.categories], axis=1)
 
     def get_cell_description(self, cat_name):
         cat_data = self.prices[cat_name]
         description = cat_data.filter(items=['description', 'hint', 'type', 'solid'], axis=0)
         if 'range' in description['type']:
-            description['keys'] = eval(description['type'])
+            description['keys'] = list(eval(description['type']))
             print(description['keys'])
         elif description['type'] == 'dict':
             description['keys'] = list(eval(cat_data['PRICE']).keys())
         return description
 
     def get_dates_for_filling(self):
-        days_for_filling = self.vedomost['DATE'].to_list()
+        days_for_filling = self.r_vedomost['DATE'].to_list()
         self.days_for_filling = {datetime.date.strftime(i, '%d.%m.%y'): i for i in days_for_filling}
         return self.days_for_filling
 
     def change_the_day_row(self, date):
-        self.ff.items = self.vedomost['DATE'].to_dict()
+        self.ff.items = self.r_vedomost['DATE'].to_dict()
         self.ff.filtration([('=', date, 'pos')], behavior='index_values')
-        self.day_frame = self.ff.present_by_items(self.vedomost)
+        self.day_frame = self.ff.present_by_items(self.r_vedomost)
         self.day_frame_index = self.day_frame.index[0]
         return self.day_frame
 
@@ -105,8 +113,8 @@ class VedomostFiller:
 
     def save_day_data(self):
         for cat in self.filled:
-            self.vedomost.loc[self.day_frame_index, cat] = self.filled[cat]
-        print(self.vedomost)
+            self.day_frame.loc[self.day_frame_index, cat] = self.filled[cat]
+        print(self.day_frame)
         #self.vedomost.to_excel(path=f'{self.path_to_filled})', sheet_name='vedomost')
 
 
@@ -115,16 +123,5 @@ if __name__ == '__main__':
     month = 'oct23'
     filler = VedomostFiller(month, 'Egr')
     li = filler.get_dates_for_filling()
-    dddd = filler.get_cell_description('z:stroll')
-    answer = [i for i in dddd[['description', 'hint']] if i]
-    answer = '\n'.join(answer)
-    print(answer)
-
-
-
-
-
-
-
-
-
+    dddd = filler.get_cell_description('h:vacuum')
+    print(dddd['keys'])
