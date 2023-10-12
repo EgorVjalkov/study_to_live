@@ -115,10 +115,9 @@ async def abort_filling_by_message(message: Message):
     filled_in_str = ', '.join(list(filler.filled.keys()))
     if filled_in_str:
         answer = f'Вы заполнили {filled_in_str}'
+        filler.save_day_data()
     else:
         answer = 'Вы ничего не заполнили'
-
-    filler.save_day_data()
     await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
 
 

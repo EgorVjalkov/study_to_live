@@ -5,15 +5,14 @@ from analytic_utilities import FrameForAnalyse
 # сделал фильтрацию на уровне ведомостей, теперь каждых может заполнить то чтопо его рангу.
 # Теперь нужно включать кнопочки с датами, добавить описание в каждую катеорию, о чем и как заполнять
 # важная тема с заполнением: неодходимо прописать как быть с многочленными категориями, типо мытья посуды или прогулок
+# задроч с путем надо подумать как его слеоать!
 
 
 class VedomostFiller:
     def __init__(self, month, recipient=''):
-        path_to_dir = f'months/{month}/'
-        md = cl.MonthData(path=f'{path_to_dir}/{month}.xlsx')
+        self.path_to_dir = f'months/{month}'
+        md = cl.MonthData(path=f'{self.path_to_dir}/{month}.xlsx')
         md.get_frames_for_working(limiting='for filling')
-
-        self.path_to_filled = f'{path_to_dir}/filled_by_bot.xlsx'
 
         self.r_vedomost = md.vedomost
         self.accessory = md.accessory
@@ -31,6 +30,7 @@ class VedomostFiller:
         self.day_frame_index = 0
         self.non_filled_categories = []
         self.filled = {}
+        self.all_filled_flag = False
 
     @property
     def admin(self):
@@ -44,6 +44,14 @@ class VedomostFiller:
     def r_name(self, name):
         self.recipient = name
 
+    @property
+    def path(self):
+        return f'{self.path_to_dir}'
+
+    @path.setter
+    def path(self, new_path):
+        self.path = new_path
+
     def restart(self):
         self.recipient = ''
         self.r_vedomost = pd.DataFrame()
@@ -54,6 +62,7 @@ class VedomostFiller:
 
     def get_r_vedomost(self):
         r = cl.Recipient(self.recipient, self.date)
+        self.path = f'{self.path_to_dir}/{self.recipient}'
         r.positions.append(r.private_position)
         self.ff.items = list(self.categories.columns)
         self.ff.filtration([('positions', r.positions, 'pos')])
@@ -79,6 +88,8 @@ class VedomostFiller:
         return self.days_for_filling
 
     def change_the_day_row(self, date):
+        date_in_str = f'{datetime.date.strftime(date, "%d.%m.%y")}'
+        self.path = f'{self.path_to_dir}/{self.recipient}_{date_in_str}'
         self.ff.items = self.r_vedomost['DATE'].to_dict()
         self.ff.filtration([('=', date, 'pos')], behavior='index_values')
         self.day_frame = self.ff.present_by_items(self.r_vedomost)
@@ -106,16 +117,22 @@ class VedomostFiller:
 
     def is_day_filled(self):
         print(self.non_filled_categories)
-        if self.non_filled_categories:
-            return False
-        else:
-            return True
+        if not self.non_filled_categories:
+            return self.all_filled_flag
 
     def save_day_data(self):
         for cat in self.filled:
             self.day_frame.loc[self.day_frame_index, cat] = self.filled[cat]
-        print(self.day_frame)
-        #self.vedomost.to_excel(path=f'{self.path_to_filled})', sheet_name='vedomost')
+        date = self.day_frame.loc[self.day_frame_index, 'DATE']
+        date = datetime.date.strftime(date, '%d_%m_%y')
+        path = f'{self.path_to_dir}/{self.recipient}_{date}'
+        if self.all_filled_flag:
+            path = f'{path}_undone.xlsx'
+        else:
+            path = f'{path}_done.xlsx'
+        print(path)
+
+        self.day_frame.to_excel(path, sheet_name=f'{date}')
 
 
 if __name__ == '__main__':
