@@ -21,6 +21,7 @@ async def main():
 
 
 month = 'oct23'
+path_to_vedomost = f'months/{month}/{month}.xlsx'
 username_dict = {'Jegor': 'Egr', 'Валерия': 'Lera'}
 
 if __name__ == '__main__':

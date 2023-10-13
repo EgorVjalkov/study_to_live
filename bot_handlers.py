@@ -17,13 +17,12 @@ router = Router()
 async def cmd_start_and_get_r_vedomost(message: Message):
     filler.restart()
     filler.r_name = username_dict[message.from_user.first_name]
-    filler.get_r_vedomost()
-    dayz_list = filler.get_dates_for_filling()
 
-    if dayz_list:
+    if filler.days_for_filling: # инициация с загрузкой ведомости
         await message.answer("Привет! Формирую ведомость")
         builder = ReplyKeyboardBuilder()
-        for day in dayz_list:
+
+        for day in filler.days_for_filling:
             builder.add(KeyboardButton(text=day))
         builder.adjust(4)
         await message.answer("Дата?", reply_markup=builder.as_markup(resize_keyboard=True,
@@ -35,8 +34,7 @@ async def cmd_start_and_get_r_vedomost(message: Message):
 
 @router.message(F.text.func(lambda text: text in filler.days_for_filling))
 async def change_a_date(message: Message):
-    day_date = filler.days_for_filling[message.text]
-    filler.change_the_day_row(day_date)
+    filler.change_the_day_row(message.text) # здесь мы уже лицезреем day_frame
     await message.reply(f"Принято. Чтоб передать данные, дайте команду /fill",
                         reply_markup=ReplyKeyboardRemove())
 
@@ -53,10 +51,10 @@ def get_categories_keyboard(keyboard, cat_list):
 
 
 @router2.message(Command("fill"))
-# и тут вилка. с акттивацией команды /fill начинает заново все заполнять
 async def get_a_cell_keyboard(message: Message):
-    if not filler.day_frame.empty:
-        filler.get_non_filled_categories()
+    if filler.day_categories_frame.empty:
+        await message.reply("Сначала нужно выбрать дату! Дайте команду /start")
+    else:
         if not filler.non_filled_categories:
             await message.reply("Все заполнено!")
             # здесь нужна функция, которая поставит "Y" в ведомость. проверка на чухана (меня)
@@ -64,8 +62,6 @@ async def get_a_cell_keyboard(message: Message):
             kb = ReplyKeyboardBuilder()
             keyboard = get_categories_keyboard(kb, filler.non_filled_categories)
             await message.answer("Выберите категорию для заполнения", reply_markup=keyboard)
-    else:
-        await message.reply("Сначала нужно выбрать дату! Дайте команду /start")
 
 
 def get_filling_inline(inline, cat_data):
@@ -80,8 +76,6 @@ def get_filling_inline(inline, cat_data):
 
 @router2.message(F.text.func(lambda text: text in filler.non_filled_categories))
 async def change_a_category(message: Message):
-    # как убрать клаву без сообщения???? можно размутиться с удалением сообщения
-    # https://ru.stackoverflow.com/questions/1497723/%D0%9A%D0%B0%D0%BA-%D1%83%D0%B1%D1%80%D0%B0%D1%82%D1%8C-%D0%BA%D0%BB%D0%B0%D0%B2%D0%B8%D0%B0%D1%82%D1%83%D1%80%D1%83-%D0%B1%D0%BE%D1%82%D0%B0-aiogram
     if filler.non_filled_categories:
         cat_name = message.text
 
