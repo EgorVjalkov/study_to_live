@@ -2,13 +2,51 @@ import pandas as pd
 import datetime
 import classes as cl
 from analytic_utilities import FrameForAnalyse
-# сделал фильтрацию на уровне ведомостей, теперь каждых может заполнить то чтопо его рангу.
-# Теперь нужно включать кнопочки с датами, добавить описание в каждую катеорию, о чем и как заполнять
 # важная тема с заполнением: неодходимо прописать как быть с многочленными категориями, типо мытья посуды или прогулок
 # задроч с путем надо подумать как его слеоать!
+# хрень с классом Сell
 
 
 ff = FrameForAnalyse()
+
+
+class Cell:
+    def __init__(self, price_frame):
+        self.prices = price_frame[self.name]
+        self.name = None
+        self.value = None
+
+    @property
+    def cat_name(self):
+        return self.name
+
+    @cat_name.setter
+    def cat_name(self, cat_name):
+        self.name = cat_name
+
+    @property
+    def category_data(self):
+        print("!")
+        cat_data = self.prices.filter(items=['description', 'hint', 'type', 'solid'], axis=0)
+        return cat_data
+
+    @property
+    def type(self):
+        return self.category_data.loc['type']
+
+    @property
+    def description(self):
+        return self.category_data.get(['description', 'hint'])
+
+    @property
+    def keys(self):
+        if 'range' in self.type:
+            keys = list(eval(self.type))
+        elif self.type == 'dict':
+            keys = list(eval(self.prices['PRICE']).keys())
+        else:
+            keys = None
+        return keys
 
 
 class VedomostFiller:
@@ -16,18 +54,14 @@ class VedomostFiller:
         self.path_to_dir = f'months/{month}'
         self.path_to_vedomost = f'{self.path_to_dir}/{month}.xlsx'
 
-        self.r_vedomost = pd.DataFrame()
-        self.accessory = pd.DataFrame()
-        self.categories = pd.DataFrame()
-        self.date = pd.DataFrame()
-        self.prices = pd.DataFrame()
-
         # поле переменных для работы функций
+        self.vedomost = pd.DataFrame()
         self.recipient = recipient
         self.day_categories_frame = pd.DataFrame()
         self.day_frame_index = 0
         self.filled = {}
         self.all_filled_flag = False
+
 
     @property
     def admin(self):
@@ -50,13 +84,11 @@ class VedomostFiller:
    #     self.path_to_dir = new_path
 
     @property
-    def vedomost(self):
-        vedomost = cl.MonthData(self.path_to_vedomost)
-        vedomost.get_frames_for_working(limiting='for filling')
-        return vedomost
+    def cell(self):
+        return Cell(self.vedomost.prices)
 
     @property
-    def r_positions_frame(self):
+    def r_positions_ser(self):
         r = cl.Recipient(self.recipient, self.vedomost.date)
         #self.path = f'{self.path_to_dir}/{self.recipient}'
         r.get_and_collect_r_name_col(self.vedomost.accessory['COM'], 'children')
@@ -82,26 +114,23 @@ class VedomostFiller:
         else:
             return None
 
+    def refresh_vedomost(self):
+        self.vedomost = cl.MonthData(self.path_to_vedomost)
+        self.vedomost.get_frames_for_working(limiting='for filling')
+        return self.vedomost
+
     def change_the_day_row(self, date_form_tg):
         date = self.days_for_filling[date_form_tg]
         ff.items = self.vedomost.date['DATE'].to_dict()
         ff.filtration([('=', date, 'pos')], behavior='index_values')
         day_frame = ff.present_by_items(self.vedomost.categories)
         self.day_frame_index = list(ff.items)[0]
-        day_positions = self.r_positions_frame.loc[self.day_frame_index]
+        day_positions = self.r_positions_ser.loc[self.day_frame_index]
 
         ff.items = list(day_frame.columns)
         ff.filtration([('positions', day_positions, 'pos')])
         self.day_categories_frame = ff.present_by_items(day_frame)
         return self.day_categories_frame
-
-
-    def restart(self):
-        self.recipient = ''
-        self.r_vedomost = pd.DataFrame()
-        self.day_categories_frame = pd.DataFrame()
-        self.day_frame_index = 0
-        self.filled = {}
 
     def add_a_cell(self, cat_name):
         self.filled[cat_name] = None
@@ -138,38 +167,17 @@ class VedomostFiller:
         self.day_categories_frame.to_excel(path, sheet_name=f'{date}')
 
 
-class Cell:
-    def __init__(self, name, price_frame):
-        self.name = name
-        self.prices = price_frame[self.name]
-        self.value = None
-
-    @property
-    def category_data(self):
-        return self.prices[self.name]
-
-    @property
-    def description(self):
-        description = self.category_data.filter(items=['description', 'hint', 'type', 'solid'], axis=0)
-        return description
-
-    @property
-    def keys(self):
-        if 'range' in self.description['type']:
-            keys = list(eval(self.description['type']))
-        elif self.description['type'] == 'dict':
-            keys = list(eval(self.prices['PRICE']).keys())
-        else:
-            keys = None
-        return keys
-
-
 if __name__ == '__main__':
     month = 'oct23'
     filler = VedomostFiller(month, 'Egr')
+    filler.refresh_vedomost()
     for i in filler.days_for_filling:
         filler.change_the_day_row(i)
-        print(filler.non_filled_categories)
+        for cat in filler.non_filled_categories:
+            filler.cell.cat_name = cat
+            print(filler.cell.description)
+            print(filler.cell.type)
+            print(filler.cell.keys)
 
 
     #li = filler.get_dates_for_filling()
