@@ -243,10 +243,9 @@ class MonthData:
         self.date = self.vedomost.get(date_keys)
         self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
 
-        return self.date, self.accessory, self.categories
-
     def fill_na(self):
-        return self.accessory.fillna('-'), self.categories.fillna('!')
+        self.accessory.fillna('-')
+        self.categories.fillna('!')
 
 
 class CategoryData:

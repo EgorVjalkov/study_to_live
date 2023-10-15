@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardButton, CallbackQuery
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
-from bot_main import filler, username_dict
+from bot_main import filler, cell, username_dict
 
 
 router = Router()
@@ -15,10 +15,9 @@ router = Router()
 
 @router.message(Command("start"))
 async def cmd_start_and_get_r_vedomost(message: Message):
-    filler.restart()
     filler.r_name = username_dict[message.from_user.first_name]
 
-    if filler.days_for_filling: # инициация с загрузкой ведомости
+    if filler.days_for_filling:
         await message.answer("Привет! Формирую ведомость")
         builder = ReplyKeyboardBuilder()
 
@@ -55,6 +54,7 @@ async def get_a_cell_keyboard(message: Message):
     if filler.day_categories_frame.empty:
         await message.reply("Сначала нужно выбрать дату! Дайте команду /start")
     else:
+        filler.get_non_filled_categories()
         if not filler.non_filled_categories:
             await message.reply("Все заполнено!")
             # здесь нужна функция, которая поставит "Y" в ведомость. проверка на чухана (меня)
@@ -64,10 +64,11 @@ async def get_a_cell_keyboard(message: Message):
             await message.answer("Выберите категорию для заполнения", reply_markup=keyboard)
 
 
-def get_filling_inline(inline, cat_data):
-    if 'keys' in cat_data:
-        keys = [InlineKeyboardButton(text=str(i), callback_data=f'fill_{i}') for i in cat_data['keys']]
+def get_filling_inline(inline, cat_keys):
+    if cat_keys:
+        keys = [InlineKeyboardButton(text=str(i), callback_data=f'fill_{i}') for i in cat_keys]
         inline.row(*keys)
+
     inline.row(InlineKeyboardButton(text='не мог', callback_data='fill_не мог'),
                InlineKeyboardButton(text='забыл', callback_data='fill_забыл'))
     # надо красивое тут сдлать!
@@ -77,23 +78,24 @@ def get_filling_inline(inline, cat_data):
 @router2.message(F.text.func(lambda text: text in filler.non_filled_categories))
 async def change_a_category(message: Message):
     if filler.non_filled_categories:
-        cat_name = message.text
+        cell.cat_name = message.text
 
-        cat_info_ser = filler.get_cell_description(cat_name)
-        answer = [i for i in cat_info_ser[['description', 'hint']] if i]
-        if 'time' in cat_info_ser['type']:
+        answer = cell.description
+        if not cell.keys:
             answer.append("Напишите сообщение в формате: чч:мм или нaжмите кнопку на экране")
 
-        answer = '\n'.join(answer)
         if not answer:
             answer = 'Нажмите кнопку на экране'
+        else:
+            answer = '\n'.join(answer)
 
         callback = InlineKeyboardBuilder()
-        callback = get_filling_inline(callback, cat_info_ser)
+        callback = get_filling_inline(callback, cell.keys)
         await message.answer(answer, reply_markup=callback.as_markup())
 
-        filler.filled[cat_name] = None
+        filler.filled[cell.cat_name] = None
         filler.non_filled_categories.remove(message.text)
+        # здесь надо снова перекраивать, т.к. не удаляет не заполненное!
 
         kb = ReplyKeyboardBuilder()
         keyboard = get_categories_keyboard(kb, filler.non_filled_categories)
