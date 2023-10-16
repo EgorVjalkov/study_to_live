@@ -107,11 +107,12 @@ async def change_a_category(message: Message):
 
 
 @router2.message(F.text == 'завершить заполнение')
-async def abort_filling_by_message(message: Message):
+async def finish_filling_by_message(message: Message):
     filled_in_str = ', '.join(list(filler.filled.keys()))
     if filled_in_str:
         answer = f'Вы заполнили {filled_in_str}'
         filler.save_day_data()
+        filler.refresh_vedomost()
     else:
         answer = 'Вы ничего не заполнили'
     await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
@@ -123,19 +124,18 @@ router3 = Router()
 @router3.callback_query(F.data.contains('fill_'))
 async def fill_a_cell(callback: CallbackQuery):
     cat_value = callback.data.split('_')[1]
-    filled_cat = filler.fill_a_cell(cat_value)
+    print(cat_value)
+    filled_cat = filler.fill_a_cell(cat_value) # здесь надо придумать, как перзаполнять категории
     print(filler.filled)
-    if filler.is_day_filled():
-        filler.save_day_data()
-    await callback.answer(f"Вы заполнили {filled_cat}")
+    print(filler.all_filled_flag)
+    await callback.answer(f"Вы заполнили {cat_value} в {filled_cat}")
 
 
 @router3.message(F.text.func(lambda text: ':' in text))
 async def fill_a_cell_with_time(message: Message):
     filled_cat = filler.fill_a_cell(message.text)
     print(filler.filled)
+    print(filler.all_filled_flag)
     if filled_cat:
-        if filler.is_day_filled():
-            filler.save_day_data()
         await message.answer(f"Вы заполнили {filled_cat}")
 

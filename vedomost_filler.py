@@ -60,9 +60,7 @@ class VedomostFiller:
         self.recipient = recipient
         self.day_categories_frame = pd.DataFrame()
         self.non_filled_categories = []
-        self.day_frame_index = 0
         self.filled = {}
-        self.all_filled_flag = False
 
     @property
     def admin(self):
@@ -76,18 +74,9 @@ class VedomostFiller:
     def r_name(self, name):
         self.recipient = name
 
-   # @property
-   # def path(self):
-   #     return self.path_to_dir
-
-   # @path.setter
-   # def path(self, new_path):
-   #     self.path_to_dir = new_path
-
     @property
     def r_positions_ser(self):
         r = cl.Recipient(self.recipient, self.vedomost.date)
-        #self.path = f'{self.path_to_dir}/{self.recipient}'
         r.get_and_collect_r_name_col(self.vedomost.accessory['COM'], 'children')
         r.get_and_collect_r_name_col(self.vedomost.accessory['PLACE'], 'place')
         r.get_and_collect_r_name_col(self.vedomost.accessory['DUTY'], 'duty')
@@ -104,19 +93,24 @@ class VedomostFiller:
     def refresh_vedomost(self):
         self.vedomost = cl.MonthData(self.path_to_vedomost)
         self.vedomost.get_frames_for_working(limiting='for filling')
+        if not self.day_categories_frame.empty:
+            self.day_categories_frame = pd.DataFrame()
         return self.vedomost
+
+    @property
+    def day_frame_index(self):
+        return self.day_categories_frame.index.to_list()[0]
 
     def change_the_day_row(self, date_form_tg):
         date = self.days_for_filling[date_form_tg]
         ff.items = self.vedomost.date['DATE'].to_dict()
         ff.filtration([('=', date, 'pos')], behavior='index_values')
-        day_frame = ff.present_by_items(self.vedomost.categories)
-        self.day_frame_index = list(ff.items)[0]
+        self.day_categories_frame = ff.present_by_items(self.vedomost.categories)
         day_positions = self.r_positions_ser.loc[self.day_frame_index]
 
-        ff.items = list(day_frame.columns)
+        ff.items = list(self.day_categories_frame.columns)
         ff.filtration([('positions', day_positions, 'pos')])
-        self.day_categories_frame = ff.present_by_items(day_frame)
+        self.day_categories_frame = ff.present_by_items(self.day_categories_frame)
         return self.day_categories_frame
 
     def get_non_filled_categories(self):
@@ -125,6 +119,13 @@ class VedomostFiller:
             ff.filtration([('nan', 'nan', 'pos')], behavior='row_values')
             self.non_filled_categories = list(ff.items)
         return self.non_filled_categories
+
+    @property
+    def all_filled_flag(self):
+        if not self.non_filled_categories:
+            return True
+        else:
+            return False
 
     def add_a_cell(self, cat_name):
         self.filled[cat_name] = None
@@ -139,26 +140,22 @@ class VedomostFiller:
                 self.filled[cat_name] = value
                 return cat_name
 
-            # зздесь нужно откровенный вопрос себе задать! как дальше жить!
-
-    def is_day_filled(self):
-        print(self.non_filled_categories)
-        if not self.non_filled_categories:
-            return self.all_filled_flag
-
-    def save_day_data(self):
-        for cat in self.filled:
-            self.day_categories_frame.loc[self.day_frame_index, cat] = self.filled[cat]
-        date = self.day_categories_frame.loc[self.day_frame_index, 'DATE']
+    def get_path_for_filled(self):
+        date = self.vedomost.date.loc[self.day_frame_index, 'DATE']
         date = datetime.date.strftime(date, '%d_%m_%y')
         path = f'{self.path_to_dir}/{self.recipient}_{date}'
-        if self.all_filled_flag:
-            path = f'{path}_undone.xlsx'
-        else:
-            path = f'{path}_done.xlsx'
-        print(path)
+        return path
 
-        self.day_categories_frame.to_excel(path, sheet_name=f'{date}')
+    def save_day_data(self):
+        for c in self.filled:
+            self.day_categories_frame.loc[self.day_frame_index, c] = self.filled[c]
+        path = self.get_path_for_filled()
+        if self.all_filled_flag:
+            path = f'{path}_done.xlsx'
+        else:
+            path = f'{path}_undone.xlsx'
+        print(path)
+        self.day_categories_frame.to_excel(path)
 
 
 if __name__ == '__main__':
