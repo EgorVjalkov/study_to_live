@@ -95,7 +95,6 @@ async def change_a_category(message: Message):
 
         filler.filled[cell.cat_name] = None
         filler.non_filled_categories.remove(message.text)
-        # здесь надо снова перекраивать, т.к. не удаляет не заполненное!
 
         kb = ReplyKeyboardBuilder()
         keyboard = get_categories_keyboard(kb, filler.non_filled_categories)

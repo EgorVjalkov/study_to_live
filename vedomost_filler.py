@@ -93,8 +93,9 @@ class VedomostFiller:
     def refresh_vedomost(self):
         self.vedomost = cl.MonthData(self.path_to_vedomost)
         self.vedomost.get_frames_for_working(limiting='for filling')
-        if not self.day_categories_frame.empty:
-            self.day_categories_frame = pd.DataFrame()
+        self.day_categories_frame = pd.DataFrame()
+        self.non_filled_categories = {}
+        self.filled = {}
         return self.vedomost
 
     @property
@@ -106,16 +107,15 @@ class VedomostFiller:
         ff.items = self.vedomost.date['DATE'].to_dict()
         ff.filtration([('=', date, 'pos')], behavior='index_values')
         self.day_categories_frame = ff.present_by_items(self.vedomost.categories)
-        day_positions = self.r_positions_ser.loc[self.day_frame_index]
-
-        ff.items = list(self.day_categories_frame.columns)
-        ff.filtration([('positions', day_positions, 'pos')])
-        self.day_categories_frame = ff.present_by_items(self.day_categories_frame)
         return self.day_categories_frame
 
     def get_non_filled_categories(self):
         if not self.day_categories_frame.empty:
-            ff.items = self.day_categories_frame.to_dict('index')[self.day_frame_index]
+            day_positions = self.r_positions_ser.loc[self.day_frame_index]
+            ff.items = list(self.day_categories_frame.columns)
+            ff.filtration([('positions', day_positions, 'pos')])
+            r_categories_frame = ff.present_by_items(self.day_categories_frame)
+            ff.items = r_categories_frame.to_dict('index')[self.day_frame_index]
             ff.filtration([('nan', 'nan', 'pos')], behavior='row_values')
             self.non_filled_categories = list(ff.items)
         return self.non_filled_categories
@@ -148,25 +148,26 @@ class VedomostFiller:
 
     def save_day_data(self):
         for c in self.filled:
-            self.day_categories_frame.loc[self.day_frame_index, c] = self.filled[c]
+            self.vedomost.loc[self.day_frame_index, c] = self.filled[c]
+        # тут есть идея все писать срузц в ведомость и в графе доне ставить E L или Y
         path = self.get_path_for_filled()
         if self.all_filled_flag:
-            path = f'{path}_done.xlsx'
+            pass
         else:
-            path = f'{path}_undone.xlsx'
+            path = f'{path}.csv'
         print(path)
-        self.day_categories_frame.to_excel(path)
+        self.day_categories_frame.to_csv(path)
+        #with open(path, 'w') as file:
+        #
+        #    csv.writer()
 
 
 if __name__ == '__main__':
     month = 'oct23'
     filler = VedomostFiller(month, 'Egr')
     filler.refresh_vedomost()
-    print(filler.vedomost.prices)
-    for i in filler.days_for_filling:
-        filler.change_the_day_row(i)
-        for cat in filler.non_filled_categories:
-            pass
+    filler.change_the_day_row('15.10.23')
+    filler.get_non_filled_categories()
 
 
     #li = filler.get_dates_for_filling()
