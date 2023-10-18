@@ -14,7 +14,7 @@ def main():
     if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
 
         md = cl.MonthData(path_to_file)
-        md.get_frames_for_working()
+        md.get_frames_for_working(limiting='for count')
         md.fill_na()
         for r_name in recipients:
             r = cl.Recipient(r_name, md.date)
@@ -26,7 +26,7 @@ def main():
             r.get_duty_coefficients_col()
             r.get_children_coef_cols(md.accessory['KG'], md.accessory['WEAK'])
             r.get_place_coefficients_col()
-            r.get_sleepless_coef_col(md.vedomost)
+            r.get_sleepless_coef_col(md.mother_frame)
             r.get_r_positions_col()
             r.get_all_coefs_col()
             r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')

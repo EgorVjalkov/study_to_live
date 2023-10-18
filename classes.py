@@ -217,31 +217,56 @@ class Recipient:
 
 
 class MonthData:
-    def __init__(self, path):
-        self.vedomost = pd.read_excel(path, sheet_name='vedomost', dtype='object').replace('CAN`T', 'can`t')
-        self.vedomost['DATE'] = [i.date() for i in self.vedomost['DATE']]
-        #self.vedomost['DATE'].astype('str')
-        self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
+    def __init__(self, path=''):
+        self.path = path
+        self.mother_frame = pd.DataFrame()
+        self.prices = pd.DataFrame()
         self.accessory = pd.DataFrame()
         self.categories = pd.DataFrame()
         self.date = pd.DataFrame()
 
-    def get_frames_for_working(self, limiting='for count'):
+    def get_vedomost(self):
+        self.mother_frame = pd.read_excel(self.path, sheet_name='vedomost', dtype='object')
+        self.mother_frame.replace('CAN`T', 'can`t')
+        self.mother_frame['DATE'] = [i.date() for i in self.mother_frame['DATE']]
+        return self.mother_frame
+
+    @property
+    def vedomost(self):
+        return self.mother_frame
+
+    @vedomost.setter
+    def vedomost(self, df):
+        self.mother_frame = df
+
+    def get_price_frame(self, path=''):
+        if not path:
+            self.prices = pd.read_excel(self.path, sheet_name='price', index_col=0).fillna(0)
+        else:
+            self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
+
+    def get_frames_for_working(self, limiting=''):
         start = 0
-        finish = len(self.vedomost)
-        if limiting == 'for count':
-            finish = len([i for i in self.vedomost['DONE'].to_list() if pd.notna(i)])
-        elif limiting == 'for filling':
-            today = datetime.date.today()
-            start = len([i for i in self.vedomost['DONE'].to_list() if pd.notna(i)])
-            finish = len([i for i in self.vedomost['DATE'].to_list() if i <= today])
-        self.vedomost = self.vedomost[start:finish]
-        del self.vedomost['DONE']
+        finish = len(self.mother_frame)
+        if limiting:
+            if limiting == 'for count':
+                finish = len([i for i in self.mother_frame['DONE'].to_list() if i == 'Y'])
+                # может быть затупа с мозаичным, когда идет YYYYYLY нужно тут через фильтр!
+                del self.mother_frame['DONE']
+            elif limiting == 'for filling':
+                today = datetime.date.today()
+                start = len(
+                    [i for i in self.mother_frame['DONE'].to_list()
+                     if pd.notna(i) or i != 'Y']
+                )
+                finish = len([i for i in self.mother_frame['DATE'].to_list() if i <= today])
+
+        self.mother_frame = self.mother_frame[start:finish]
 
         date_keys = ['DATE', 'DAY']
-        self.accessory = self.vedomost.get([i for i in self.vedomost.columns if i == i.upper() and i not in date_keys])
-        self.date = self.vedomost.get(date_keys)
-        self.categories = self.vedomost.get([i for i in self.vedomost if i == i.lower()])
+        self.accessory = self.mother_frame.get([i for i in self.mother_frame.columns if i == i.upper() and i not in date_keys])
+        self.date = self.mother_frame.get(date_keys)
+        self.categories = self.mother_frame.get([i for i in self.mother_frame if i == i.lower()])
 
     def fill_na(self):
         self.accessory.fillna('-')

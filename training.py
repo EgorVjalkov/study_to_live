@@ -66,13 +66,13 @@ show_calc = True
 
 
 month_data_may = cl.MonthData(path_to_file_may, recipients)
-ad = cl.AccessoryData(month_data_may.accessory, month_data_may.vedomost, recipients)
+ad = cl.AccessoryData(month_data_may.accessory, month_data_may.mother_frame, recipients)
 #ad.get_in_time_sleeptime_col('Egr', month_data.vedomost)
 ad.get_mods_frame()
 acc = pd.concat([month_data_may.date, ad.mods_frame], axis=1)
 acc.to_excel(f'output_files/{month}/testing_af.xlsx')
 cat = 'e:dev'
-cf = cl.CategoryData('Egr', month_data_may.vedomost[cat], ad.mods_frame, month_data_may.prices)
+cf = cl.CategoryData('Egr', month_data_may.mother_frame[cat], ad.mods_frame, month_data_may.prices)
 cf.add_price_column()
 jun_prices = cl.MonthData(path_to_file_jun, recipients).prices[cat]
 bonus_column = cl.BonusFrame(cf.cat_frame, jun_prices)

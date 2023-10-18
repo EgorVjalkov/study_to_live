@@ -47,7 +47,7 @@ for r_name in recp:
         frame_filtered.items = list(cat_frame.columns)
         frame_filtered.filtration([('columns', ['DATE', 'DAY'], 'neg')])
         cat_frame = frame_filtered.present_by_items(cat_frame)
-        cat_frame_with_acc = pd.concat([md.date, md.accessory, md.vedomost[i], cat_frame, frame_filtered.df['cat_day_sum']], axis=1)
+        cat_frame_with_acc = pd.concat([md.date, md.accessory, md.mother_frame[i], cat_frame, frame_filtered.df['cat_day_sum']], axis=1)
         #cat_frame_with_acc = frame_filtered.present_by_items(cat_frame_with_acc, by_previos_conditions=days_above_mean)
         #print(cat_frame_with_acc)
         cat_frame_with_acc.to_excel(f'{path_to_output}/___test_{i}.xlsx')

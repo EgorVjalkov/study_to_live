@@ -26,11 +26,11 @@ username_dict = {'Jegor': 'Egr', 'Валерия': 'Lera'}
 
 if __name__ == '__main__':
     filler = vfill.VedomostFiller(month)
-    filler.refresh_vedomost()
-    prices = filler.vedomost.prices
+    filler.get_mother_frame_and_refresh_values()
+    prices = filler.mother_frame.prices
     cell = vfill.Cell(prices)
     asyncio.run(main())
 else:
     filler = vfill.VedomostFiller(month)
-    filler.refresh_vedomost()
-    cell = vfill.Cell(filler.vedomost.prices)
+    filler.get_mother_frame_and_refresh_values()
+    cell = vfill.Cell(filler.mother_frame.prices)

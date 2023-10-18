@@ -51,7 +51,7 @@ def get_categories_keyboard(keyboard, cat_list):
 
 @router2.message(Command("fill"))
 async def get_a_cell_keyboard(message: Message):
-    if filler.day_categories_frame.empty:
+    if filler.day_row.vedomost.empty:
         await message.reply("Сначала нужно выбрать дату! Дайте команду /start")
     else:
         filler.get_non_filled_categories()
@@ -111,7 +111,7 @@ async def finish_filling_by_message(message: Message):
     if filled_in_str:
         answer = f'Вы заполнили {filled_in_str}'
         filler.save_day_data()
-        filler.refresh_vedomost()
+        filler.get_mother_frame_and_refresh_values()
     else:
         answer = 'Вы ничего не заполнили'
     await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())

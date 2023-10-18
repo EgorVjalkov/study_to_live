@@ -53,12 +53,12 @@ class Cell:
 class VedomostFiller:
     def __init__(self, month, recipient=''):
         self.path_to_dir = f'months/{month}'
-        self.path_to_vedomost = f'{self.path_to_dir}/{month}.xlsx'
+        self.path_to_mother_frame = f'{self.path_to_dir}/{month}.xlsx'
 
         # поле переменных для работы функций
-        self.vedomost = pd.DataFrame()
+        self.mother_frame = pd.DataFrame()
+        self.day_row = cl.MonthData()
         self.recipient = recipient
-        self.day_categories_frame = pd.DataFrame()
         self.non_filled_categories = []
         self.filled = {}
 
@@ -75,47 +75,58 @@ class VedomostFiller:
         self.recipient = name
 
     @property
-    def r_positions_ser(self):
-        r = cl.Recipient(self.recipient, self.vedomost.date)
-        r.get_and_collect_r_name_col(self.vedomost.accessory['COM'], 'children')
-        r.get_and_collect_r_name_col(self.vedomost.accessory['PLACE'], 'place')
-        r.get_and_collect_r_name_col(self.vedomost.accessory['DUTY'], 'duty')
-        r.get_family_col()
-        r.get_r_positions_col()
-        return r.mod_data['positions']
-
-    @property
     def days_for_filling(self):
-        days_for_filling = self.vedomost.date['DATE'].to_list()
+        days_for_filling = self.mother_frame.date['DATE'].to_list()
         days_for_filling = {datetime.date.strftime(i, '%d.%m.%y'): i for i in days_for_filling}
         return days_for_filling
 
-    def refresh_vedomost(self):
-        self.vedomost = cl.MonthData(self.path_to_vedomost)
-        self.vedomost.get_frames_for_working(limiting='for filling')
-        self.day_categories_frame = pd.DataFrame()
-        self.non_filled_categories = {}
-        self.filled = {}
-        return self.vedomost
+    def get_mother_frame_and_refresh_values(self):
+        # здесь возможно облегчить суть, т.к. нет смысла кажды раз запускать например pricefr
+        self.mother_frame = cl.MonthData(self.path_to_mother_frame)
+        self.mother_frame.get_vedomost()
+        self.mother_frame.get_price_frame()
+        self.mother_frame.get_frames_for_working(limiting='for filling')
+
+        if not self.day_row.vedomost.empty:
+            self.day_row.vedomost = pd.DataFrame()
+            self.non_filled_categories.clear()
+            self.filled.clear()
+
+        return (self.mother_frame,
+                self.day_row,
+                self.non_filled_categories,
+                self.filled)
 
     @property
-    def day_frame_index(self):
-        return self.day_categories_frame.index.to_list()[0]
+    def day_row_index(self):
+        return self.day_row.date.index.to_list()[0]
 
     def change_the_day_row(self, date_form_tg):
         date = self.days_for_filling[date_form_tg]
-        ff.items = self.vedomost.date['DATE'].to_dict()
+        ff.items = self.mother_frame.date['DATE'].to_dict()
         ff.filtration([('=', date, 'pos')], behavior='index_values')
-        self.day_categories_frame = ff.present_by_items(self.vedomost.categories)
-        return self.day_categories_frame
+        day_frame = ff.present_by_items(self.mother_frame.vedomost)
+
+        self.day_row.vedomost = day_frame
+        self.day_row.get_frames_for_working()
+        return self.day_row
+
+    @property
+    def r_positions(self):
+        r = cl.Recipient(self.recipient, self.day_row.date)
+        r.get_and_collect_r_name_col(self.day_row.accessory['COM'], 'children')
+        r.get_and_collect_r_name_col(self.day_row.accessory['PLACE'], 'place')
+        r.get_and_collect_r_name_col(self.day_row.accessory['DUTY'], 'duty')
+        r.get_family_col()
+        r.get_r_positions_col()
+        return r.mod_data.at[self.day_row_index, 'positions']
 
     def get_non_filled_categories(self):
-        if not self.day_categories_frame.empty:
-            day_positions = self.r_positions_ser.loc[self.day_frame_index]
-            ff.items = list(self.day_categories_frame.columns)
-            ff.filtration([('positions', day_positions, 'pos')])
-            r_categories_frame = ff.present_by_items(self.day_categories_frame)
-            ff.items = r_categories_frame.to_dict('index')[self.day_frame_index]
+        if not self.day_row.vedomost.empty:
+            ff.items = list(self.day_row.categories.columns)
+            ff.filtration([('positions', self.r_positions, 'pos')])
+            r_categories_frame = ff.present_by_items(self.day_row.categories)
+            ff.items = r_categories_frame.to_dict('index')[self.day_row_index]
             ff.filtration([('nan', 'nan', 'pos')], behavior='row_values')
             self.non_filled_categories = list(ff.items)
         return self.non_filled_categories
@@ -128,6 +139,7 @@ class VedomostFiller:
             return False
 
     def add_a_cell(self, cat_name):
+        # аопрос а нужен ли вообще ыелфюфиллев, может сразу писать в дэйроу
         self.filled[cat_name] = None
 
     def fill_a_cell(self, value):
@@ -141,33 +153,45 @@ class VedomostFiller:
                 return cat_name
 
     def get_path_for_filled(self):
-        date = self.vedomost.date.loc[self.day_frame_index, 'DATE']
+        date = self.mother_frame.date.loc[self.day_row_index, 'DATE']
         date = datetime.date.strftime(date, '%d_%m_%y')
         path = f'{self.path_to_dir}/{self.recipient}_{date}'
         return path
 
     def save_day_data(self):
         for c in self.filled:
-            self.vedomost.loc[self.day_frame_index, c] = self.filled[c]
-        # тут есть идея все писать срузц в ведомость и в графе доне ставить E L или Y
-        path = self.get_path_for_filled()
+            self.day_row.vedomost.loc[self.day_row_index, c] = self.filled[c]
+
+        self.mother_frame.vedomost.loc[self.day_row_index:self.day_row_index+1]\
+            = self.day_row.vedomost
+        print(self.mother_frame.vedomost)
+
         if self.all_filled_flag:
-            pass
-        else:
-            path = f'{path}.csv'
-        print(path)
-        self.day_categories_frame.to_csv(path)
-        #with open(path, 'w') as file:
-        #
-        #    csv.writer()
+            if pd.isna(self.mother_frame.vedomost.at[self.day_row_index, 'DONE']):
+                self.mother_frame.vedomost.at[self.day_row_index, 'DONE'] = 'Y'
+                # нужно потестить реакцию на DONE
+            else:
+                self.mother_frame.vedomost.at[self.day_row_index, 'DONE'] = self.recipient[0]
+
+# здеся тестинг записи на странице (нью, реплайс или оверлэй)
+        with pd.ExcelWriter(
+                self.path_to_mother_frame,
+                mode='a',
+                engine='openpyxl',
+                if_sheet_exists='new'
+        ) as mf_writer:
+            self.mother_frame.to_excel(mf_writer, sheet_name='vedomost')
+
 
 
 if __name__ == '__main__':
     month = 'oct23'
     filler = VedomostFiller(month, 'Egr')
-    filler.refresh_vedomost()
+    filler.get_mother_frame_and_refresh_values()
     filler.change_the_day_row('15.10.23')
     filler.get_non_filled_categories()
+    print(filler.non_filled_categories)
+    print(filler.mother_frame.vedomost.loc[filler.day_row_index].at['DONE'])
 
 
     #li = filler.get_dates_for_filling()
