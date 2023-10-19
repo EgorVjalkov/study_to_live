@@ -3,8 +3,8 @@ import pandas as pd
 from testing import does_need_correction
 from analytic_utilities import FrameForAnalyse
 
-recipients = ['Egr', 'Lera']
-month = "sep23"
+recipients = ['Egr']
+month = "oct23"
 
 path_to_file = f'months/{month}/{month}.xlsx'
 show_calc = True
@@ -14,6 +14,8 @@ def main():
     if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
 
         md = cl.MonthData(path_to_file)
+        md.get_vedomost()
+        md.get_price_frame()
         md.get_frames_for_working(limiting='for count')
         md.fill_na()
         for r_name in recipients:
@@ -31,6 +33,7 @@ def main():
             r.get_all_coefs_col()
             r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
             r.get_r_vedomost(recipients, md.categories)
+            print(r.cat_data)
             # fltr = FrameForAnalyse(df=r.cat_data)
             # fltr.filtration([('part', 'a:sleeptime', 'pos')])
             # for column in fltr.items:

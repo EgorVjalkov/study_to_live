@@ -7,6 +7,9 @@ import analytic_utilities as au
 pd.set_option('display.max.columns', None)
 
 
+ff = au.FrameForAnalyse()
+
+
 class CompCoef:
     def __init__(self, coef_data):
         self.coef_data = coef_data
@@ -147,6 +150,7 @@ class Recipient:
             else:
                 if self.litera == position or position not in all_private_positions:
                     self.cat_data[column] = categories[column]
+                    # здесь баги
         return self.cat_data
 
     def collect_to_result_frame(self, result_column, bonus_column=()):
@@ -188,16 +192,18 @@ class Recipient:
             else:
                 return round(sum(day_row.values()), 2)
 
-        frame_filtered = au.FrameForAnalyse(df=self.result_frame)
-        frame_filtered.filtration([('part', 'bonus', 'neg'), ('part', 'DATE', 'neg')])
-        only_categories_frame = frame_filtered.present_by_items(frame_filtered.df)
+        ff.items = list(self.result_frame.columns)
+        ff.filtration([('part', 'bonus', 'neg'), ('part', 'DATE', 'neg')])
+        only_categories_frame = ff.present_by_items(self.result_frame)
         default_sum_list = list(map(get_day_sum, only_categories_frame.to_dict('index').values()))
         self.result_frame['cat_day_sum'] = default_sum_list
 
-        frame_filtered.items = list(frame_filtered.df.columns)
-        frame_filtered.filtration([('part', 'bonus', 'pos')])
-        bonus_frame = pd.concat([self.result_frame['DAY'], frame_filtered.present_by_items(frame_filtered.df)], axis=1)
+        ff.items = list(self.result_frame.columns)
+        ff.filtration([('part', 'bonus', 'pos')])
+        bonus_frame = pd.concat([self.result_frame['DAY'], ff.present_by_items(self.result_frame)], axis=1)
         self.result_frame['day_bonus'] = list(map(get_day_sum, bonus_frame.to_dict('index').values()))
+
+        print(self.result_frame)
 
         sleep_in_time_ser = self.get_in_time_sleeptime_ser()
         self.result_frame = pd.concat([self.result_frame, sleep_in_time_ser], axis=1)
@@ -211,9 +217,10 @@ class Recipient:
             done_percent_after_0 = round(day_sum_after_0/default_sum_list[-1], 2)
 
         sum_after_0_list.extend([done_percent_after_0, day_sum_after_0])
+        print(self.result_frame)
         self.result_frame['day_sum_in_time'] = sum_after_0_list
         #self.result_frame.insert(2, 'coefs', self.mod_data['coefs'])
-        self.result_frame.set_index('DATE').to_excel(path)
+        self.result_frame.to_excel(path, index=False)
 
 
 class MonthData:
@@ -227,7 +234,7 @@ class MonthData:
 
     def get_vedomost(self):
         self.mother_frame = pd.read_excel(self.path, sheet_name='vedomost', dtype='object')
-        self.mother_frame.replace('CAN`T', 'can`t')
+        self.mother_frame = self.mother_frame.replace('CAN`T', 'can`t')
         self.mother_frame['DATE'] = [i.date() for i in self.mother_frame['DATE']]
         return self.mother_frame
 
@@ -246,22 +253,16 @@ class MonthData:
             self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
 
     def get_frames_for_working(self, limiting=''):
-        start = 0
-        finish = len(self.mother_frame)
         if limiting:
             if limiting == 'for count':
-                finish = len([i for i in self.mother_frame['DONE'].to_list() if i == 'Y'])
-                # может быть затупа с мозаичным, когда идет YYYYYLY нужно тут через фильтр!
+                ff.items = self.mother_frame['DONE'].to_list()
+                ff.filtration([('=', 'Y', 'pos')], behavior='index_values')
+                self.mother_frame = ff.present_by_items(self.mother_frame)
                 del self.mother_frame['DONE']
             elif limiting == 'for filling':
-                today = datetime.date.today()
-                start = len(
-                    [i for i in self.mother_frame['DONE'].to_list()
-                     if pd.notna(i) or i != 'Y']
-                )
-                finish = len([i for i in self.mother_frame['DATE'].to_list() if i <= today])
-
-        self.mother_frame = self.mother_frame[start:finish]
+                ff.items = self.mother_frame['DONE'].to_list()
+                ff.filtration([('=', 'Y', 'neg')], behavior='index_values')
+                self.mother_frame = ff.present_by_items(self.mother_frame)
 
         date_keys = ['DATE', 'DAY']
         self.accessory = self.mother_frame.get([i for i in self.mother_frame.columns if i == i.upper() and i not in date_keys])
