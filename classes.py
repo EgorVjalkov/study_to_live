@@ -143,14 +143,13 @@ class Recipient:
         all_private_positions = [i[0].upper() for i in recipients]
         for column in categories:
             position = column[0].upper()
-            double_category_flag = [i for i in categories[column] if type(i) == str and i[0] in all_private_positions]
+            double_category_flag = [i for i in categories[column] if str(i)[0] in all_private_positions]
             if double_category_flag:
                 column_list = [PriceMarkCalc(result=i).prepare_named_result(self.r_name) for i in categories[column]]
                 self.cat_data[column] = column_list
             else:
                 if self.litera == position or position not in all_private_positions:
                     self.cat_data[column] = categories[column]
-                    # здесь баги
         return self.cat_data
 
     def collect_to_result_frame(self, result_column, bonus_column=()):
@@ -203,8 +202,6 @@ class Recipient:
         bonus_frame = pd.concat([self.result_frame['DAY'], ff.present_by_items(self.result_frame)], axis=1)
         self.result_frame['day_bonus'] = list(map(get_day_sum, bonus_frame.to_dict('index').values()))
 
-        print(self.result_frame)
-
         sleep_in_time_ser = self.get_in_time_sleeptime_ser()
         self.result_frame = pd.concat([self.result_frame, sleep_in_time_ser], axis=1)
 
@@ -217,7 +214,6 @@ class Recipient:
             done_percent_after_0 = round(day_sum_after_0/default_sum_list[-1], 2)
 
         sum_after_0_list.extend([done_percent_after_0, day_sum_after_0])
-        print(self.result_frame)
         self.result_frame['day_sum_in_time'] = sum_after_0_list
         #self.result_frame.insert(2, 'coefs', self.mod_data['coefs'])
         self.result_frame.to_excel(path, index=False)
@@ -257,6 +253,7 @@ class MonthData:
             if limiting == 'for count':
                 ff.items = self.mother_frame['DONE'].to_list()
                 ff.filtration([('=', 'Y', 'pos')], behavior='index_values')
+                ff.items = [i for i in ff.items if i < len(ff.items)]
                 self.mother_frame = ff.present_by_items(self.mother_frame)
                 del self.mother_frame['DONE']
             elif limiting == 'for filling':
@@ -278,7 +275,11 @@ class CategoryData:
     def __init__(self, cf, mf, pf, date_frame=''):
         self.name = cf.name
         change_dict = {'T': '+'}
-        self.cat_frame = pd.DataFrame([change_dict[i] if i in change_dict else i for i in cf], columns=[self.name], dtype='str')
+        self.cat_frame = pd.DataFrame(
+            [change_dict[i] if i in change_dict else i for i in cf],
+            columns=[self.name],
+            index=cf.index,
+            dtype='str')
         self.position = self.name[0]
         self.price_frame = pf[self.name]
         self.mod_frame = mf
@@ -363,9 +364,10 @@ class CategoryData:
             return round(percent, 2)
 
         true_percent = count_true_percent(self.cat_frame['mark'])
-        index_limit = len(self.cat_frame.index)
+        print(self.cat_frame)
+        last_index = list(self.cat_frame.index)[-1]
         result = round(self.cat_frame['result'].sum(), 2)
-        statistic_app = pd.Series({index_limit: true_percent, index_limit+1: result})
+        statistic_app = pd.Series({last_index+1: true_percent, last_index+2: result})
         result_column = pd.concat([self.cat_frame['result'], statistic_app], axis=0)
         result_column.name = self.name
         return result_column
@@ -387,8 +389,15 @@ class BonusFrame:
     def tools(self):
         return {'every N': self.every_n_give_a_bonus}
 
-    def has_bonus_logic(self):
+    @property
+    def bonus_logic(self):
         flag = True if self.logic else False
+        return flag
+
+    @property
+    def enough_len(self):
+        flag = True if len(self.mark_ser) >= self.interval else False
+        print('enough', flag)
         return flag
 
     def every_n_give_a_bonus(self, mark_dict, bonus_list):

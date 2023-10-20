@@ -183,7 +183,6 @@ class VedomostFiller:
             self.mother_frame.to_excel(mf_writer, sheet_name='vedomost')
 
 
-
 if __name__ == '__main__':
     month = 'oct23'
     filler = VedomostFiller(month, 'Egr')

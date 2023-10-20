@@ -76,7 +76,7 @@ cf = cl.CategoryData('Egr', month_data_may.mother_frame[cat], ad.mods_frame, mon
 cf.add_price_column()
 jun_prices = cl.MonthData(path_to_file_jun, recipients).prices[cat]
 bonus_column = cl.BonusFrame(cf.cat_frame, jun_prices)
-if bonus_column.has_bonus_logic():
+if bonus_column.bonus_logic():
     cf.cat_frame['bonus'] = bonus_column.count_a_bonus()
     print(cf.cat_frame.get(['mark', 'bonus']))
 

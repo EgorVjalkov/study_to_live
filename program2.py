@@ -32,19 +32,20 @@ def main():
             r.get_r_positions_col()
             r.get_all_coefs_col()
             r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
-            r.get_r_vedomost(recipients, md.categories)
-            print(r.cat_data)
+            r.get_r_vedomost(['Egr', 'Lera'], md.categories)
             # fltr = FrameForAnalyse(df=r.cat_data)
-            # fltr.filtration([('part', 'a:sleeptime', 'pos')])
+            # fltr.filtration([('=', '1', 'pos')], behavior='row_values')
             # for column in fltr.items:
+            r.cat_data = r.cat_data.loc[2:3]
             for column in r.cat_data:
                 cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
                 print(cd.name)
                 cd.add_price_column(show_calculation=show_calc)
                 #print(cd.cat_frame)
                 cd.add_coef_and_result_column(show_calculation=show_calc)
+                # замуть глупая с бонусами. Нужно пересмотреть нихрена не понятно, код делал умолишенный
                 bonus_column = cl.BonusFrame(cd.cat_frame, cd.price_frame)
-                if bonus_column.has_bonus_logic():
+                if bonus_column.bonus_logic and bonus_column.enough_len:
                     cd.cat_frame['bonus'] = bonus_column.count_a_bonus()
                     bc_with_statistic = bonus_column.get_bonus_list_with_statistic()
                 else:
