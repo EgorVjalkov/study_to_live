@@ -152,10 +152,9 @@ class Recipient:
                     self.cat_data[column] = categories[column]
         return self.cat_data
 
-    def collect_to_result_frame(self, result_column, bonus_column=()):
+    def collect_to_result_frame(self, result_column, bonus_column=pd.Series()):
         self.result_frame = pd.concat([self.result_frame, result_column], axis=1)
-        if bonus_column:
-            bonus_column = pd.Series(bonus_column, name=result_column.name+'_bonus')
+        if not bonus_column.empty:
             self.result_frame = pd.concat([self.result_frame, bonus_column], axis=1)
 
     def get_in_time_sleeptime_ser(self):
@@ -285,19 +284,27 @@ class CategoryData:
         self.mod_frame = mf
 
     def find_a_price(self, result, positions):
-        mark = 'can`t'
         if self.position not in positions:
-            return {'price': 0, 'mark': mark, 'price_calc': 'not in positions'}
+            return {'price': 0, 'mark': 'can`t', 'price_calc': 'not in positions'}
 
-        price_calc = {'price': self.price_frame['PRICE'], 'can`t': 0, 'wishn`t': 0, '!': -50}
+        price_calc = {
+            'price': self.price_frame['PRICE'],
+            'can`t': 0,
+            'wishn`t': 0,
+            '!': -50}
+
         if result not in price_calc:
             price = PriceMarkCalc(result, price_calc['price']).get_price()
         else:
             price = price_calc[result]
 
-        true_condition = eval(str(price)+self.price_frame["True"])
-        #print(true_condition)
-        mark = 'True' if true_condition else 'False'
+        if result not in ['can`t', 'wishn`t']:
+            true_condition = eval(str(price)+self.price_frame["True"])
+            mark = str(true_condition)[0]
+        elif result == 'wish`t':
+            mark = 'F'
+        else:
+            mark = result
 
         #print(result, price, mark, '\n end \n')
         price_calc = {k: price_calc[k] for k in price_calc if k not in ('can`t', 'wishn`t')}
@@ -319,7 +326,7 @@ class CategoryData:
 
     def count_a_modification(self, coefs, mark): # сюда нужно интегрировать марки
         coef_dict = {'coef': 0}
-        if mark not in ('True', 'False'):
+        if mark not in ('T', 'F'):
             return coef_dict
 
         for coef_name in coefs:
@@ -359,12 +366,11 @@ class CategoryData:
     def get_result_col_with_statistic(self):
         def count_true_percent(mark_column):
             not_cant_mark_list = [i for i in mark_column if i != 'can`t']
-            true_list = [i for i in mark_column if i == 'True']
+            true_list = [i for i in mark_column if i == 'T']
             percent = len(true_list) / len(not_cant_mark_list)
             return round(percent, 2)
 
         true_percent = count_true_percent(self.cat_frame['mark'])
-        print(self.cat_frame)
         last_index = list(self.cat_frame.index)[-1]
         result = round(self.cat_frame['result'].sum(), 2)
         statistic_app = pd.Series({last_index+1: true_percent, last_index+2: result})
@@ -372,77 +378,3 @@ class CategoryData:
         result_column.name = self.name
         return result_column
 
-
-class BonusFrame:
-    def __init__(self, cat_frame, price_frame):
-        self.name = price_frame.name
-        self.logic = price_frame['logic']
-        self.interval = int(price_frame['N'])
-        self.bonus = float(price_frame['bonus'])
-        self.mark_ser = pd.Series(cat_frame['mark'])
-        all_True_exept_cant = lambda i: 'True' if i != 'can`t' else i
-        self.max_bonus_ser = self.mark_ser.map(all_True_exept_cant)
-        # self.max_bonus_ser = pd.Series(['can`t' if i == 'can`t' else 'True' for i in self.mark_ser])
-        self.bonus_list = [0] * len(self.mark_ser)
-
-    @property
-    def tools(self):
-        return {'every N': self.every_n_give_a_bonus}
-
-    @property
-    def bonus_logic(self):
-        flag = True if self.logic else False
-        return flag
-
-    @property
-    def enough_len(self):
-        flag = True if len(self.mark_ser) >= self.interval else False
-        print('enough', flag)
-        return flag
-
-    def every_n_give_a_bonus(self, mark_dict, bonus_list):
-        counter = 1
-        for k in mark_dict:
-            k_index = list(mark_dict.keys()).index(k)
-            if mark_dict[k] == 'True':
-                if counter < self.interval:
-                    if k_index + (self.interval-counter+1) > len(mark_dict):
-                        bonus_list[k] = round(self.bonus / self.interval * counter)
-                        counter = 1
-                    else:
-                        bonus_list[k] = mark_dict[k]
-                        counter += 1
-                else:
-                    bonus_list[k] = self.bonus
-                    counter = 1
-
-            elif mark_dict[k] == 'False':
-                bonus_list[k] = mark_dict[k]
-                counter = 1
-
-        return bonus_list
-
-    def count_a_bonus(self, mark_ser=pd.Series()):
-        if not mark_ser.empty:
-            mark_dict = mark_ser.to_dict()
-        else:
-            mark_dict = self.mark_ser.to_dict()
-
-        mark_dict = {k: mark_dict[k] for k in mark_dict if mark_dict[k] not in ('can`t', 'wishn`t')}
-        bonus_list = self.tools[self.logic](mark_dict, self.bonus_list.copy())
-
-        return bonus_list
-
-    def get_bonus_list_with_statistic(self):
-        self.bonus_list = [0 if type(i) == str else i for i in self.count_a_bonus()]
-        max_bonus_list = [0 if type(i) == str else i for i in self.count_a_bonus(self.max_bonus_ser)]
-        bonus_count = len([i for i in self.bonus_list if i])
-        max_bonus_count = len([i for i in max_bonus_list if i])
-        try:
-            true_percent = round(bonus_count / max_bonus_count, 2)
-        except ZeroDivisionError:
-            true_percent = 0
-
-        self.bonus_list.append(sum(self.bonus_list))
-        self.bonus_list.insert(-1, true_percent)
-        return self.bonus_list

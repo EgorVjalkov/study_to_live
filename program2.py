@@ -2,6 +2,7 @@ import classes as cl
 import pandas as pd
 from testing import does_need_correction
 from analytic_utilities import FrameForAnalyse
+from BonusColumn import BonusColumn
 
 recipients = ['Egr']
 month = "oct23"
@@ -33,25 +34,25 @@ def main():
             r.get_all_coefs_col()
             r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
             r.get_r_vedomost(['Egr', 'Lera'], md.categories)
-            # fltr = FrameForAnalyse(df=r.cat_data)
-            # fltr.filtration([('=', '1', 'pos')], behavior='row_values')
-            # for column in fltr.items:
-            r.cat_data = r.cat_data.loc[2:3]
+            #fltr = FrameForAnalyse(df=r.cat_data)
+            #fltr.filtration([('positions', ['h'], 'pos')])
+            #for column in fltr.items:
             for column in r.cat_data:
                 cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
                 print(cd.name)
                 cd.add_price_column(show_calculation=show_calc)
-                #print(cd.cat_frame)
                 cd.add_coef_and_result_column(show_calculation=show_calc)
-                # замуть глупая с бонусами. Нужно пересмотреть нихрена не понятно, код делал умолишенный
-                bonus_column = cl.BonusFrame(cd.cat_frame, cd.price_frame)
-                if bonus_column.bonus_logic and bonus_column.enough_len:
-                    cd.cat_frame['bonus'] = bonus_column.count_a_bonus()
-                    bc_with_statistic = bonus_column.get_bonus_list_with_statistic()
+
+                bc = BonusColumn(cd.cat_frame['mark'], cd.price_frame)
+                if bc.bonus_logic and bc.enough_len:
+                    bc.count_a_bonus()
+                    cd.cat_frame[bc.name] = bc.get_bonus_ser_without_statistic()
+                    bc_with_statistic = bc.get_bonus_ser_with_statistic()
                 else:
-                    bc_with_statistic = ()
-                r.collect_to_result_frame(cd.get_result_col_with_statistic(), bc_with_statistic)
+                    bc_with_statistic = pd.Series()
+
                 cd.get_ready_and_save_to_excel(md.date, f'output_files/{month}/{r_name}/{cd.name}.xlsx')
+                r.collect_to_result_frame(cd.get_result_col_with_statistic(), bc_with_statistic)
             r.get_day_sum_if_sleep_in_time_and_save(f'output_files/{month}/{r_name}/{r_name}_total.xlsx')
 
 
