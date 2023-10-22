@@ -115,6 +115,7 @@ class BonusColumn:
         stat_ser = pd.Series([true_count, sum_of_bonus])
 
         self.output_bonus_ser = pd.concat([self.output_bonus_ser, stat_ser], axis=0, ignore_index=True)
+        self.output_bonus_ser.name = self.name
         return self.output_bonus_ser
 
 

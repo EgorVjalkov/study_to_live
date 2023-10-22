@@ -41,6 +41,7 @@ def main():
                 cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
                 print(cd.name)
                 cd.add_price_column(show_calculation=show_calc)
+                cd.add_mark_column(show_calculation=show_calc)
                 cd.add_coef_and_result_column(show_calculation=show_calc)
 
                 bc = BonusColumn(cd.cat_frame['mark'], cd.price_frame)

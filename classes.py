@@ -1,6 +1,5 @@
-import datetime
 import pandas as pd
-import numpy as np
+from statistics import mean
 import os
 from PriceMarkCalc import PriceMarkCalc
 import analytic_utilities as au
@@ -83,7 +82,7 @@ class Recipient:
             child_coef_dict = {'child_coef': 0, 'KG_coef': 0, 'weak_coef': 0}
             if r_children:
                 child_coef_dict['child_coef'] = len(r_children)
-                if weak_children:
+                if weak_children: # можно заморочиться здесь
                     r_weak_children_list = [i for i in weak_children if i in r_children]
                     child_coef_dict['weak_coef'] = len(r_weak_children_list)
                 if d8:
@@ -155,7 +154,7 @@ class Recipient:
     def collect_to_result_frame(self, result_column, bonus_column=pd.Series()):
         self.result_frame = pd.concat([self.result_frame, result_column], axis=1)
         if not bonus_column.empty:
-            self.result_frame = pd.concat([self.result_frame, bonus_column], axis=1)
+            self.result_frame[bonus_column.name] = bonus_column
 
     def get_in_time_sleeptime_ser(self):
         def hour_extraction(time):
@@ -181,40 +180,56 @@ class Recipient:
     def get_day_sum_if_sleep_in_time_and_save(self, path):
         def get_day_sum(day_row, sleep_in_time_flag=''):
             percent_row_cell = day_row.pop('DAY')
-            #print(day_row)
+            day_row = [0 if isinstance(day_row[i], str) else day_row[i]
+                       for i in day_row]
             if sleep_in_time_flag:
                 if sleep_in_time_flag == 'False':
-                    day_row = {i: day_row[i] if day_row[i] < 0 else 0 for i in day_row}
+                    day_row = [i if i < 0 else 0 for i in day_row]
             if percent_row_cell == 'done_percent':
-                return round(np.mean(np.array(list(day_row.values()))), 2)
+                return round(mean(day_row), 2)
             else:
-                return round(sum(day_row.values()), 2)
+                return round(sum(day_row), 2)
 
         ff.items = list(self.result_frame.columns)
-        ff.filtration([('part', 'bonus', 'neg'), ('part', 'DATE', 'neg')])
+        ff.filtration([('part', 'bonus', 'neg'),
+                       ('part', 'fire', 'neg'),
+                       ('columns', ['DATE'], 'neg')])
         only_categories_frame = ff.present_by_items(self.result_frame)
-        default_sum_list = list(map(get_day_sum, only_categories_frame.to_dict('index').values()))
+        default_sum_list = list(map(get_day_sum,
+                                    only_categories_frame.to_dict('index').values()))
         self.result_frame['cat_day_sum'] = default_sum_list
 
         ff.items = list(self.result_frame.columns)
         ff.filtration([('part', 'bonus', 'pos')])
         bonus_frame = pd.concat([self.result_frame['DAY'], ff.present_by_items(self.result_frame)], axis=1)
-        self.result_frame['day_bonus'] = list(map(get_day_sum, bonus_frame.to_dict('index').values()))
+        self.result_frame['day_bonus'] = list(map(get_day_sum,
+                                                  bonus_frame.to_dict('index').values()))
 
         sleep_in_time_ser = self.get_in_time_sleeptime_ser()
-        self.result_frame = pd.concat([self.result_frame, sleep_in_time_ser], axis=1)
+        self.result_frame = pd.concat(
+            [self.result_frame, sleep_in_time_ser],
+            axis=1)
 
-        sum_after_0_list = list(map(get_day_sum, only_categories_frame.to_dict('index').values(), sleep_in_time_ser))
-        sum_after_0_list = sum_after_0_list[:-2] # статистику пресчитаем отдельно
-        day_sum_after_0 = round(sum(sum_after_0_list), 2)
+        sum_after_0_col = pd.Series(
+            list(
+                map(
+                    get_day_sum,
+                    only_categories_frame.to_dict('index').values(),
+                    sleep_in_time_ser)
+            ))
+        sum_after_0_col = sum_after_0_col[:-2] # статистику пресчитаем отдельно
+        day_sum_after_0 = sum_after_0_col.sum()
         if not day_sum_after_0:
             done_percent_after_0 = 0.0
         else:
             done_percent_after_0 = round(day_sum_after_0/default_sum_list[-1], 2)
 
-        sum_after_0_list.extend([done_percent_after_0, day_sum_after_0])
-        self.result_frame['day_sum_in_time'] = sum_after_0_list
-        #self.result_frame.insert(2, 'coefs', self.mod_data['coefs'])
+        sum_after_0_col = pd.concat(
+            [sum_after_0_col, pd.Series([done_percent_after_0, day_sum_after_0])],
+            axis=0,
+            ignore_index=True)
+        self.result_frame['day_sum_in_time'] = sum_after_0_col
+
         self.result_frame.to_excel(path, index=False)
 
 
@@ -285,31 +300,22 @@ class CategoryData:
 
     def find_a_price(self, result, positions):
         if self.position not in positions:
-            return {'price': 0, 'mark': 'can`t', 'price_calc': 'not in positions'}
+            return {'price': 'can`t', 'price_calc': 'not in positions'}
 
         price_calc = {
-            'price': self.price_frame['PRICE'],
+            'price': self.price_frame.at['PRICE'],
             'can`t': 0,
             'wishn`t': 0,
             '!': -50}
-
-        if result not in price_calc:
+        if result in price_calc:
+            if result in ['can`t', 'wishn`t']:
+                price = result
+            else:
+                price = price_calc[result]
+        else:
             price = PriceMarkCalc(result, price_calc['price']).get_price()
-        else:
-            price = price_calc[result]
 
-        if result not in ['can`t', 'wishn`t']:
-            true_condition = eval(str(price)+self.price_frame["True"])
-            mark = str(true_condition)[0]
-        elif result == 'wish`t':
-            mark = 'F'
-        else:
-            mark = result
-
-        #print(result, price, mark, '\n end \n')
-        price_calc = {k: price_calc[k] for k in price_calc if k not in ('can`t', 'wishn`t')}
-        return {'price': price, 'mark': mark, 'price_calc': list(price_calc.values())}
-
+        return {'price': price, 'price_calc': price_calc['price']}
 
     def add_price_column(self, show_calculation=False):
         #print(self.name)
@@ -317,14 +323,36 @@ class CategoryData:
                               self.cat_frame[self.name],
                               self.mod_frame['positions']))
         self.cat_frame['price'] = [i.pop('price') for i in price_list]
-        self.cat_frame['mark'] = [i.pop('mark') for i in price_list]
-
+        price_list = [i.pop('price_calc') for i in price_list]
         if show_calculation:
-            self.cat_frame.insert(self.cat_frame.columns.get_loc('price'), 'price_calc', self.price_frame['PRICE'])
-        #print(self.cat_frame)
-        return self.cat_frame
+            self.cat_frame.insert(self.cat_frame.columns.get_loc('price'),
+                                  'price_calc',
+                                  pd.Series(price_list))
 
-    def count_a_modification(self, coefs, mark): # сюда нужно интегрировать марки
+    def get_a_mark(self, price):
+        if not isinstance(price, str):
+            true_condition = str(price)+self.price_frame.at["True"]
+            mark = str(eval(true_condition))[0]
+            mark_calc = true_condition
+        else:
+            mark_calc = price
+            if price == 'wish`t':
+                mark = 'F'
+            else:
+                mark = price
+        return {'mark': mark, 'mark_calc': mark_calc}
+
+    def add_mark_column(self, show_calculation=False):
+        mark_list = list(map(self.get_a_mark,
+                             self.cat_frame['price']))
+        self.cat_frame['mark'] = [i.pop('mark') for i in mark_list]
+        mark_list = [i.pop('mark_calc') for i in mark_list]
+        if show_calculation:
+            self.cat_frame.insert(self.cat_frame.columns.get_loc('mark'),
+                                  'mark_calc',
+                                  pd.Series(mark_list))
+
+    def count_a_modification(self, coefs, mark):
         coef_dict = {'coef': 0}
         if mark not in ('T', 'F'):
             return coef_dict
@@ -343,21 +371,30 @@ class CategoryData:
         # if mark == 'True' and coef > 0.5 and price == 0:
         #     coef = abs(50) * coef
         # else:
-        coef = abs(price) * coef
-        price += coef
-        return round(coef, 2), round(price, 2)
+        if price in ['can`t', 'wishn`t']:
+            return coef, price
+        else:
+            coef = abs(price) * coef
+            price += coef
+            return round(coef, 2), round(price, 2)
 
     def add_coef_and_result_column(self, show_calculation=False):
-        coefs_list = list(map(self.count_a_modification, self.mod_frame['coefs'].copy(), self.cat_frame['mark']))
+        coefs_list = list(map(self.count_a_modification,
+                              self.mod_frame['coefs'].copy(),
+                              self.cat_frame['mark']))
         self.cat_frame['coef'] = [i.pop('coef') for i in coefs_list]
-        #print(self.cat_frame)
-        result_list = list(map(self.total_count, self.cat_frame['price'], self.cat_frame['coef'], self.cat_frame['mark']))
+
+        result_list = list(map(self.total_count,
+                               self.cat_frame['price'],
+                               self.cat_frame['coef'],
+                               self.cat_frame['mark']))
         self.cat_frame['mod'] = [i[0] for i in result_list]
         self.cat_frame['result'] = [i[1] for i in result_list]
-        if show_calculation:
-            self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'), 'coef_count', coefs_list)
 
-        return self.price_frame
+        if show_calculation:
+            self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'),
+                                  'coef_count',
+                                  pd.Series(coefs_list))
 
     def get_ready_and_save_to_excel(self, date_frame, path):
         self.cat_frame = pd.concat([date_frame, self.cat_frame], axis='columns')
@@ -371,10 +408,10 @@ class CategoryData:
             return round(percent, 2)
 
         true_percent = count_true_percent(self.cat_frame['mark'])
-        last_index = list(self.cat_frame.index)[-1]
-        result = round(self.cat_frame['result'].sum(), 2)
-        statistic_app = pd.Series({last_index+1: true_percent, last_index+2: result})
-        result_column = pd.concat([self.cat_frame['result'], statistic_app], axis=0)
+        result_ser = self.cat_frame['result'].map(lambda i: 0 if isinstance(i, str) else i)
+        result = round(result_ser.sum(), 2)
+        statistic_app = pd.Series([true_percent, result])
+        result_column = pd.concat([self.cat_frame['result'], statistic_app], axis=0, ignore_index=True)
         result_column.name = self.name
         return result_column
 

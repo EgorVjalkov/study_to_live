@@ -75,6 +75,7 @@ class FrameForAnalyse:
 
             if filter_logic == 'pos':
                 self.items = {i: dict_object[i] for i in dict_object if filter_func(dict_object[i], value)}
+                print(self.items)
             elif filter_logic == 'neg':
                 self.items = {i: dict_object[i] for i in dict_object if not filter_func(dict_object[i], value)}
 
