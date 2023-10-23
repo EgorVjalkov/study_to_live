@@ -242,7 +242,7 @@ class MonthData:
         self.categories = pd.DataFrame()
         self.date = pd.DataFrame()
 
-    def get_vedomost(self):
+    def load_and_prepare_vedomost(self):
         self.mother_frame = pd.read_excel(self.path, sheet_name='vedomost', dtype='object')
         self.mother_frame = self.mother_frame.replace('CAN`T', 'can`t')
         self.mother_frame['DATE'] = [i.date() for i in self.mother_frame['DATE']]
@@ -261,20 +261,27 @@ class MonthData:
             self.prices = pd.read_excel(self.path, sheet_name='price', index_col=0).fillna(0)
         else:
             self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
+        return self.prices
 
-    def get_frames_for_working(self, limiting=''):
-        if limiting:
-            if limiting == 'for count':
-                ff.items = self.mother_frame['DONE'].to_list()
-                ff.filtration([('=', 'Y', 'pos')], behavior='index_values')
-                ff.items = [i for i in ff.items if i < len(ff.items)]
-                self.mother_frame = ff.present_by_items(self.mother_frame)
-                del self.mother_frame['DONE']
-            elif limiting == 'for filling':
-                ff.items = self.mother_frame['DONE'].to_list()
-                ff.filtration([('=', 'Y', 'neg')], behavior='index_values')
-                self.mother_frame = ff.present_by_items(self.mother_frame)
+    def limiting(self, limiting, recipient_name=''):
+        if limiting == 'for count':
+            ff.items = self.mother_frame['DONE'].to_list()
+            ff.filtration([('=', 'Y', 'pos')], behavior='index_values')
+            ff.items = [i for i in ff.items if i < len(ff.items)]
+            self.mother_frame = ff.present_by_items(self.mother_frame)
+            del self.mother_frame['DONE']
+        elif limiting == 'for filling':
+            marks_of_filled = ['Y', recipient_name[0]]
+            ff.items = self.mother_frame['DONE'].to_list()
+            ff.filtration(
+                [
+                    ('columns',  marks_of_filled, 'neg')
+                ],
+                behavior='index_values')
+        self.mother_frame = ff.present_by_items(self.mother_frame)
+        return self.mother_frame
 
+    def get_frames_for_working(self):
         date_keys = ['DATE', 'DAY']
         self.accessory = self.mother_frame.get([i for i in self.mother_frame.columns if i == i.upper() and i not in date_keys])
         self.date = self.mother_frame.get(date_keys)

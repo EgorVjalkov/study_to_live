@@ -15,9 +15,9 @@ def main():
     if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
 
         md = cl.MonthData(path_to_file)
-        md.get_vedomost()
+        md.load_and_prepare_vedomost()
         md.get_price_frame()
-        md.get_frames_for_working(limiting='for count')
+        md.limiting(limiting='for count')
         md.fill_na()
         for r_name in recipients:
             r = cl.Recipient(r_name, md.date)

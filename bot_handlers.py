@@ -54,13 +54,13 @@ async def get_a_cell_keyboard(message: Message):
     if filler.day_row.vedomost.empty:
         await message.reply("Сначала нужно выбрать дату! Дайте команду /start")
     else:
-        filler.get_non_filled_categories()
-        if not filler.non_filled_categories:
+        filler.filtering_by_positions()
+        if not filler.r_filling_ser:
             await message.reply("Все заполнено!")
             # здесь нужна функция, которая поставит "Y" в ведомость. проверка на чухана (меня)
         else:
             kb = ReplyKeyboardBuilder()
-            keyboard = get_categories_keyboard(kb, filler.non_filled_categories)
+            keyboard = get_categories_keyboard(kb, filler.r_filling_ser)
             await message.answer("Выберите категорию для заполнения", reply_markup=keyboard)
 
 
@@ -75,9 +75,9 @@ def get_filling_inline(inline, cat_keys):
     return inline
 
 
-@router2.message(F.text.func(lambda text: text in filler.non_filled_categories))
+@router2.message(F.text.func(lambda text: text in filler.r_filling_ser))
 async def change_a_category(message: Message):
-    if filler.non_filled_categories:
+    if filler.r_filling_ser:
         cell.cat_name = message.text
 
         answer = cell.description
@@ -94,10 +94,10 @@ async def change_a_category(message: Message):
         await message.answer(answer, reply_markup=callback.as_markup())
 
         filler.filled[cell.cat_name] = None
-        filler.non_filled_categories.remove(message.text)
+        filler.r_filling_ser.remove(message.text)
 
         kb = ReplyKeyboardBuilder()
-        keyboard = get_categories_keyboard(kb, filler.non_filled_categories)
+        keyboard = get_categories_keyboard(kb, filler.r_filling_ser)
 
         #здесь хотелочь бы при наличии отклика на колбэк вернуть новую клаву Надо мутить с асинхронью
         await message.answer("Следующая категория?", reply_markup=keyboard)
@@ -124,17 +124,17 @@ router3 = Router()
 async def fill_a_cell(callback: CallbackQuery):
     cat_value = callback.data.split('_')[1]
     print(cat_value)
-    filled_cat = filler.fill_a_cell(cat_value) # здесь надо придумать, как перзаполнять категории
+    filled_cat = filler.fill_the_cell(cat_value) # здесь надо придумать, как перзаполнять категории
     print(filler.filled)
-    print(filler.all_filled_flag)
+    print(filler.recipient_all_filled_flag)
     await callback.answer(f"Вы заполнили {cat_value} в {filled_cat}")
 
 
 @router3.message(F.text.func(lambda text: ':' in text))
 async def fill_a_cell_with_time(message: Message):
-    filled_cat = filler.fill_a_cell(message.text)
+    filled_cat = filler.fill_the_cell(message.text)
     print(filler.filled)
-    print(filler.all_filled_flag)
+    print(filler.recipient_all_filled_flag)
     if filled_cat:
         await message.answer(f"Вы заполнили {filled_cat}")
 

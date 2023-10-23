@@ -75,7 +75,6 @@ class FrameForAnalyse:
 
             if filter_logic == 'pos':
                 self.items = {i: dict_object[i] for i in dict_object if filter_func(dict_object[i], value)}
-                print(self.items)
             elif filter_logic == 'neg':
                 self.items = {i: dict_object[i] for i in dict_object if not filter_func(dict_object[i], value)}
 
@@ -101,9 +100,7 @@ class FrameForAnalyse:
         if by_previos_conditions:
             frame = frame.filter(items=by_previos_conditions['items'], axis=by_previos_conditions['axis'])
         else:
-            print(frame)
             frame = frame.filter(items=self.items, axis=self.axis)
-            print(frame)
             # здесь надо бы доработать!!!
             if remove_stat:
                 frame = self.remove_statistic(frame)
