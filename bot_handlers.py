@@ -137,4 +137,3 @@ async def fill_a_cell_with_time(message: Message):
     print(filler.recipient_all_filled_flag)
     if filled_cat:
         await message.answer(f"Вы заполнили {filled_cat}")
-
