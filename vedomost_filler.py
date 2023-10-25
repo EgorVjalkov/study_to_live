@@ -1,7 +1,9 @@
 import pandas as pd
+import numpy as np
 import datetime
 import classes as cl
 from analytic_utilities import FrameForAnalyse
+from VedomostCell import VedomostCell
 #from bot_main import cell
 # важная тема с заполнением: неодходимо прописать как быть с многочленными категориями, типо мытья посуды или прогулок
 # задроч с путем надо подумать как его слеоать!
@@ -11,78 +13,17 @@ from analytic_utilities import FrameForAnalyse
 ff = FrameForAnalyse()
 
 
-class VedomostCell:
-    def __init__(self, price_frame, num_of_recipietns, name=''):
-        self.prices = price_frame
-        self.name = name
-        self.num_of_recipients = num_of_recipietns
-        self.value = None
-
-    @property
-    def cat_name(self):
-        return self.name
-
-    @cat_name.setter
-    def cat_name(self, category_name):
-        self.name = category_name
-
-    @property
-    def cat_value(self):
-        return self.value
-
-    @cat_value.setter
-    def cat_value(self, value):
-        self.value = value
-
-    @property
-    def category_data(self):
-        cat_data = self.prices[self.cat_name]
-        return cat_data
-
-    @property
-    def type(self):
-        return self.category_data.loc['type']
-
-    @property
-    def description(self):
-        descr_list = self.category_data.get(['description', 'hint']).to_list()
-        descr_list = [e for e in descr_list if e]
-        return descr_list
-
-    @property
-    def keys(self):
-        if 'range' in self.type:
-            keys = list(eval(self.type))
-        elif self.type == 'dict':
-            keys = list(eval(self.category_data['PRICE']).keys())
-        else:
-            keys = None
-        return keys
-
-    @property
-    def is_solid(self):
-        return self.category_data['solid']
-
-    @property
-    def can_append_data(self):
-        flag = False
-        record_num = len(self.value.split(','))
-        if record_num < self.num_of_recipients:
-            flag = True
-        return flag
-
-
 class VedomostFiller:
-    def __init__(self, month, recipient=''):
-        self.path_to_dir = f'months/{month}'
-        self.path_to_mother_frame = f'{self.path_to_dir}/{month}.xlsx'
+    def __init__(self, path='', recipient=''):
+        self.path_to_mother_frame = path
+        self.md_instrument = cl.MonthData()
 
         # поле переменных для работы функций
         self.mother_frame = pd.DataFrame()
         self.prices = pd.DataFrame()
         self.r_vedomost = pd.DataFrame()
 
-        self.day_row = cl.MonthData()
+        self.day_row = pd.DataFrame()
         self.day_row_index = None
         self.recipient = recipient
         self.r_filling_ser = pd.Series()
@@ -94,34 +35,16 @@ class VedomostFiller:
     def admin(self):
         return True if self.recipient == 'Egr' else False
 
-    @property
-    def r_name(self):
-        return self.recipient
+    def get_mother_frame_and_prices(self, path_to_mother_frame=None):
+        if path_to_mother_frame:
+            self.path_to_mother_frame = path_to_mother_frame
+        print(self.path_to_mother_frame)
+        self.mother_frame = self.md_instrument.load_and_prepare_vedomost(self.path_to_mother_frame)
+        self.prices = self.md_instrument.get_price_frame(self.path_to_mother_frame)
 
-    @r_name.setter
-    def r_name(self, name):
-        self.recipient = name
-
-    def get_mother_frame_and_prices(self):
-        pass
-
-    def get_mother_frame_and_refresh_values(self):
-        md = cl.MonthData(self.path_to_mother_frame)
-        self.prices = md.get_price_frame()
-        self.mother_frame = md.load_and_prepare_vedomost()
-
-        self.r_vedomost = md.limiting('for filling', self.r_name)
-
-        # подумай над рефрешем
-
-        if not self.day_row.vedomost.empty:
-            self.day_row.vedomost = pd.DataFrame()
-            self.day_row_index = None
-            self.r_filling_ser = pd.Series()
-
-        return (self.mother_frame,
-                self.day_row,
-                self.r_filling_ser)
+    def get_r_name_and_limiting(self, r_name):
+        self.recipient = r_name
+        self.r_vedomost = self.md_instrument.limiting('for filling', self.recipient)
 
     @property
     def days_for_filling(self):
@@ -130,7 +53,8 @@ class VedomostFiller:
 
     def change_the_day_row(self, date_form_tg):
         self.day_row_index = self.days_for_filling[date_form_tg]
-        self.day_row.vedomost = self.r_vedomost.loc[self.day_row_index:self.day_row_index]
+        self.md_instrument.vedomost = self.r_vedomost.loc[self.day_row_index:self.day_row_index]
+        self.day_row = self.md_instrument
         self.day_row.get_frames_for_working()
         return self.day_row
 
@@ -153,17 +77,21 @@ class VedomostFiller:
 
 # затрах с нонфиледом.
     def get_non_filled_categories(self):
+        self.r_filling_ser = self.r_filling_ser.replace('!', np.nan)
+        print(self.r_filling_ser)
         non_filled = self.r_filling_ser.to_dict()
         for cat in non_filled:
-            if pd.notna(non_filled[cat]): # проверка на запись
-                cell.cat_name, cell.cat_value = cat, non_filled[cat]
-                if not cell.is_solid:
-                    if not cell.can_append_data: # проверка на невозможность дописывания в яйчейку
-                        del non_filled[cat]
-                else:
-                    del non_filled[cat]
-        self.non_filled_categories = non_filled
+            cell.cat_name, cell.cat_value = cat, non_filled[cat]
+            if not cell.is_empty: # прoверка на пустоту
+                if cell.has_private_value: # проверка на именные значения
+                    if cell.can_append_data: # проверка на возможность дописывания в яйчейку
+                        self.non_filled_categories.append(cat)
+            else:
+                self.non_filled_categories.append(cat)
         return self.non_filled_categories
+
+    def delete_filled_category(self, cat_name):
+        self.non_filled_categories.remove(cat_name)
 
     @property
     def recipient_all_filled_flag(self):
@@ -176,6 +104,7 @@ class VedomostFiller:
     def change_a_cell(self, VedomostCell_object):
         self.filling_now_cell = VedomostCell_object
         self.filling_now_cell.cat_value = self.r_filling_ser[self.filling_now_cell.name]
+        # self.delete_filled_category(self.filling_now_cell.cat_name)
         return self.filling_now_cell
 
     def fill_the_cell(self, new_value):
@@ -184,17 +113,22 @@ class VedomostFiller:
         elif new_value == 'забыл':
             new_value = '!'
 
-        if self.filling_now_cell.is_solid:
-            if self.filling_now_cell.can_append_data:
-                self.r_filling_ser.at[self.filling_now_cell.cat_name] = \
-                    f'{self.filling_now_cell.cat_value},{self.r_name[0]}{new_value}'
+        #print(self.filling_now_cell.cat_name,
+        #      self.filling_now_cell.cat_value,
+        #      self.filling_now_cell.is_empty,
+        #      self.filling_now_cell.has_private_value)
 
-            else:
+        if self.filling_now_cell.is_empty:
+            if self.filling_now_cell.has_private_value:
                 self.r_filling_ser.at[self.filling_now_cell.cat_name] = \
-                    f'{self.r_name[0]}{new_value}'
+                    f'{self.recipient[0]}{new_value}'
+            else:
+                self.r_filling_ser.at[self.filling_now_cell.cat_name] = new_value
 
         else:
-            self.r_filling_ser.at[self.filling_now_cell] = new_value
+            self.r_filling_ser.at[self.filling_now_cell.cat_name] = \
+                f'{self.filling_now_cell.cat_value},{self.recipient[0]}{new_value}'
+
         return self.filling_now_cell
 
     def save_day_data(self):
@@ -207,7 +141,6 @@ class VedomostFiller:
         if self.recipient_all_filled_flag:
             if pd.notna(self.mother_frame.at[self.day_row_index, 'DONE']):
                 self.mother_frame.at[self.day_row_index, 'DONE'] = 'Y'
-                # нужно потестить реакцию на DONE
             else:
                 self.mother_frame.at[self.day_row_index, 'DONE'] = self.recipient[0]
 
@@ -223,29 +156,23 @@ class VedomostFiller:
 if __name__ == '__main__':
     month = 'oct23'
     #pd.reset_option('display.max.columns')
-    filler = VedomostFiller(month)
-
-    filler.r_name = 'Egr'
-
-    filler.get_mother_frame_and_refresh_values()
+    filler = VedomostFiller(path=f'months/{month}/{month}.xlsx')
+    filler.get_mother_frame_and_prices()
     cell = VedomostCell(filler.prices, num_of_recipietns=2)
+    filler.get_r_name_and_limiting('Egr')
 
-    filler.change_the_day_row('17.10.23')
+    filler.change_the_day_row('16.10.23')
     filler.filtering_by_positions()
     filler.get_non_filled_categories()
-    print(filler.non_filled_categories)
-    cell.name = 'e:hygiene'
-    filler.change_a_cell(cell)
-    print(filler.filling_now_cell.cat_name, filler.filling_now_cell.cat_value)
-    filler.fill_the_cell(new_value='9')
-    print(filler.filling_now_cell.cat_name,
-          filler.filling_now_cell.cat_value,
-          'flgs',
-          filler.filling_now_cell.is_solid,
-          filler.filling_now_cell.can_append_data
-          )
+    for i in filler.non_filled_categories:
+        cell.name = i
+        filler.change_a_cell(cell)
+        filler.fill_the_cell(new_value='5')
+        # тут есть баги!!!!!
+        filler.get_non_filled_categories()
+        print(filler.non_filled_categories)
     print(filler.r_filling_ser)
-    # filler.save_day_data()
+    filler.save_day_data()
 #    print(filler.day_row.vedomost)
 #    print(filler.mother_frame.loc[14:15])
 #

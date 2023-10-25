@@ -242,8 +242,11 @@ class MonthData:
         self.categories = pd.DataFrame()
         self.date = pd.DataFrame()
 
-    def load_and_prepare_vedomost(self):
-        self.mother_frame = pd.read_excel(self.path, sheet_name='vedomost', dtype='object')
+    def load_and_prepare_vedomost(self, path=''):
+        if path:
+            self.mother_frame = pd.read_excel(path, sheet_name='vedomost', dtype='object')
+        else:
+            self.mother_frame = pd.read_excel(self.path, sheet_name='vedomost', dtype='object')
         self.mother_frame = self.mother_frame.replace('CAN`T', 'can`t')
         self.mother_frame['DATE'] = [i.date() for i in self.mother_frame['DATE']]
         return self.mother_frame
@@ -257,10 +260,10 @@ class MonthData:
         self.mother_frame = df
 
     def get_price_frame(self, path=''):
-        if not path:
-            self.prices = pd.read_excel(self.path, sheet_name='price', index_col=0).fillna(0)
-        else:
+        if path:
             self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
+        else:
+            self.prices = pd.read_excel(self.path, sheet_name='price', index_col=0).fillna(0)
         return self.prices
 
     def limiting(self, limiting, recipient_name=''):

@@ -15,7 +15,8 @@ router = Router()
 
 @router.message(Command("start"))
 async def cmd_start_and_get_r_vedomost(message: Message):
-    filler.r_name = username_dict[message.from_user.first_name]
+    r_name = username_dict[message.from_user.first_name]
+    filler.get_r_name_and_limiting(r_name)
 
     if filler.days_for_filling:
         await message.answer("Привет! Формирую ведомость")
@@ -111,7 +112,7 @@ async def finish_filling_by_message(message: Message):
     if filled_in_str:
         answer = f'Вы заполнили {filled_in_str}'
         filler.save_day_data()
-        filler.get_mother_frame_and_refresh_values()
+        filler.get_r_name_and_limiting()
     else:
         answer = 'Вы ничего не заполнили'
     await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
