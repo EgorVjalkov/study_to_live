@@ -26,10 +26,10 @@ class VedomostFiller:
         self.day_row = pd.DataFrame()
         self.day_row_index = None
         self.recipient = recipient
-        self.r_filling_ser = pd.Series()
-        self.non_filled_categories = []
+        self.r_cats_ser_by_positions = pd.Series()
+        self.non_filled_cells_df = pd.DataFrame()
 
-        self.filling_now_cell = None
+        self.active_cell = None
 
     @property
     def admin(self):
@@ -72,68 +72,66 @@ class VedomostFiller:
         if not self.day_row.vedomost.empty:
             filtered = [i for i in self.day_row.categories.columns
                         if i[0] in self.r_positions]
-            self.r_filling_ser = self.day_row.categories.loc[self.day_row_index][filtered]
-        return self.r_filling_ser
+            self.r_cats_ser_by_positions = self.day_row.categories.loc[self.day_row_index][filtered]
+        return self.r_cats_ser_by_positions
 
 # затрах с нонфиледом.
-    def get_non_filled_categories(self):
-        self.r_filling_ser = self.r_filling_ser.replace('!', np.nan)
-        print(self.r_filling_ser)
-        non_filled = self.r_filling_ser.to_dict()
+    def get_non_filled_cells_df(self):
+        self.r_cats_ser_by_positions = self.r_cats_ser_by_positions.replace('!', np.nan)
+        print(self.r_cats_ser_by_positions)
+        non_filled = self.r_cats_ser_by_positions.to_dict()
         for cat in non_filled:
-            cell.cat_name, cell.cat_value = cat, non_filled[cat]
-            if not cell.is_empty: # прoверка на пустоту
-                if cell.has_private_value: # проверка на именные значения
-                    if cell.can_append_data: # проверка на возможность дописывания в яйчейку
-                        self.non_filled_categories.append(cat)
+            cell = VedomostCell(self.prices,
+                                self.recipient,
+                                name=cat,
+                                value=non_filled[cat])
+            if cell.is_filled: # прoверка на заполненность
+                if cell.can_append_data: # проверка на возможность дописывания в яйчейку
+                    self.non_filled_cells_df[cell.cat_name] = cell.extract_cell_data()
             else:
-                self.non_filled_categories.append(cat)
-        return self.non_filled_categories
+                self.non_filled_cells_df[cell.cat_name] = cell.extract_cell_data()
+        return self.non_filled_cells_df
 
-    def delete_filled_category(self, cat_name):
-        self.non_filled_categories.remove(cat_name)
+    @property
+    def non_filled_names_list(self):
+        non_filled = self.non_filled_cells_df.loc['new_value'].map(lambda e: pd.notna(e))
+        non_filled_list = [i for i in non_filled.index if non_filled[i]]
+        return non_filled_list
 
     @property
     def recipient_all_filled_flag(self):
-        if not self.non_filled_categories:
+        if not self.non_filled_names_list:
             return True
         else:
             return False
 
 # ежно здесь подумать как переплести Cell и Filler
-    def change_a_cell(self, VedomostCell_object):
-        self.filling_now_cell = VedomostCell_object
-        self.filling_now_cell.cat_value = self.r_filling_ser[self.filling_now_cell.name]
-        # self.delete_filled_category(self.filling_now_cell.cat_name)
-        return self.filling_now_cell
+    def change_a_cell(self, name_from_tg):
+        self.active_cell = name_from_tg
+        return self.active_cell
 
-    def fill_the_cell(self, new_value):
-        if new_value == 'не мог':
-            new_value = 'can`t'
-        elif new_value == 'забыл':
-            new_value = '!'
-
-        #print(self.filling_now_cell.cat_name,
-        #      self.filling_now_cell.cat_value,
-        #      self.filling_now_cell.is_empty,
-        #      self.filling_now_cell.has_private_value)
-
-        if self.filling_now_cell.is_empty:
-            if self.filling_now_cell.has_private_value:
-                self.r_filling_ser.at[self.filling_now_cell.cat_name] = \
-                    f'{self.recipient[0]}{new_value}'
-            else:
-                self.r_filling_ser.at[self.filling_now_cell.cat_name] = new_value
-
+    def fill_the_cell(self, value_from_tg):
+        if value_from_tg == 'не мог':
+            value_from_tg = 'can`t'
+        elif value_from_tg == 'забыл':
+            value_from_tg = '!'
+        cell_ser = self.non_filled_cells_df[self.active_cell]
+        print(cell_ser)
+        if cell_ser['is_filled']:
+            self.non_filled_cells_df.loc['new_value'][self.active_cell] = \
+                    f'{cell_ser["old_value"]},{self.recipient[0]}{value_from_tg}'
         else:
-            self.r_filling_ser.at[self.filling_now_cell.cat_name] = \
-                f'{self.filling_now_cell.cat_value},{self.recipient[0]}{new_value}'
-
-        return self.filling_now_cell
+            if cell_ser['has_private_value']:
+                self.non_filled_cells_df.loc['new_value'][self.active_cell] = \
+                    f'{self.recipient[0]}{value_from_tg}'
+            else:
+                self.non_filled_cells_df.loc['new_value'][self.active_cell] = value_from_tg
 
     def save_day_data(self):
-        for c in self.r_filling_ser.index:
-            self.day_row.vedomost.loc[self.day_row_index, c] = self.r_filling_ser[c]
+        new_value_row = self.non_filled_cells_df.loc['new_value']
+        for c in new_value_row.index:
+            self.day_row.vedomost.loc[self.day_row_index][c]\
+                = new_value_row.loc[c]
 
         self.mother_frame[self.day_row_index:self.day_row_index+1]\
             = self.day_row.vedomost
@@ -158,21 +156,19 @@ if __name__ == '__main__':
     #pd.reset_option('display.max.columns')
     filler = VedomostFiller(path=f'months/{month}/{month}.xlsx')
     filler.get_mother_frame_and_prices()
-    cell = VedomostCell(filler.prices, num_of_recipietns=2)
     filler.get_r_name_and_limiting('Egr')
 
     filler.change_the_day_row('16.10.23')
     filler.filtering_by_positions()
-    filler.get_non_filled_categories()
-    for i in filler.non_filled_categories:
-        cell.name = i
-        filler.change_a_cell(cell)
-        filler.fill_the_cell(new_value='5')
-        # тут есть баги!!!!!
-        filler.get_non_filled_categories()
-        print(filler.non_filled_categories)
-    print(filler.r_filling_ser)
+    filler.get_non_filled_cells_df()
+    print(filler.non_filled_names_list)
+    for i in filler.non_filled_cells_df:
+        print(filler.non_filled_names_list)
+        filler.change_a_cell(i)
+        filler.fill_the_cell('5')
+    filler.change_a_cell('z:stroll')
+    filler.fill_the_cell('2')
     filler.save_day_data()
-#    print(filler.day_row.vedomost)
-#    print(filler.mother_frame.loc[14:15])
-#
+##    print(filler.day_row.vedomost)
+##    print(filler.mother_frame.loc[14:15])
+##

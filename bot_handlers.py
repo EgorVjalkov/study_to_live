@@ -56,12 +56,12 @@ async def get_a_cell_keyboard(message: Message):
         await message.reply("Сначала нужно выбрать дату! Дайте команду /start")
     else:
         filler.filtering_by_positions()
-        if not filler.r_filling_ser:
+        if not filler.r_cats_ser_by_positions:
             await message.reply("Все заполнено!")
             # здесь нужна функция, которая поставит "Y" в ведомость. проверка на чухана (меня)
         else:
             kb = ReplyKeyboardBuilder()
-            keyboard = get_categories_keyboard(kb, filler.r_filling_ser)
+            keyboard = get_categories_keyboard(kb, filler.r_cats_ser_by_positions)
             await message.answer("Выберите категорию для заполнения", reply_markup=keyboard)
 
 
@@ -76,9 +76,9 @@ def get_filling_inline(inline, cat_keys):
     return inline
 
 
-@router2.message(F.text.func(lambda text: text in filler.r_filling_ser))
+@router2.message(F.text.func(lambda text: text in filler.r_cats_ser_by_positions))
 async def change_a_category(message: Message):
-    if filler.r_filling_ser:
+    if filler.r_cats_ser_by_positions:
         cell.cat_name = message.text
 
         answer = cell.description
@@ -95,10 +95,10 @@ async def change_a_category(message: Message):
         await message.answer(answer, reply_markup=callback.as_markup())
 
         filler.filled[cell.cat_name] = None
-        filler.r_filling_ser.remove(message.text)
+        filler.r_cats_ser_by_positions.remove(message.text)
 
         kb = ReplyKeyboardBuilder()
-        keyboard = get_categories_keyboard(kb, filler.r_filling_ser)
+        keyboard = get_categories_keyboard(kb, filler.r_cats_ser_by_positions)
 
         #здесь хотелочь бы при наличии отклика на колбэк вернуть новую клаву Надо мутить с асинхронью
         await message.answer("Следующая категория?", reply_markup=keyboard)

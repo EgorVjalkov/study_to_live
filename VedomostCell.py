@@ -3,11 +3,13 @@ import pandas as pd
 
 
 class VedomostCell:
-    def __init__(self, price_frame, num_of_recipietns, name=''):
+    def __init__(self, price_frame, recipient, name='', value=''):
         self.prices = price_frame
+        self.r_litera = recipient[0]
+
         self.name = name
-        self.num_of_recipients = num_of_recipietns
-        self.value = None
+        self.old_value = value
+        self.new_value = np.nan
 
     @property
     def cat_name(self):
@@ -18,12 +20,12 @@ class VedomostCell:
         self.name = category_name
 
     @property
-    def cat_value(self):
-        return self.value
+    def old_cat_value(self):
+        return self.old_value
 
-    @cat_value.setter
-    def cat_value(self, value):
-        self.value = value
+    @old_cat_value.setter
+    def old_cat_value(self, value):
+        self.old_value = value
 
     @property
     def category_data(self):
@@ -51,8 +53,8 @@ class VedomostCell:
         return keys
 
     @property
-    def is_empty(self):
-        return pd.isna(self.value)
+    def is_filled(self):
+        return pd.notna(self.old_value)
 
     @property
     def has_private_value(self):
@@ -61,10 +63,23 @@ class VedomostCell:
     @property
     def can_append_data(self):
         flag = False
-        record_num = len(self.value.split(','))
-        if record_num < self.num_of_recipients:
-            flag = True
+        if self.is_filled:
+            if self.r_litera not in self.old_value:
+                flag = True
         return flag
+
+    def extract_cell_data(self):
+        cell_data = {
+            'keys': self.keys,
+            'description': self.description,
+            'old_value': self.old_value,
+            'is_filled': self.is_filled,
+            'has_private_value': self.has_private_value,
+            'can_append_data': self.can_append_data,
+            'new_value': None
+        }
+        return pd.Series(cell_data)
+
 
 a = np.nan
 print(pd.isna(a))
