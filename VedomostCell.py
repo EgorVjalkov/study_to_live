@@ -63,9 +63,8 @@ class VedomostCell:
     @property
     def can_append_data(self):
         flag = False
-        if self.is_filled:
-            if self.r_litera not in self.old_value:
-                flag = True
+        if self.is_filled and self.r_litera not in self.old_value:
+            flag = True
         return flag
 
     def extract_cell_data(self):
@@ -81,5 +80,5 @@ class VedomostCell:
         return pd.Series(cell_data)
 
 
-a = np.nan
-print(pd.isna(a))
+#a = np.nan
+#print(pd.isna(a))

@@ -23,11 +23,8 @@ async def main():
 month = 'oct23'
 path_to_vedomost = f'months/{month}/{month}.xlsx'
 username_dict = {'Jegor': 'Egr', 'Валерия': 'Lera'}
+filler = vfill.VedomostFiller()
+filler.get_mother_frame_and_prices(path_to_vedomost)
 
 if __name__ == '__main__':
-    filler = vfill.VedomostFiller()
-    filler.get_mother_frame_and_prices(path_to_vedomost)
     asyncio.run(main())
-else:
-    filler = vfill.VedomostFiller()
-    filler.get_mother_frame_and_prices(path_to_vedomost)
