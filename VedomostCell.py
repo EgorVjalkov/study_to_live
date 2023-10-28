@@ -49,7 +49,7 @@ class VedomostCell:
         elif self.type == 'dict':
             keys = list(eval(self.category_data['PRICE']).keys())
         else:
-            keys = None
+            keys = ['передать вручную']
         return keys
 
     @property

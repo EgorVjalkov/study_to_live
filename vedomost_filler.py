@@ -61,6 +61,12 @@ class VedomostFiller:
                 for d in days}
         return days
 
+    @property
+    def changed_date(self):
+        date = self.day_row.date.at[self.day_row_index, 'DATE']
+        date = datetime.date.strftime(date,  '%d.%m.%y')
+        return date
+
     def change_the_day_row(self, date_form_tg):
         self.day_row_index = self.days_for_filling[date_form_tg]
         self.md_instrument.vedomost = self.r_vedomost.loc[self.day_row_index:self.day_row_index]
@@ -114,11 +120,13 @@ class VedomostFiller:
 
     @property
     def filled_names_list(self):
-        filled_list = []
+        filled = []
         if not self.non_filled_cells_df.empty:
             filled = self.non_filled_cells_df.loc['new_value'].map(lambda e: pd.notna(e))
-            filled_list = [i for i in filled.index if filled[i]]
-        return filled_list
+            filled = {i: filled[i] for i in filled.index if filled[i]}
+            filled = [f'{i} - {self.non_filled_cells_df.loc["new_value"][i]}'
+                      for i in filled]
+        return filled
 
     @property
     def recipient_all_filled_flag(self):
@@ -127,7 +135,6 @@ class VedomostFiller:
         else:
             return False
 
-# ежно здесь подумать как переплести Cell и Filler
     def change_a_cell(self, name_from_tg):
         self.active_cell = name_from_tg
         return self.active_cell
