@@ -4,7 +4,7 @@ from testing import does_need_correction
 from analytic_utilities import FrameForAnalyse
 from BonusColumn import BonusColumn
 
-recipients = ['Egr']
+recipients = ['Egr', 'Lera']
 month = "oct23"
 
 path_to_file = f'months/{month}/{month}.xlsx'
@@ -36,6 +36,7 @@ def main():
             r.get_all_coefs_col()
             r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
             r.get_r_vedomost(['Egr', 'Lera'], md.categories)
+            print(r.cat_data)
             #fltr = FrameForAnalyse(df=r.cat_data)
             #fltr.filtration([('positions', ['h'], 'pos')])
             #for column in fltr.items:

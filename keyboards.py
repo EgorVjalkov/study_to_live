@@ -3,9 +3,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 
 def get_keyboard(keyboard, keys_list, rows=None):
-    print(keys_list)
     for key in keys_list:
-        print(key)
         keyboard.add(KeyboardButton(text=key))
     keyboard.add(KeyboardButton(text='завершить заполнение'))
     if rows:

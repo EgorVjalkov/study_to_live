@@ -142,9 +142,11 @@ class Recipient:
         all_private_positions = [i[0].upper() for i in recipients]
         for column in categories:
             position = column[0].upper()
+            # здесь можно упростить, т.. к. мы уже сделали пометки где есть личные отметки а где нет
             double_category_flag = [i for i in categories[column] if str(i)[0] in all_private_positions]
             if double_category_flag:
-                column_list = [PriceMarkCalc(result=i).prepare_named_result(self.r_name) for i in categories[column]]
+                column_list = [PriceMarkCalc(result=i).prepare_named_result(self.r_name)
+                               for i in categories[column]]
                 self.cat_data[column] = column_list
             else:
                 if self.litera == position or position not in all_private_positions:

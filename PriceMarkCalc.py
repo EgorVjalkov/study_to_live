@@ -132,30 +132,32 @@ class PriceMarkCalc:
 
         return self.price
 
-    def prepare_named_result(self, recipient_name): # результат по литере
+    def prepare_named_result(self, recipient): # результат по литере
+        r_litera = recipient[0]
         print(self.result)
-        if type(self.result) == str:
-            comp_result = self.result.split(',')
-            for i in comp_result:
-                if i[0].isupper():
-                    if i[0] == recipient_name[0]:
-                        if len(i) == 1:
-                            self.result = '+'
-                        else:
-                            self.result = i[1:] if i[1:].isdigit() else i[1:]
-                        break
-                    else:
-                        self.result = 'wishn`t'
+        if isinstance(self.result, str):
+            comp_result_dict = {i[0]: i[1:] for i in self.result.split(',')}
+            numeric_values = [int(comp_result_dict[i]) for i in comp_result_dict if comp_result_dict[i].isnumeric()]
+            print(numeric_values)
+            if r_litera not in comp_result_dict:
+                if sum(numeric_values) > 0:
+                    self.result = 'wishn`t'
+            else:
+                if comp_result_dict[r_litera] == '0' and sum(numeric_values) > 0:
+                    self.result = 'wishn`t'
+                else:
+                    self.result = comp_result_dict[r_litera]
+
         return self.result
 
 
-#results = ['2', 1.0, 1, True, 'L1', 'L22:00', 'E1,L2', 'L']
-
-# for i in results:
-#    cc = PriceMarkCalc(result=i)
-#    cc.prepare_named_result('Egr')
-#    print(cc.result)
-#    print()
+#results = ['L1', 'E1', 'L22:00,Ecan`t', 'EF,LF', 'E1,L0']
+#
+#for i in results:
+#   cc = PriceMarkCalc(result=i)
+#   cc.prepare_named_result('Lera')
+#   print(cc.result)
+#   print()
 
 # cc = PriceMarkCalc('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
 #cc = PriceMarkCalc('21:50', '{"<.22": "20+1*", "<.23": 0, ">=.23": "-2*"}')

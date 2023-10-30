@@ -86,6 +86,16 @@ async def change_a_category(message: Message):
     last_message = message
 
 
+@router2.message(F.text.func(lambda text: len(text) == 5 and text.find(':') == 2)) # xx:yy
+async def fill_a_cell_with_time(message: Message):
+    cat_value = message.text
+    filler.fill_the_cell(cat_value)
+    await message.answer(f"Вы заполнили '{cat_value}' в {filler.active_cell}")
+    await get_categories_keyboard(message, answer='Следующая категория?')
+    print(filler.non_filled_cells_df[filler.active_cell])
+    print(filler.filled_names_list)
+
+
 @router2.message(F.text == 'завершить заполнение')
 async def finish_filling_by_message(message: Message):
     answer = 'Вы ничего не заполнили'
@@ -123,11 +133,3 @@ async def fill_by_callback(callback: CallbackQuery):
     print(filler.filled_names_list)
 
 
-@router3.message(F.text.func(lambda text: len(text) == 5 and text.find(':') == 2)) # xx:yy
-async def fill_a_cell_with_time(message: Message):
-    cat_value = message.text
-    filler.fill_the_cell(cat_value)
-    await message.answer(f"Вы заполнили '{cat_value}' в {filler.active_cell}")
-    await get_categories_keyboard(message, answer='Следующая категория?')
-    print(filler.non_filled_cells_df[filler.active_cell])
-    print(filler.filled_names_list)
