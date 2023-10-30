@@ -26,5 +26,3 @@ def get_filling_inline(inline, cat_name, cat_keys):
                InlineKeyboardButton(text='забыл', callback_data=f'fill_{cat_name}_забыл'))
     # надо красивое тут сдлать!
     return inline
-
-

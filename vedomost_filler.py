@@ -124,7 +124,7 @@ class VedomostFiller:
         if not self.non_filled_cells_df.empty:
             filled = self.non_filled_cells_df.loc['new_value'].map(lambda e: pd.notna(e))
             filled = {i: filled[i] for i in filled.index if filled[i]}
-            filled = [f'{i} - {self.non_filled_cells_df.loc["new_value"][i]}'
+            filled = [f'{i} - "{self.non_filled_cells_df.loc["new_value"][i]}"'
                       for i in filled]
         return filled
 
@@ -146,6 +146,7 @@ class VedomostFiller:
             value_from_tg = '!'
         cell_ser = self.non_filled_cells_df[self.active_cell]
         if cell_ser['is_filled']:
+            # проверка на не нулевое значение?
             self.non_filled_cells_df.loc['new_value'][self.active_cell] = \
                     f'{cell_ser["old_value"]},{self.recipient[0]}{value_from_tg}'
         else:
@@ -189,9 +190,9 @@ if __name__ == '__main__':
     #pd.reset_option('display.max.columns')
     filler = VedomostFiller(path=f'months/{month}/{month}.xlsx')
     filler.get_mother_frame_and_prices()
-    filler.get_r_name_and_limiting('Egr')
+    filler.get_r_name_and_limiting('Lera')
 
-    filler.change_the_day_row('16.10.23')
+    filler.change_the_day_row('29.10.23')
     filler.filtering_by_positions()
     filler.get_non_filled_cells_df()
     print(filler.non_filled_cells_df)
@@ -201,11 +202,12 @@ if __name__ == '__main__':
     #for i in filler.non_filled_names_list:
     #    filler.change_a_cell(i)
     #    filler.fill_the_cell('5')
-    #filler.change_a_cell('z:stroll')
-    #filler.fill_the_cell('2')
+    filler.change_a_cell('z:stroll')
+    filler.fill_the_cell('0')
     #print(filler.non_filled_names_list)
-    #print(filler.filled_names_list)
-    #filler.save_day_data()
+    print(filler.filled_names_list)
+    filler.write_day_data_to_mother_frame()
+    filler.change_done_mark_and_save_day_data()
 ##    print(filler.day_row.vedomost)
 ##    print(filler.mother_frame.loc[14:15])
 ##

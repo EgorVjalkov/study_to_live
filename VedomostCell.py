@@ -50,6 +50,8 @@ class VedomostCell:
             keys = list(eval(self.category_data['PRICE']).keys())
         else:
             keys = ['передать вручную']
+        if self.category_data['add_keys']:
+            keys.append(self.category_data['add_keys'])
         return keys
 
     @property
@@ -58,7 +60,7 @@ class VedomostCell:
 
     @property
     def has_private_value(self):
-        return self.category_data['private_value']
+        return True if self.category_data['private_value'] else False
 
     @property
     def can_append_data(self):

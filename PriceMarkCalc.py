@@ -133,6 +133,7 @@ class PriceMarkCalc:
         return self.price
 
     def prepare_named_result(self, recipient_name): # результат по литере
+        print(self.result)
         if type(self.result) == str:
             comp_result = self.result.split(',')
             for i in comp_result:
