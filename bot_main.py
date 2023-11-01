@@ -20,7 +20,7 @@ async def main():
     await dp.start_polling(bot)
 
 
-month = 'oct23'
+month = 'nov23'
 path_to_vedomost = f'months/{month}/{month}.xlsx'
 username_dict = {'Jegor': 'Egr', 'Валерия': 'Lera'}
 filler = vfill.VedomostFiller()

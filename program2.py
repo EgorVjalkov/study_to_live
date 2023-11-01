@@ -36,10 +36,10 @@ def main():
             r.get_all_coefs_col()
             r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
             r.get_r_vedomost(['Egr', 'Lera'], md.categories)
-            print(r.cat_data)
-            #fltr = FrameForAnalyse(df=r.cat_data)
-            #fltr.filtration([('positions', ['h'], 'pos')])
-            #for column in fltr.items:
+            # fltr = FrameForAnalyse(df=r.cat_data)
+            # cat_filter = ('positions', ['a', 'z', 'h'], 'pos')
+            # fltr.filtration([cat_filter])
+            # for column in fltr.items:
             for column in r.cat_data:
                 cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
                 print(cd.name)

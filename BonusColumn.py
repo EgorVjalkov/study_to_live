@@ -67,11 +67,16 @@ class BonusColumn:
         remains_index_list = []
         if self.cond == 'T':
             remains_dict = self.mark_bonus_frame[mark_col].to_dict()
-            remains_dict = {i: remains_dict[i] for i in remains_dict if remains_dict[i] == self.cond}
+            last_non_cond = {i: remains_dict[i] for i in remains_dict if remains_dict[i] != self.cond}
+            if last_non_cond: # проверка на некондицию
+                last_non_cond = max(last_non_cond) # последная некондиция, от нее и будет происходить дробление
+                remains_dict = {i: remains_dict[i] for i in remains_dict if i > last_non_cond}
+
             if remains_dict:
                 remains = len(remains_dict) % self.interval
+                #print(remains)
                 if remains:
-                    remains_index_list = list(remains_dict.keys())[-remains-1:]
+                    remains_index_list = list(remains_dict.keys())[-remains:]
         return remains_index_list
 
     def every_n_give_a_bonus(self, mark_col, bonus_col):
@@ -85,8 +90,9 @@ class BonusColumn:
             if self.mark_bonus_frame.at[i, mark_col] == self.cond:
                 if counter < self.interval:
                     if i in remains_list and i == remains_list[-1]:
+                        #print(f'{remains_list}, {self.pay}/{self.interval}*{len(remains_list)}')
                         # TRUE, но длины не хватит для результата, дробление суммы. ОПЦИЯ бонусов
-                        self.mark_bonus_frame.at[i, bonus_col] = round(self.pay / self.interval * len(remains_list),1)
+                        self.mark_bonus_frame.at[i, bonus_col] = round(self.pay / self.interval * len(remains_list), 1)
 
                     else: # TRUE, резуотат не достигнут, прибавка счетчика
                         self.mark_bonus_frame.at[i, bonus_col] = self.mark_bonus_frame.at[i, mark_col]
@@ -121,12 +127,11 @@ class BonusColumn:
 
 if __name__ == '__main__':
     month = 'oct23'
-    cat_name = 'a:sleeptime'
-    mark_column = pd.read_excel(f'output_files/{month}/Egr/{cat_name}.xlsx')['mark']
+    cat_name = 'z:teeth'
+    mark_column = pd.read_excel(f'output_files/{month}/Lera/{cat_name}.xlsx')['mark']
     cat_price_column = pd.read_excel(f'months/{month}/{month}.xlsx', sheet_name='price', index_col=0).fillna(0)
     cat_price_column = pd.Series(cat_price_column[cat_name])
     bc = BonusColumn(mark_column, cat_price_column)
     if bc.bonus_logic and bc.enough_len:
         bc.count_a_bonus()
-        print(bc.get_bonus_ser_without_statistic())
-        print(bc.get_bonus_ser_with_statistic())
+        print(bc.mark_bonus_frame)
