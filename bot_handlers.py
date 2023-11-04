@@ -7,9 +7,8 @@ from bot_main import filler, username_dict
 from keyboards import get_keyboard, get_filling_inline
 
 
-deleted_messages_list = []
 inlines = []
-msg = []
+msg_del = [] # лист для удаления сообщений
 last_message = None
 router = Router()
 # надо потестироваь на предмет асинхронности, почитать всякое про асунх
@@ -20,6 +19,7 @@ router = Router()
 @router.message(Command("start"))
 async def cmd_start_and_get_r_vedomost(message: Message, great=True):
     inlines.clear()
+    msg_del.clear()
     r_name = username_dict[message.from_user.first_name]
     filler.get_r_name_and_limiting(r_name)
     # здесь слетает фильтрация глючит и позволяет предавать дату за все дни
@@ -81,10 +81,9 @@ async def change_a_category(message: Message):
 
     callback = InlineKeyboardBuilder()
     callback = get_filling_inline(callback, cell_name, cell_data['keys'])
-    msg1 = await message.answer(f'{cell_name}:', reply_markup=ReplyKeyboardRemove())
-    msg.append(msg1)
-    msg2 = await message.answer(answer, reply_markup=callback.as_markup())
-    msg.append(msg2)
+
+    await message.answer(f'{cell_name}:', reply_markup=ReplyKeyboardRemove())
+    await message.answer(answer, reply_markup=callback.as_markup())
     global last_message
     last_message = message
 
@@ -93,10 +92,8 @@ async def change_a_category(message: Message):
 async def fill_a_cell_with_time(message: Message):
     cat_value = message.text
     filler.fill_the_cell(cat_value)
-    msg1 = await message.answer(f"Вы заполнили '{cat_value}' в {filler.active_cell}")
-    msg.append(msg1)
-    msg2 = await get_categories_keyboard(message, answer='Следующая категория?')
-    msg.append(msg2)
+    await message.answer(f"Вы заполнили '{cat_value}' в {filler.active_cell}")
+    await get_categories_keyboard(message, answer='Следующая категория?')
     print(filler.non_filled_cells_df[filler.active_cell])
     print(filler.filled_names_list)
 
@@ -111,8 +108,6 @@ async def finish_filling_by_message(message: Message):
         filler.write_day_data_to_mother_frame()
         filler.change_done_mark_and_save_day_data()
         filler.refresh_day_row()
-        for msg in msg:
-            await msg.delete()
     await message.answer(f'Завершeно! {answer}\n Жмите /start, чтобы продолжить', reply_markup=ReplyKeyboardRemove())
 
 
@@ -120,9 +115,8 @@ router3 = Router()
 
 
 async def remove_keyboard_if_sleeptime(message: Message):
-    msg = await message.answer(f"Жду сообщение в формате ЧЧ:ММ",
-                               reply_markup=ReplyKeyboardRemove())
-    msg.append(msg)
+    await message.answer(f"Жду сообщение в формате ЧЧ:ММ",
+                         reply_markup=ReplyKeyboardRemove())
 
 
 @router3.callback_query(F.data.contains('fill_'))
