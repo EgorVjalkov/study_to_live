@@ -138,7 +138,7 @@ class PriceMarkCalc:
         if isinstance(self.result, str):
             comp_result_dict = {i[0]: i[1:] for i in self.result.split(',')}
             numeric_values = [int(comp_result_dict[i]) for i in comp_result_dict if comp_result_dict[i].isnumeric()]
-            print(numeric_values)
+            #print(numeric_values)
             if r_litera not in comp_result_dict:
                 if sum(numeric_values) > 0:
                     self.result = 'wishn`t'

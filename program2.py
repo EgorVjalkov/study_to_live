@@ -27,7 +27,8 @@ def main():
             r.get_and_collect_r_name_col(md.accessory['COM'], 'children')
             r.get_and_collect_r_name_col(md.accessory['PLACE'], 'place')
             r.get_and_collect_r_name_col(md.accessory['DUTY'], 'duty')
-            r.get_family_col()
+            r.get_full_family_col(md.accessory['COM'])
+            r.get_with_children_col()
             r.get_duty_coefficients_col()
             r.get_children_coef_cols(md.accessory['KG'], md.accessory['WEAK'])
             r.get_place_coefficients_col()
@@ -41,7 +42,7 @@ def main():
             # fltr.filtration([cat_filter])
             # for column in fltr.items:
             for column in r.cat_data:
-                cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices)
+                cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices, r.r_name)
                 print(cd.name)
                 cd.add_price_column(show_calculation=show_calc)
                 cd.add_mark_column(show_calculation=show_calc)

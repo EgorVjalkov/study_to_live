@@ -80,7 +80,7 @@ class VedomostFiller:
         r.get_and_collect_r_name_col(self.day_row.accessory['COM'], 'children')
         r.get_and_collect_r_name_col(self.day_row.accessory['PLACE'], 'place')
         r.get_and_collect_r_name_col(self.day_row.accessory['DUTY'], 'duty')
-        r.get_family_col()
+        r.get_with_children_col()
         r.get_r_positions_col()
         return r.mod_data.at[self.day_row_index, 'positions']
 
@@ -186,13 +186,13 @@ class VedomostFiller:
 
 
 if __name__ == '__main__':
-    month = 'oct23'
+    month = 'nov23'
     #pd.reset_option('display.max.columns')
     filler = VedomostFiller(path=f'months/{month}/{month}.xlsx')
     filler.get_mother_frame_and_prices()
-    filler.get_r_name_and_limiting('Lera')
+    filler.get_r_name_and_limiting('Egr')
 
-    filler.change_the_day_row('29.10.23')
+    filler.change_the_day_row('05.11.23')
     filler.filtering_by_positions()
     filler.get_non_filled_cells_df()
     print(filler.non_filled_cells_df)
@@ -202,8 +202,8 @@ if __name__ == '__main__':
     #for i in filler.non_filled_names_list:
     #    filler.change_a_cell(i)
     #    filler.fill_the_cell('5')
-    filler.change_a_cell('z:stroll')
-    filler.fill_the_cell('0')
+    #filler.change_a_cell('z:stroll')
+    #filler.fill_the_cell('0')
     #print(filler.non_filled_names_list)
     print(filler.filled_names_list)
     filler.write_day_data_to_mother_frame()

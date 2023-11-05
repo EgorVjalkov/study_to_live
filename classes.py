@@ -63,19 +63,26 @@ class Recipient:
 
     def get_and_collect_r_name_col(self, column, new_column_name=''):
         def extract_by_litera(day):
-            if day:
-                day = day.split(', ')
-                day = [i[1:] if len(i) > 1 else '' for i in day if i[0] == self.litera]
-                return ''.join(day)
-            else:
-                return ''
+            data = ''
+            day = day.split(', ')
+            for d in day:
+                #print(d)
+                if self.litera in d:
+                    data = [i for i in list(d) if not i.isupper()]
+                    #print(data)
+                    data = ''.join(data)
+            return data
 
         self.mod_data[new_column_name] = column.map(extract_by_litera)
 
-    def get_family_col(self):
-        def is_family(r_children):
+    def get_with_children_col(self):
+        def with_children(r_children):
             return 'f' if r_children else ''
-        self.mod_data['family'] = self.mod_data['children'].map(is_family)
+        self.mod_data['w_children'] = self.mod_data['children'].map(with_children)
+
+    def get_full_family_col(self, commands_col: pd.Series):
+        print(commands_col)
+        self.mod_data['full_family'] = commands_col.map(lambda i: len(i.split()) < 2)
 
     def get_children_coef_cols(self, KG_col, weak_col):
         def get_child_coefs(r_children, KG_coefs, weak_children, d8):
@@ -128,7 +135,9 @@ class Recipient:
             return positions
 
         self.mod_data['positions'] = list(map(extract_positions,
-                                              self.mod_data['children'], self.mod_data['place'], self.mod_data['family']))
+                                              self.mod_data['children'],
+                                              self.mod_data['place'],
+                                              self.mod_data['w_children']))
 
     def get_all_coefs_col(self):
         def get_coef_dict(row_of_coefs):
@@ -298,8 +307,9 @@ class MonthData:
 
 
 class CategoryData:
-    def __init__(self, cf, mf, pf, date_frame=''):
+    def __init__(self, cf, mf, pf, recipient, date_frame=''):
         self.name = cf.name
+        self.recipient = recipient
         change_dict = {'T': '+'}
         self.cat_frame = pd.DataFrame(
             [change_dict[i] if i in change_dict else i for i in cf],
@@ -309,6 +319,10 @@ class CategoryData:
         self.position = self.name[0]
         self.price_frame = pf[self.name]
         self.mod_frame = mf
+
+    @property
+    def non_private_category(self):
+        return self.recipient[0].lower() != self.name[0]
 
     def find_a_price(self, result, positions):
         if self.position not in positions:
@@ -379,13 +393,14 @@ class CategoryData:
         coef_dict['coef'] = sum(coef_dict.values())
         return coef_dict
 
-    def total_count(self, price, coef, mark):
-        # if mark == 'True' and coef > 0.5 and price == 0:
-        #     coef = abs(50) * coef
-        # else:
+    def total_count(self, price, coef, full_family_flag):
         if price in ['can`t', 'wishn`t']:
             return coef, price
         else:
+            if full_family_flag and price > 0 and self.non_private_category:
+                price *= 0.5
+                reduced = True
+
             coef = abs(price) * coef
             price += coef
             return round(coef, 2), round(price, 2)
@@ -399,9 +414,11 @@ class CategoryData:
         result_list = list(map(self.total_count,
                                self.cat_frame['price'],
                                self.cat_frame['coef'],
-                               self.cat_frame['mark']))
+                               self.mod_frame['full_family']))
         self.cat_frame['mod'] = [i[0] for i in result_list]
         self.cat_frame['result'] = [i[1] for i in result_list]
+        # self.cat_frame['reduced'] = [i[2] for i in result_list] #
+        # self.cat_frame['full'] = self.mod_frame['full_family'] #
 
         if show_calculation:
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'),
