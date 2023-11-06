@@ -4,7 +4,6 @@ import datetime
 import classes as cl
 from analytic_utilities import FrameForAnalyse
 from VedomostCell import VedomostCell
-#from bot_main import cell
 # важная тема с заполнением: неодходимо прописать как быть с многочленными категориями, типо мытья посуды или прогулок
 # задроч с путем надо подумать как его слеоать!
 # хрень с классом Сell
@@ -14,7 +13,7 @@ ff = FrameForAnalyse()
 
 
 class VedomostFiller:
-    def __init__(self, path='', recipient=''):
+    def __init__(self, path='', recipient='', behavior=None):
         self.path_to_mother_frame = path
         self.md_instrument = cl.MonthData()
 
@@ -28,6 +27,7 @@ class VedomostFiller:
         self.recipient = recipient
         self.r_cats_ser_by_positions = pd.Series()
         self.non_filled_cells_df = pd.DataFrame()
+        self.behavior = behavior
 
         self.active_cell = None
 
@@ -48,17 +48,24 @@ class VedomostFiller:
         self.non_filled_cells_df = pd.DataFrame()
         self.active_cell = None
 
-    def get_r_name_and_limiting(self, r_name):
+    def get_r_name_and_limiting(self, r_name: str, behavior: str):
         self.recipient = r_name
         self.md_instrument.vedomost = self.mother_frame
-        self.r_vedomost = self.md_instrument.limiting('for filling', self.recipient)
+        self.behavior = behavior
+        self.r_vedomost = self.md_instrument.limiting(behavior, self.recipient)
 
     @property
-    def days_for_filling(self):
-        days = self.r_vedomost['DATE'].to_dict()
-        days = {i: days[i] for i in days if days[i] <= datetime.date.today()}
-        days = {datetime.date.strftime(days[d], '%d.%m.%y'): d
-                for d in days}
+    def days(self):
+        days = None
+        if self.behavior == 'for filling':
+            days = self.r_vedomost['DATE'].to_dict()
+            days = {i: days[i] for i in days if days[i] <= datetime.date.today()}
+            days = {datetime.date.strftime(days[d], '%d.%m.%y'): d
+                    for d in days}
+        elif self.behavior == 'for correction':
+            days = self.r_vedomost['DATE'].to_dict()
+            days = {datetime.date.strftime(days[d], '%d.%m.%y'): d
+                    for d in days}
         return days
 
     @property
@@ -68,7 +75,7 @@ class VedomostFiller:
         return date
 
     def change_the_day_row(self, date_form_tg):
-        self.day_row_index = self.days_for_filling[date_form_tg]
+        self.day_row_index = self.days[date_form_tg]
         self.md_instrument.vedomost = self.r_vedomost.loc[self.day_row_index:self.day_row_index]
         self.day_row = self.md_instrument
         self.day_row.get_frames_for_working()
@@ -190,24 +197,28 @@ if __name__ == '__main__':
     #pd.reset_option('display.max.columns')
     filler = VedomostFiller(path=f'months/{month}/{month}.xlsx')
     filler.get_mother_frame_and_prices()
-    filler.get_r_name_and_limiting('Egr')
+    filler.get_r_name_and_limiting('Egr', 'for filling')
+    print(filler.r_vedomost)
+    print(filler.days)
 
-    filler.change_the_day_row('05.11.23')
-    filler.filtering_by_positions()
-    filler.get_non_filled_cells_df()
-    print(filler.non_filled_cells_df)
-    print(filler.non_filled_names_list)
-    print(filler.filled_names_list)
-    print(filler.recipient_all_filled_flag)
-    #for i in filler.non_filled_names_list:
+    #filler.change_the_day_row('05.11.23')
+    #filler.filtering_by_positions()
+    #print(filler.r_cats_ser_by_positions)
+
+    #filler.get_non_filled_cells_df()
+    #print(filler.non_filled_cells_df)
+    #print(filler.non_filled_names_list)
+    #print(filler.filled_names_list)
+    #print(filler.recipient_all_filled_flag)
+    ##for i in filler.non_filled_names_list:
     #    filler.change_a_cell(i)
     #    filler.fill_the_cell('5')
     #filler.change_a_cell('z:stroll')
     #filler.fill_the_cell('0')
     #print(filler.non_filled_names_list)
-    print(filler.filled_names_list)
-    filler.write_day_data_to_mother_frame()
-    filler.change_done_mark_and_save_day_data()
+    #print(filler.filled_names_list)
+    #filler.write_day_data_to_mother_frame()
+    #filler.change_done_mark_and_save_day_data()
 ##    print(filler.day_row.vedomost)
 ##    print(filler.mother_frame.loc[14:15])
 ##

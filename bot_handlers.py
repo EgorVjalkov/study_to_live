@@ -19,21 +19,32 @@ router = Router()
 router.message.filter(F.chat.type == 'private')
 
 
-@router.message(Command("start"))
-async def cmd_start_and_get_r_vedomost(message: Message, greet=True):
-    print(message.chat.type)
+def get_r_vedomost(message: Message, behavior: str):
     r_name = username_dict[message.from_user.first_name]
-    filler.get_r_name_and_limiting(r_name)
-    #filler.refresh_day_row()
+    filler.get_r_name_and_limiting(r_name, behavior)
 
-    if filler.days_for_filling:
+
+@router.message(Command("fill"))
+async def cmd_fill(message: Message, greet=True):
+    get_r_vedomost(message, 'for filling')
+    if filler.days:
         answer = "Привет! Формирую ведомость" if greet else "Формирую ведомость"
         await message.answer(answer)
         days_kb = ReplyKeyboardBuilder()
-        days_kb = get_keyboard(days_kb, filler.days_for_filling)
+        days_kb = get_keyboard(days_kb, filler.days)
         await message.answer("Дата?", reply_markup=days_kb)
     else:
         await message.answer("Привет! Все заполнено!")
+
+
+@router.message(Command("correct"))
+async def cmd_correct(message: Message):
+    get_r_vedomost(message, 'for correction')
+    answer = "Привет! Формирую ведомость"
+    await message.answer(answer)
+    days_kb = ReplyKeyboardBuilder()
+    days_kb = get_keyboard(days_kb, filler.days)
+    await message.answer("Дата?", reply_markup=days_kb)
 
 
 async def get_categories_keyboard(message: Message):
@@ -46,8 +57,10 @@ async def get_categories_keyboard(message: Message):
     await message.answer(answer, reply_markup=keyboard)
 
 
-@router.message(F.text.func(lambda text: text in filler.days_for_filling))
+@router.message(F.text.func(lambda text: text in filler.days))
 async def change_a_date(message: Message):
+    # остановился здесь: нужно сделать унивресальную функцию решение
+
     filler.change_the_day_row(message.text)
     filler.filtering_by_positions()
     filler.get_non_filled_cells_df()
@@ -56,7 +69,7 @@ async def change_a_date(message: Message):
                             reply_markup=ReplyKeyboardRemove())
 
         filler.change_done_mark_and_save_day_data()
-        await cmd_start_and_get_r_vedomost(message, greet=False) # перезапускаем прогу
+        await cmd_fill(message, greet=False) # перезапускаем прогу
 
     else:
         inlines.extend(filler.non_filled_names_list)
@@ -103,9 +116,9 @@ async def finish_filling(message: Message):
         answer = "\n".join(filled_for_answer)
         filler.write_day_data_to_mother_frame()
         filler.change_done_mark_and_save_day_data()
-        filler.refresh_day_row()
-        inlines.clear()
-    await message.answer(f'Завершeно! {answer}\n Жмите /start, чтобы продолжить', reply_markup=ReplyKeyboardRemove())
+    filler.refresh_day_row()
+    inlines.clear()
+    await message.answer(f'Завершeно! {answer}\n Жмите /fill, чтобы продолжить', reply_markup=ReplyKeyboardRemove())
 
 
 router3 = Router()
@@ -131,13 +144,13 @@ async def fill_by_callback(callback: CallbackQuery):
     else:
         filler.fill_the_cell(cat_value)
         await callback.answer(f"Вы заполнили '{cat_value}' в {filler.active_cell}")
-    print(filler.non_filled_cells_df[filler.active_cell])
+    print(filler.active_cell)
     print(filler.filled_names_list)
 
 
 date_fill_router = Router()
 # не понимаю как это работает!
-date_fill_router.message.middleware(SetTimebyHandMiddleWare(filler.active_cell))
+#date_fill_router.message.middleware(SetTimebyHandMiddleWare(filler.active_cell))
 
 
 @date_fill_router.message(F.text.func(lambda text: len(text) == 5 and text.find(':') == 2)) # чч:mm

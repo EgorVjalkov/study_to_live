@@ -278,20 +278,24 @@ class MonthData:
         return self.prices
 
     def limiting(self, limiting, recipient_name=''):
+        ff.items = self.mother_frame['DONE'].to_list()
+
         if limiting == 'for count':
-            ff.items = self.mother_frame['DONE'].to_list()
             ff.filtration([('=', 'Y', 'pos')], behavior='index_values')
             ff.items = [i for i in ff.items if i < len(ff.items)]
-            self.mother_frame = ff.present_by_items(self.mother_frame)
             del self.mother_frame['DONE']
-        elif limiting == 'for filling':
+        else:
             marks_of_filled = ['Y', recipient_name[0]]
-            ff.items = self.mother_frame['DONE'].to_list()
-            ff.filtration(
-                [
-                    ('columns',  marks_of_filled, 'neg')
-                ],
-                behavior='index_values')
+
+            if limiting == 'for filling':
+                ff.filtration(
+                    [('columns',  marks_of_filled, 'neg')],
+                    behavior='index_values')
+            elif limiting == 'for correction':
+                ff.filtration(
+                    [('columns',  marks_of_filled, 'pos')],
+                    behavior='index_values')
+
         self.mother_frame = ff.present_by_items(self.mother_frame)
         return self.mother_frame
 
