@@ -26,7 +26,7 @@ class VedomostFiller:
         self.day_row_index = None
         self.recipient = recipient
         self.r_cats_ser_by_positions = pd.Series()
-        self.non_filled_cells_df = pd.DataFrame()
+        self.cells_df = pd.DataFrame()
         self.behavior = behavior
 
         self.active_cell = None
@@ -45,7 +45,7 @@ class VedomostFiller:
         self.day_row = pd.DataFrame()
         self.day_row_index = None
         self.r_cats_ser_by_positions = pd.Series()
-        self.non_filled_cells_df = pd.DataFrame()
+        self.cells_df = pd.DataFrame()
         self.active_cell = None
 
     def get_r_name_and_limiting(self, r_name: str, behavior: str):
@@ -56,16 +56,26 @@ class VedomostFiller:
 
     @property
     def days(self):
-        days = None
-        if self.behavior == 'for filling':
+        days = {}
+        if self.behavior:
             days = self.r_vedomost['DATE'].to_dict()
-            days = {i: days[i] for i in days if days[i] <= datetime.date.today()}
-            days = {datetime.date.strftime(days[d], '%d.%m.%y'): d
-                    for d in days}
-        elif self.behavior == 'for correction':
-            days = self.r_vedomost['DATE'].to_dict()
-            days = {datetime.date.strftime(days[d], '%d.%m.%y'): d
-                    for d in days}
+            if self.behavior == 'for filling':
+                days = {i: days[i] for i in days if days[i] <= datetime.date.today()}
+                days = {datetime.date.strftime(days[d], '%d.%m.%y'): d
+                        for d in days}
+            elif self.behavior == 'for correction':
+                today = datetime.date.today()
+                yesterday = today - datetime.timedelta(days=1)
+                categories_f = self.r_vedomost.get(
+                    [cat for cat in self.r_vedomost if cat.islower()])
+
+                days_index = [i for i in days if days[i] in [yesterday, today]] #находим индекс вчера и сегодня
+                days_index = [i for i in days_index                         # проверяем по индексу
+                              if not all(categories_f.loc[i].map(pd.isna))] # нужно ли что то корректированть
+
+                days = {i: days[i] for i in days_index}
+                days = {datetime.date.strftime(days[d], '%d.%m.%y'): d
+                        for d in days}
         return days
 
     @property
@@ -95,12 +105,12 @@ class VedomostFiller:
         if not self.day_row.vedomost.empty:
             filtered = [i for i in self.day_row.categories.columns
                         if i[0] in self.r_positions]
-            self.r_cats_ser_by_positions = self.day_row.categories.loc[self.day_row_index][filtered]
+            self.r_cats_ser_by_positions = \
+                self.day_row.categories.loc[self.day_row_index][filtered]
         return self.r_cats_ser_by_positions
 
-# затрах с нонфиледом.
-    def get_non_filled_cells_df(self):
-        self.r_cats_ser_by_positions = self.r_cats_ser_by_positions.replace('!', np.nan)
+    def get_cells_df(self):
+        #self.r_cats_ser_by_positions = self.r_cats_ser_by_positions.replace('!', np.nan)
         #print(self.r_cats_ser_by_positions)
         non_filled = self.r_cats_ser_by_positions.to_dict()
         for cat in non_filled:
@@ -108,42 +118,64 @@ class VedomostFiller:
                                 self.recipient,
                                 name=cat,
                                 value=non_filled[cat])
-            if cell.is_filled: # прoверка на заполненность
-                if cell.has_private_value:
-                    if cell.can_append_data: # проверка на возможность дописывания в яйчейку
-                        self.non_filled_cells_df[cell.cat_name] = cell.extract_cell_data()
-            else:
-                self.non_filled_cells_df[cell.cat_name] = cell.extract_cell_data()
+            if self.behavior == 'for filling':
+                print(cell.extract_cell_data())
+                if cell.can_be_filled:
+                    # print(cell.name, cell.old_value)
+                    # print(cell.can_be_filled)
+                    self.cells_df[cell.cat_name] = cell.extract_cell_data()
 
-        return self.non_filled_cells_df
+            else:
+                if cell.can_be_corrected:
+                    self.cells_df[cell.cat_name] = cell.extract_cell_data()
+
+        return self.cells_df
 
     @property
-    def non_filled_names_list(self):
+    def cell_names_list(self):
         non_filled_list = []
-        if not self.non_filled_cells_df.empty:
-            non_filled = self.non_filled_cells_df.loc['new_value'].map(lambda e: pd.isna(e))
-            non_filled_list = [i for i in non_filled.index if non_filled[i]]
+        if not self.cells_df.empty:
+            if self.behavior == 'for filling':
+                non_filled = self.cells_df.loc['new_value'].map(lambda v: v is None)
+                non_filled_list = [i for i in non_filled.index if non_filled[i]]
+            else:
+                non_filled_list = list(self.cells_df.columns)
         return non_filled_list
 
     @property
-    def filled_names_list(self):
+    def already_filled_cell_names_dict(self):
         filled = []
-        if not self.non_filled_cells_df.empty:
-            filled = self.non_filled_cells_df.loc['new_value'].map(lambda e: pd.notna(e))
-            filled = {i: filled[i] for i in filled.index if filled[i]}
-            filled = [f'{i} - "{self.non_filled_cells_df.loc["new_value"][i]}"'
-                      for i in filled]
+        if not self.cells_df.empty:
+            old = self.cells_df.loc['old_value'].to_dict()
+            new = self.cells_df.loc['new_value'].to_dict()
+            new = {i: new[i] for i in new if new[i]}
+            filled = {i: new[i] for i in new if new[i] != old[i]}
         return filled
 
     @property
+    def filled_cells_list_for_print(self):
+        return [f'{i} - "{self.already_filled_cell_names_dict[i]}"'
+                for i in self.already_filled_cell_names_dict]
+
+    @property
     def recipient_all_filled_flag(self):
-        if not self.non_filled_names_list:
+        if not self.cell_names_list:
             return True
         else:
             return False
 
     def change_a_cell(self, name_from_tg):
         self.active_cell = name_from_tg
+        if self.behavior == 'for correction':
+            old_value = self.cells_df.at['old_value', self.active_cell]
+            print(old_value)
+            cell_for_correction = VedomostCell(self.prices,
+                                               self.recipient,
+                                               name=self.active_cell,
+                                               value=old_value)
+            cell_for_correction.revert_value()
+            self.cells_df[self.active_cell] = cell_for_correction.extract_cell_data()
+
         return self.active_cell
 
     def fill_the_cell(self, value_from_tg):
@@ -151,17 +183,18 @@ class VedomostFiller:
             value_from_tg = 'can`t'
         elif value_from_tg == 'забыл':
             value_from_tg = '!'
-        cell_ser = self.non_filled_cells_df[self.active_cell]
+        cell_ser = self.cells_df[self.active_cell]
+
         if cell_ser['is_filled']:
-            # проверка на не нулевое значение?
-            self.non_filled_cells_df.loc['new_value'][self.active_cell] = \
+            self.cells_df.loc['new_value'][self.active_cell] = \
                     f'{cell_ser["old_value"]},{self.recipient[0]}{value_from_tg}'
+
         else:
             if cell_ser['has_private_value']:
-                self.non_filled_cells_df.loc['new_value'][self.active_cell] = \
+                self.cells_df.loc['new_value'][self.active_cell] = \
                     f'{self.recipient[0]}{value_from_tg}'
             else:
-                self.non_filled_cells_df.loc['new_value'][self.active_cell] = value_from_tg
+                self.cells_df.loc['new_value'][self.active_cell] = value_from_tg
 
     def change_done_mark(self):
         # print(self.mother_frame.loc[self.day_row_index]['DONE'])
@@ -173,16 +206,14 @@ class VedomostFiller:
         # print(self.mother_frame.loc[self.day_row_index]['DONE'])
 
     def write_day_data_to_mother_frame(self):
-        new_value_row = self.non_filled_cells_df.loc['new_value']
-        for c in new_value_row.index:
+        for c in self.already_filled_cell_names_dict:
             self.day_row.vedomost.loc[self.day_row_index][c]\
-                = new_value_row.loc[c]
+                = self.already_filled_cell_names_dict[c]
 
         self.mother_frame[self.day_row_index:self.day_row_index+1]\
             = self.day_row.vedomost
 
-    def change_done_mark_and_save_day_data(self):
-        self.change_done_mark()
+    def save_day_data(self):
         with pd.ExcelWriter(
                 self.path_to_mother_frame,
                 mode='a',
@@ -198,27 +229,25 @@ if __name__ == '__main__':
     filler = VedomostFiller(path=f'months/{month}/{month}.xlsx')
     filler.get_mother_frame_and_prices()
     filler.get_r_name_and_limiting('Egr', 'for filling')
-    print(filler.r_vedomost)
+    #print(filler.r_vedomost)
     print(filler.days)
 
-    #filler.change_the_day_row('05.11.23')
-    #filler.filtering_by_positions()
-    #print(filler.r_cats_ser_by_positions)
+    filler.change_the_day_row('06.11.23')
+    filler.filtering_by_positions()
+    # print(filler.r_cats_ser_by_positions)
 
-    #filler.get_non_filled_cells_df()
-    #print(filler.non_filled_cells_df)
-    #print(filler.non_filled_names_list)
-    #print(filler.filled_names_list)
-    #print(filler.recipient_all_filled_flag)
-    ##for i in filler.non_filled_names_list:
-    #    filler.change_a_cell(i)
-    #    filler.fill_the_cell('5')
-    #filler.change_a_cell('z:stroll')
-    #filler.fill_the_cell('0')
-    #print(filler.non_filled_names_list)
-    #print(filler.filled_names_list)
+    filler.get_cells_df()
+    cell = 'a:stroll'
+    print(filler.cells_df[cell])
+    filler.change_a_cell(cell)
+    filler.fill_the_cell('F')
+    print(filler.cells_df[cell])
+    print(filler.already_filled_cell_names_dict)
+    print(filler.cell_names_list)
+    print(filler.recipient_all_filled_flag)
     #filler.write_day_data_to_mother_frame()
-    #filler.change_done_mark_and_save_day_data()
-##    print(filler.day_row.vedomost)
-##    print(filler.mother_frame.loc[14:15])
-##
+    # filler.change_done_mark()
+    # filler.save_day_data()
+#    print(filler.day_row.vedomost)
+#    print(filler.mother_frame.loc[14:15])
+#

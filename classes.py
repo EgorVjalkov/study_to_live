@@ -272,31 +272,29 @@ class MonthData:
 
     def get_price_frame(self, path=''):
         if path:
-            self.prices = pd.read_excel(path, sheet_name='price', index_col=0).fillna(0)
+            self.prices = pd.read_excel(path, sheet_name='price', index_col=0)
         else:
-            self.prices = pd.read_excel(self.path, sheet_name='price', index_col=0).fillna(0)
+            self.prices = pd.read_excel(self.path, sheet_name='price', index_col=0)
         return self.prices
 
     def limiting(self, limiting, recipient_name=''):
-        ff.items = self.mother_frame['DONE'].to_list()
-
-        if limiting == 'for count':
-            ff.filtration([('=', 'Y', 'pos')], behavior='index_values')
-            ff.items = [i for i in ff.items if i < len(ff.items)]
-            del self.mother_frame['DONE']
+        if limiting == 'for correction':
+            return self.mother_frame
         else:
-            marks_of_filled = ['Y', recipient_name[0]]
+            ff.items = self.mother_frame['DONE'].to_list()
 
-            if limiting == 'for filling':
+            if limiting == 'for count':
+                ff.filtration([('=', 'Y', 'pos')], behavior='index_values')
+                ff.items = [i for i in ff.items if i < len(ff.items)]
+                del self.mother_frame['DONE']
+
+            elif limiting == 'for filling':
+                marks_of_filled = ['Y', recipient_name[0]]
                 ff.filtration(
                     [('columns',  marks_of_filled, 'neg')],
                     behavior='index_values')
-            elif limiting == 'for correction':
-                ff.filtration(
-                    [('columns',  marks_of_filled, 'pos')],
-                    behavior='index_values')
 
-        self.mother_frame = ff.present_by_items(self.mother_frame)
+            self.mother_frame = ff.present_by_items(self.mother_frame)
         return self.mother_frame
 
     def get_frames_for_working(self):
@@ -308,6 +306,7 @@ class MonthData:
     def fill_na(self):
         self.accessory.fillna('-')
         self.categories.fillna('!')
+        self.prices.fillna(0)
 
 
 class CategoryData:

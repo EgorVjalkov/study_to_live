@@ -39,7 +39,7 @@ class VedomostCell:
     @property
     def description(self):
         descr_list = self.category_data.get(['description', 'hint']).to_list()
-        descr_list = [e for e in descr_list if e]
+        descr_list = [e for e in descr_list if pd.notna(e)]
         return descr_list
 
     @property
@@ -50,7 +50,7 @@ class VedomostCell:
             keys = list(eval(self.category_data['PRICE']).keys())
         else:
             keys = ['передать вручную']
-        if self.category_data['add_keys']:
+        if pd.notna(self.category_data['add_keys']):
             keys.append(self.category_data['add_keys'])
         return keys
 
@@ -60,7 +60,7 @@ class VedomostCell:
 
     @property
     def has_private_value(self):
-        return True if self.category_data['private_value'] else False
+        return pd.notna(self.category_data['private_value'])
 
     @property
     def can_append_data(self):
@@ -68,6 +68,29 @@ class VedomostCell:
         if self.is_filled and self.r_litera not in self.old_value:
             flag = True
         return flag
+
+    @property
+    def can_be_filled(self) -> bool:
+        flag = False
+        if self.is_filled:  # прoверка на заполненность
+            if self.has_private_value: # проверка на возможность иметь несколько значение
+                if self.can_append_data:  # проверка на возможность дописывания в яйчейку
+                    flag = True
+        else:
+            flag = True
+        return flag
+
+    @property
+    def can_be_corrected(self) -> bool:
+        return not self.can_be_filled
+
+    def revert_value(self):
+        revert_old_value = np.nan  # очистка ячейки в дефолте
+        if self.is_filled and self.r_litera in self.old_value:  # очистка записи при наличии записи в ней
+            revert_old_value = [i for i in self.old_value.split(',')
+                                if self.r_litera not in i]
+            revert_old_value = ''.join(revert_old_value)
+        self.old_value = revert_old_value
 
     def extract_cell_data(self):
         cell_data = {

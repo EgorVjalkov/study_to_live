@@ -1,3 +1,4 @@
+import datetime
 list_ = []
 
 
@@ -20,3 +21,6 @@ print_('1')
 print_('1')
 print(list_)
 
+today = datetime.date.today()
+yesterday = today - datetime.timedelta(days=1)
+print(today, yesterday)
