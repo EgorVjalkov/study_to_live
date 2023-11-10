@@ -156,6 +156,8 @@ class VedomostFiller:
                 non_filled_list = [i for i in non_filled.index if non_filled[i]]
             else:
                 non_filled_list = list(self.cells_df.columns)
+                # вот здесь коллизия: нужно решить как сделать: если я делаю мануальное, то у меня заполняется селл_намес
+                # лист, а значит пробиается флаг на полное заполнение, ставится ложная метка! нужно фиксить
         return non_filled_list
 
     @property

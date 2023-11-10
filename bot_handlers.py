@@ -151,7 +151,7 @@ async def finish_filling(message: Message):
         filled_for_answer.extend(filler.filled_cells_list_for_print)
         answer = "\n".join(filled_for_answer)
         filler.write_day_data_to_mother_frame()
-        if filler.behavior == 'for filling':
+        if filler.behavior in ['for filling', 'manually']:
             filler.change_done_mark()
         filler.save_day_data()
     filler.refresh_day_row()
