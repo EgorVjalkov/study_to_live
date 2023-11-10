@@ -99,10 +99,8 @@ class Recipient:
                         KG_l = KG_coefs.split(', ')
                         KG_coefs_list = [float(CompCoef(i).severity_dict['sev']) for i in KG_l if i[0] in r_children]
                         child_coef_dict['KG_coef'] = sum(KG_coefs_list)
-
             # print(r_children, weak_children, KG_coefs, d8)
             # print(child_coef_dict)
-
             return child_coef_dict
 
         coefs_list = list(map(get_child_coefs, self.mod_data['children'], KG_col, weak_col, self.mod_data['d8_coef']))
@@ -126,7 +124,8 @@ class Recipient:
 
     def get_sleepless_coef_col(self, vedomost):
         sleepless_col_name = self.private_position + ':siesta'
-        self.mod_data['sleep_coef'] = list(map(lambda i: True if i != 'can`t' else False, vedomost[sleepless_col_name]))
+        if sleepless_col_name in vedomost:
+            self.mod_data['sleep_coef'] = vedomost[sleepless_col_name].map(lambda i: i not in ['can`t', '!'])
 
     def get_r_positions_col(self):
         def extract_positions(children, place, family):
@@ -146,6 +145,25 @@ class Recipient:
 
         coef_frame = self.mod_data.get([i for i in self.mod_data if 'coef' in i])
         self.mod_data['coefs'] = list(map(get_coef_dict, coef_frame.to_dict('index').values()))
+
+    def get_mod_frame(
+            self,
+            acc_frame: pd.DataFrame,
+            categories_frame: pd.DataFrame,
+            new_names_dict: dict
+            ) -> pd.DataFrame:
+        columns = list(new_names_dict.keys())
+        for column in acc_frame.get(columns):
+            self.get_and_collect_r_name_col(acc_frame[column], new_names_dict[column])
+        self.get_full_family_col(acc_frame['COM'])
+        self.get_with_children_col()
+        self.get_duty_coefficients_col()
+        self.get_children_coef_cols(acc_frame['KG'], acc_frame['WEAK'])
+        self.get_place_coefficients_col()
+        self.get_sleepless_coef_col(categories_frame)
+        self.get_r_positions_col()
+        self.get_all_coefs_col()
+        return self.mod_data
 
     def get_r_vedomost(self, recipients, categories):
         all_private_positions = [i[0].upper() for i in recipients]
@@ -278,7 +296,7 @@ class MonthData:
         return self.prices
 
     def limiting(self, limiting, recipient_name=''):
-        if limiting == 'for correction':
+        if limiting in ['for correction', 'manually']:
             return self.mother_frame
         else:
             ff.items = self.mother_frame['DONE'].to_list()
@@ -304,9 +322,9 @@ class MonthData:
         self.categories = self.mother_frame.get([i for i in self.mother_frame if i == i.lower()])
 
     def fill_na(self):
-        self.accessory.fillna('-')
-        self.categories.fillna('!')
-        self.prices.fillna(0)
+        self.accessory = self.accessory.fillna('-')
+        self.categories = self.categories.fillna('!')
+        self.prices = self.prices.fillna(0)
 
 
 class CategoryData:

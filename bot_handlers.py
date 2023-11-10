@@ -1,3 +1,6 @@
+import datetime
+import pytz
+
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import (Message, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardButton, CallbackQuery)
@@ -45,6 +48,33 @@ async def cmd_correct(message: Message):
     days_kb = ReplyKeyboardBuilder()
     days_kb = get_keyboard(days_kb, filler.days)
     await message.answer("Дата?", reply_markup=days_kb)
+
+
+@router.message(Command("sleep")) # интересное здесь
+async def cmd_sleep(message: Message):
+    get_r_vedomost(message, 'manually')
+    message_day = datetime.datetime.now()
+    message_time = message_day.time()
+    #message_time = datetime.time(hour=11, minute=1)
+    if message_time.hour in range(6, 21):
+        category = filler.private_siesta_category
+        new_value = '+'
+    else:
+        if message_time.hour in range(0, 6):
+            message_time = datetime.time(hour=0, minute=0)
+            message_day -= datetime.timedelta(days=1)
+
+        category = filler.private_sleeptime_category
+        new_value = datetime.time.strftime(message_time, '%H:%M')
+
+    message_day = datetime.date.strftime(message_day, '%d.%m.%y')
+    filler.change_the_day_row(message_day)
+    filler.get_cells_df(category)
+    filler.fill_the_cell(new_value)
+    #print(message_day, category, new_value)
+    #print(filler.active_cell)
+    #print(filler.already_filled_cell_names_dict)
+    await finish_filling(message)
 
 
 async def get_categories_keyboard(message: Message):
@@ -99,9 +129,14 @@ async def change_a_category(message: Message):
     inline_args = callback, cell_name, cell_data['keys'], 'следующая'
     if not inlines:
         inline_args = callback, cell_name, cell_data['keys'], 'завершить'
-
     callback = get_filling_inline(*inline_args)
-    await message.answer(f'{cell_name}:', reply_markup=ReplyKeyboardRemove())
+
+    if filler.behavior == 'for correction':
+        await message.answer(f'Принято. Предыдущие значение - {cell_data["old_value"]}',
+                             reply_markup=ReplyKeyboardRemove())
+    else:
+        await message.answer('Принято', reply_markup=ReplyKeyboardRemove())
+
     await message.answer(answer, reply_markup=callback.as_markup())
     global last_message
     last_message = message
@@ -121,7 +156,7 @@ async def finish_filling(message: Message):
         filler.save_day_data()
     filler.refresh_day_row()
     inlines.clear()
-    await message.answer(f'Завершeно! {answer}\n Жмите /fill, чтобы продолжить', reply_markup=ReplyKeyboardRemove())
+    await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
 
 
 router3 = Router()

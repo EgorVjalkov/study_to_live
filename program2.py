@@ -20,21 +20,14 @@ def main():
         md.limiting(limiting='for count')
         md.get_frames_for_working()
         md.fill_na()
+        print(md.prices)
 
         for r_name in recipients:
+            # рефакторнуть???
+            rename_dict = {'COM': 'children', 'PLACE': 'place', 'DUTY': 'duty'}
             r = cl.Recipient(r_name, md.date)
             r.create_output_dir(f'output_files', month)
-            r.get_and_collect_r_name_col(md.accessory['COM'], 'children')
-            r.get_and_collect_r_name_col(md.accessory['PLACE'], 'place')
-            r.get_and_collect_r_name_col(md.accessory['DUTY'], 'duty')
-            r.get_full_family_col(md.accessory['COM'])
-            r.get_with_children_col()
-            r.get_duty_coefficients_col()
-            r.get_children_coef_cols(md.accessory['KG'], md.accessory['WEAK'])
-            r.get_place_coefficients_col()
-            r.get_sleepless_coef_col(md.mother_frame)
-            r.get_r_positions_col()
-            r.get_all_coefs_col()
+            r.get_mod_frame(md.accessory, md.categories, rename_dict)
             r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
             r.get_r_vedomost(['Egr', 'Lera'], md.categories)
             # fltr = FrameForAnalyse(df=r.cat_data)

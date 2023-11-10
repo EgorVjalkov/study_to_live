@@ -35,6 +35,14 @@ class VedomostFiller:
     def admin(self):
         return True if self.recipient == 'Egr' else False
 
+    @ property
+    def private_sleeptime_category(self):
+        return f'{self.recipient[0].lower()}:sleeptime'
+
+    @ property
+    def private_siesta_category(self):
+        return f'{self.recipient[0].lower()}:siesta'
+
     def get_mother_frame_and_prices(self, path_to_mother_frame=None):
         if path_to_mother_frame:
             self.path_to_mother_frame = path_to_mother_frame
@@ -56,13 +64,11 @@ class VedomostFiller:
 
     @property
     def days(self):
-        days = {}
+        days = self.r_vedomost['DATE'].to_dict()
         if self.behavior:
-            days = self.r_vedomost['DATE'].to_dict()
             if self.behavior == 'for filling':
                 days = {i: days[i] for i in days if days[i] <= datetime.date.today()}
-                days = {datetime.date.strftime(days[d], '%d.%m.%y'): d
-                        for d in days}
+
             elif self.behavior == 'for correction':
                 today = datetime.date.today()
                 yesterday = today - datetime.timedelta(days=1)
@@ -74,8 +80,9 @@ class VedomostFiller:
                               if not all(categories_f.loc[i].map(pd.isna))] # нужно ли что то корректированть
 
                 days = {i: days[i] for i in days_index}
-                days = {datetime.date.strftime(days[d], '%d.%m.%y'): d
-                        for d in days}
+
+        days = {datetime.date.strftime(days[d], '%d.%m.%y'): d
+                for d in days}
         return days
 
     @property
@@ -109,25 +116,34 @@ class VedomostFiller:
                 self.day_row.categories.loc[self.day_row_index][filtered]
         return self.r_cats_ser_by_positions
 
-    def get_cells_df(self):
+    def get_cells_df(self, category_name=''):
         #self.r_cats_ser_by_positions = self.r_cats_ser_by_positions.replace('!', np.nan)
         #print(self.r_cats_ser_by_positions)
-        non_filled = self.r_cats_ser_by_positions.to_dict()
-        for cat in non_filled:
+        if category_name:
+            self.active_cell = category_name
             cell = VedomostCell(self.prices,
                                 self.recipient,
-                                name=cat,
-                                value=non_filled[cat])
-            if self.behavior == 'for filling':
-                print(cell.extract_cell_data())
-                if cell.can_be_filled:
-                    # print(cell.name, cell.old_value)
-                    # print(cell.can_be_filled)
-                    self.cells_df[cell.cat_name] = cell.extract_cell_data()
+                                name=category_name,
+                                value=np.nan) # при выборе ячейки вручную, ее старое стирается
+            self.cells_df[cell.cat_name] = cell.extract_cell_data()
 
-            else:
-                if cell.can_be_corrected:
-                    self.cells_df[cell.cat_name] = cell.extract_cell_data()
+        else:
+            non_filled = self.r_cats_ser_by_positions.to_dict()
+            for cat in non_filled:
+                cell = VedomostCell(self.prices,
+                                    self.recipient,
+                                    name=cat,
+                                    value=non_filled[cat])
+                if self.behavior == 'for filling':
+                    print(cell.extract_cell_data())
+                    if cell.can_be_filled:
+                        # print(cell.name, cell.old_value)
+                        # print(cell.can_be_filled)
+                        self.cells_df[cell.cat_name] = cell.extract_cell_data()
+
+                else:
+                    if cell.can_be_corrected:
+                        self.cells_df[cell.cat_name] = cell.extract_cell_data()
 
         return self.cells_df
 
@@ -213,6 +229,9 @@ class VedomostFiller:
         self.mother_frame[self.day_row_index:self.day_row_index+1]\
             = self.day_row.vedomost
 
+    def count_day_sum(self):
+        pass
+
     def save_day_data(self):
         with pd.ExcelWriter(
                 self.path_to_mother_frame,
@@ -223,12 +242,14 @@ class VedomostFiller:
             self.mother_frame.to_excel(mf_writer, sheet_name='vedomost', index=False)
 
 
+
+
 if __name__ == '__main__':
     month = 'nov23'
     #pd.reset_option('display.max.columns')
     filler = VedomostFiller(path=f'months/{month}/{month}.xlsx')
     filler.get_mother_frame_and_prices()
-    filler.get_r_name_and_limiting('Egr', 'for filling')
+    filler.get_r_name_and_limiting('Egr', 'manually')
     #print(filler.r_vedomost)
     print(filler.days)
 
