@@ -135,7 +135,6 @@ class VedomostFiller:
                                     name=cat,
                                     value=non_filled[cat])
                 if self.behavior == 'for filling':
-                    print(cell.extract_cell_data())
                     if cell.can_be_filled:
                         # print(cell.name, cell.old_value)
                         # print(cell.can_be_filled)

@@ -117,7 +117,6 @@ async def change_a_category(message: Message):
     cell_name = message.text
     inlines.remove(cell_name)
     cell_data = filler.cells_df[cell_name]
-    print(cell_data)
 
     answer = cell_data['description']
     if not answer:
@@ -197,6 +196,5 @@ async def fill_a_cell_with_time(message: Message):
     cat_value = message.text
     filler.fill_the_cell(cat_value)
     await message.answer(f"Вы заполнили '{cat_value}' в {filler.active_cell}")
-    print(filler.cells_df[filler.active_cell])
     print(filler.already_filled_cell_names_dict)
 
