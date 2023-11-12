@@ -2,14 +2,8 @@ import pandas as pd
 import numpy as np
 import datetime
 import classes as cl
-from analytic_utilities import FrameForAnalyse
+from colorama import Fore
 from VedomostCell import VedomostCell
-# важная тема с заполнением: неодходимо прописать как быть с многочленными категориями, типо мытья посуды или прогулок
-# задроч с путем надо подумать как его слеоать!
-# хрень с классом Сell
-
-
-ff = FrameForAnalyse()
 
 
 class VedomostFiller:
@@ -203,15 +197,15 @@ class VedomostFiller:
         cell_ser = self.cells_df[self.active_cell]
 
         if cell_ser['is_filled']:
-            self.cells_df.loc['new_value'][self.active_cell] = \
-                    f'{cell_ser["old_value"]},{self.recipient[0]}{value_from_tg}'
+            self.cells_df.at['new_value', self.active_cell] = \
+                f'{cell_ser["old_value"]},{self.recipient[0]}{value_from_tg}'
 
         else:
             if cell_ser['has_private_value']:
-                self.cells_df.loc['new_value'][self.active_cell] = \
+                self.cells_df.at['new_value', self.active_cell] = \
                     f'{self.recipient[0]}{value_from_tg}'
             else:
-                self.cells_df.loc['new_value'][self.active_cell] = value_from_tg
+                self.cells_df.at['new_value', self.active_cell] = value_from_tg
 
     def change_done_mark(self):
         # print(self.mother_frame.loc[self.day_row_index]['DONE'])
@@ -224,10 +218,10 @@ class VedomostFiller:
 
     def write_day_data_to_mother_frame(self):
         for c in self.already_filled_cell_names_dict:
-            self.day_row.vedomost.loc[self.day_row_index][c]\
+            self.day_row.vedomost.at[self.day_row_index, c] \
                 = self.already_filled_cell_names_dict[c]
 
-        self.mother_frame[self.day_row_index:self.day_row_index+1]\
+        self.mother_frame[self.day_row_index:self.day_row_index+1] \
             = self.day_row.vedomost
 
     def count_day_sum(self):
@@ -243,33 +237,31 @@ class VedomostFiller:
             self.mother_frame.to_excel(mf_writer, sheet_name='vedomost', index=False)
 
 
-
-
 if __name__ == '__main__':
     month = 'nov23'
     #pd.reset_option('display.max.columns')
     filler = VedomostFiller(path=f'months/{month}/{month}.xlsx')
     filler.get_mother_frame_and_prices()
-    filler.get_r_name_and_limiting('Egr', 'manually')
+    filler.get_r_name_and_limiting('Egr', 'for filling')
     #print(filler.r_vedomost)
     print(filler.days)
 
-    filler.change_the_day_row('06.11.23')
+    filler.change_the_day_row('11.11.23')
     filler.filtering_by_positions()
     # print(filler.r_cats_ser_by_positions)
 
     filler.get_cells_df()
-    cell = 'a:stroll'
+    cell = 'e:plan'
     print(filler.cells_df[cell])
     filler.change_a_cell(cell)
-    filler.fill_the_cell('F')
+    filler.fill_the_cell('B')
     print(filler.cells_df[cell])
     print(filler.already_filled_cell_names_dict)
     print(filler.cell_names_list)
     print(filler.recipient_all_filled_flag)
-    #filler.write_day_data_to_mother_frame()
-    # filler.change_done_mark()
+    filler.write_day_data_to_mother_frame()
+    filler.change_done_mark()
+    print(filler.day_row_after_filling)
     # filler.save_day_data()
 #    print(filler.day_row.vedomost)
 #    print(filler.mother_frame.loc[14:15])
-#

@@ -1,5 +1,5 @@
 import datetime
-import pytz
+import pandas as pd
 
 from aiogram import Router, F
 from aiogram.filters import Command
@@ -16,7 +16,6 @@ msg_del = [] # лист для удаления сообщений
 last_message = None
 # надо потестироваь на предмет асинхронности, почитать всякое про асунх
 # запуск filler должен быть асинхронным!!!!
-# подумай как очистить все поля и заново перезапустить филлер
 
 router = Router()
 router.message.filter(F.chat.type == 'private')
@@ -153,6 +152,7 @@ async def finish_filling(message: Message):
         if filler.behavior in ['for filling', 'manually']:
             filler.change_done_mark()
         filler.save_day_data()
+        print(pd.Series(filler.already_filled_cell_names_dict))
     filler.refresh_day_row()
     inlines.clear()
     await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
