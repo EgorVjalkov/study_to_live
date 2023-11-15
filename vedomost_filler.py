@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import datetime
 import classes as cl
-from colorama import Fore
 from VedomostCell import VedomostCell
 
 
@@ -30,16 +29,17 @@ class VedomostFiller:
         return True if self.recipient == 'Egr' else False
 
     @ property
-    def private_sleeptime_category(self):
+    def r_sleeptime(self):
         return f'{self.recipient[0].lower()}:sleeptime'
 
     @ property
-    def private_siesta_category(self):
+    def r_siesta(self):
         return f'{self.recipient[0].lower()}:siesta'
 
     def get_mother_frame_and_prices(self, path_to_mother_frame=None):
         if path_to_mother_frame:
             self.path_to_mother_frame = path_to_mother_frame
+        print(self.path_to_mother_frame)
         self.mother_frame = self.md_instrument.load_and_prepare_vedomost(self.path_to_mother_frame)
         self.prices = self.md_instrument.get_price_frame(self.path_to_mother_frame)
 
@@ -50,8 +50,9 @@ class VedomostFiller:
         self.cells_df = pd.DataFrame()
         self.active_cell = None
 
-    def get_r_name_and_limiting(self, r_name: str, behavior: str):
-        self.recipient = r_name
+    def limiting(self, behavior: str, r_name=''):
+        if r_name:
+            self.recipient = r_name
         self.md_instrument.vedomost = self.mother_frame
         self.behavior = behavior
         self.r_vedomost = self.md_instrument.limiting(behavior, self.recipient)
@@ -242,7 +243,7 @@ if __name__ == '__main__':
     #pd.reset_option('display.max.columns')
     filler = VedomostFiller(path=f'months/{month}/{month}.xlsx')
     filler.get_mother_frame_and_prices()
-    filler.get_r_name_and_limiting('Egr', 'for filling')
+    filler.limiting('Egr', 'for filling')
     #print(filler.r_vedomost)
     print(filler.days)
 

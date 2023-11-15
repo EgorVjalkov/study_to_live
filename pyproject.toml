@@ -4,14 +4,20 @@ version = "0.1.0"
 description = ""
 authors = ["EgorVjalkov <e.vjalkov@yandex.ru>"]
 
+packages = [{include = "handlers"}]
+
 [tool.poetry.dependencies]
 python = "^3.10"
 pandas = "^1.5.2"
 openpyxl = "^3.0.10"
 colorama = "^0.4.6"
 aiogram = "^3.0.0"
+pathlib = "^1.0.1"
 
 [tool.poetry.dev-dependencies]
+
+[tool.poetry.scripts]
+bot = "bot_main:bot_run"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

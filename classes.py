@@ -180,7 +180,7 @@ class Recipient:
                     self.cat_data[column] = categories[column]
         return self.cat_data
 
-    def collect_to_result_frame(self, result_column, bonus_column=pd.Series()):
+    def collect_to_result_frame(self, result_column, bonus_column: pd.Series):
         self.result_frame = pd.concat([self.result_frame, result_column], axis=1)
         if not bonus_column.empty:
             self.result_frame[bonus_column.name] = bonus_column
@@ -298,7 +298,7 @@ class MonthData:
     def limiting(self, limiting, recipient_name=''):
         if limiting in ['for correction', 'manually']:
             return self.mother_frame
-        else:
+        else: # for filling
             ff.items = self.mother_frame['DONE'].to_list()
 
             if limiting == 'for count':
