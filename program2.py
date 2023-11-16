@@ -20,7 +20,7 @@ def main():
         md.limiting(limiting='for count')
         md.get_frames_for_working()
         md.fill_na()
-        print(md.prices)
+        #print(md.prices)
 
         for r_name in recipients:
             # рефакторнуть???
