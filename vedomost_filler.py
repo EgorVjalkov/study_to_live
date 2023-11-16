@@ -43,6 +43,9 @@ class VedomostFiller:
         self.mother_frame = self.md_instrument.load_and_prepare_vedomost(self.path_to_mother_frame)
         self.prices = self.md_instrument.get_price_frame(self.path_to_mother_frame)
 
+    def refresh_mf(self):
+        self.mother_frame = self.md_instrument.load_and_prepare_vedomost(self.path_to_mother_frame)
+
     def refresh_day_row(self):
         self.day_row = pd.DataFrame()
         self.day_row_index = None
@@ -155,7 +158,7 @@ class VedomostFiller:
         return non_filled_list
 
     @property
-    def already_filled_cell_names_dict(self):
+    def already_filled_dict(self):
         filled = []
         if not self.cells_df.empty:
             old = self.cells_df.loc['old_value'].to_dict()
@@ -166,11 +169,11 @@ class VedomostFiller:
 
     @property
     def filled_cells_list_for_print(self):
-        return [f'{i} - "{self.already_filled_cell_names_dict[i]}"'
-                for i in self.already_filled_cell_names_dict]
+        return [f'{i} - "{self.already_filled_dict[i]}"'
+                for i in self.already_filled_dict]
 
     @property
-    def recipient_all_filled_flag(self):
+    def all_filled_flag(self):
         if not self.cell_names_list:
             return True
         else:
@@ -208,22 +211,28 @@ class VedomostFiller:
             else:
                 self.cells_df.at['new_value', self.active_cell] = value_from_tg
 
+    def check_common_values(self):
+        pass
+    # прямо жуткая коллизия намечается с одновременным заполнением...
+
+    def write_day_data_to_mother_frame(self):
+        for c in self.already_filled_dict:
+            self.day_row.vedomost.at[self.day_row_index, c] \
+                = self.already_filled_dict[c]
+
+        self.refresh_mf()
+        self.check_common_values()
+
+        self.mother_frame[self.day_row_index:self.day_row_index+1] \
+            = self.day_row.vedomost
+
     def change_done_mark(self):
-        # print(self.mother_frame.loc[self.day_row_index]['DONE'])
-        if self.recipient_all_filled_flag:
+        if self.all_filled_flag:
             if pd.notna(self.mother_frame.at[self.day_row_index, 'DONE']):
                 self.mother_frame.at[self.day_row_index, 'DONE'] = 'Y'
             else:
                 self.mother_frame.at[self.day_row_index, 'DONE'] = self.recipient[0]
         # print(self.mother_frame.loc[self.day_row_index]['DONE'])
-
-    def write_day_data_to_mother_frame(self):
-        for c in self.already_filled_cell_names_dict:
-            self.day_row.vedomost.at[self.day_row_index, c] \
-                = self.already_filled_cell_names_dict[c]
-
-        self.mother_frame[self.day_row_index:self.day_row_index+1] \
-            = self.day_row.vedomost
 
     def count_day_sum(self):
         pass
@@ -257,9 +266,9 @@ if __name__ == '__main__':
     filler.change_a_cell(cell)
     filler.fill_the_cell('B')
     print(filler.cells_df[cell])
-    print(filler.already_filled_cell_names_dict)
+    print(filler.already_filled_dict)
     print(filler.cell_names_list)
-    print(filler.recipient_all_filled_flag)
+    print(filler.all_filled_flag)
     filler.write_day_data_to_mother_frame()
     filler.change_done_mark()
     print(filler.day_row_after_filling)

@@ -49,7 +49,7 @@ async def cmd_correct(message: Message):
         UDB.remove_recipient(message)
 
 
-@filler_router.message(Command("sleep")) # интересное здесь
+@filler_router.message(Command("sleep"))
 async def cmd_sleep(message: Message):
     UDB.add_new_recipient(message)
     UDB.r_data.filler.limiting('manually')
@@ -71,9 +71,9 @@ async def cmd_sleep(message: Message):
     UDB.r_data.filler.change_the_day_row(message_day)
     UDB.r_data.filler.get_cells_df(category)
     UDB.r_data.filler.fill_the_cell(new_value)
-    print(message_day, category, new_value)
-    print(UDB.r_data.filler.active_cell)
-    print(UDB.r_data.filler.already_filled_cell_names_dict)
+    #print(message_day, category, new_value)
+    #print(UDB.r_data.filler.active_cell)
+    #print(UDB.r_data.filler.already_filled_dict)
     await finish_filling(message)
 
 
@@ -86,15 +86,16 @@ filler_router.include_router(router2)
 async def finish_filling(message: Message):
     UDB.r = message.from_user.first_name
     answer = 'Вы ничего не заполнили'
-    if UDB.r_data.filler.already_filled_cell_names_dict:
+    if UDB.r_data.filler.already_filled_dict:
         filled_for_answer = [f'За {UDB.r_data.filler.changed_date} Вы заполнили:']
         filled_for_answer.extend(UDB.r_data.filler.filled_cells_list_for_print)
         answer = "\n".join(filled_for_answer)
         UDB.r_data.filler.write_day_data_to_mother_frame()
+        print(UDB.r_data.filler.behavior, UDB.r_data.filler.already_filled_dict, UDB.r_data.filler.all_filled_flag)
         if UDB.r_data.filler.behavior in ['for filling', 'manually']:
             UDB.r_data.filler.change_done_mark()
         UDB.r_data.filler.save_day_data()
-        print(pd.Series(UDB.r_data.filler.already_filled_cell_names_dict))
+        print(pd.Series(UDB.r_data.filler.already_filled_dict))
 
     UDB.remove_recipient(message)
     await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
@@ -192,7 +193,7 @@ async def fill_by_callback(callback: CallbackQuery):
             await callback.answer(f"Вы заполнили '{cat_value}' в {UDB.r_data.filler.active_cell}")
         print(UDB.r)
         print(UDB.r_data.filler.active_cell)
-        print(UDB.r_data.filler.already_filled_cell_names_dict)
+        print(UDB.r_data.filler.already_filled_dict)
 
 
 date_fill_router = Router()
@@ -210,4 +211,4 @@ async def fill_a_cell_with_time(message: Message):
     await message.answer(f"Вы заполнили '{cat_value}' в {UDB.r_data.filler.active_cell}")
     print(UDB.r)
     print(UDB.r_data.filler.active_cell)
-    print(UDB.r_data.filler.already_filled_cell_names_dict)
+    print(UDB.r_data.filler.already_filled_dict)
