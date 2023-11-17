@@ -3,6 +3,7 @@ import numpy as np
 import datetime
 import classes as cl
 from VedomostCell import VedomostCell
+from config import path_to_vedomost
 
 
 class VedomostFiller:
@@ -16,7 +17,7 @@ class VedomostFiller:
         self.r_vedomost = pd.DataFrame()
 
         self.day_row = pd.DataFrame()
-        self.day_row_index = None
+        self.row_in_process_index = None
         self.recipient = recipient
         self.r_cats_ser_by_positions = pd.Series()
         self.cells_df = pd.DataFrame()
@@ -43,12 +44,9 @@ class VedomostFiller:
         self.mother_frame = self.md_instrument.load_and_prepare_vedomost(self.path_to_mother_frame)
         self.prices = self.md_instrument.get_price_frame(self.path_to_mother_frame)
 
-    def refresh_mf(self):
-        self.mother_frame = self.md_instrument.load_and_prepare_vedomost(self.path_to_mother_frame)
-
     def refresh_day_row(self):
         self.day_row = pd.DataFrame()
-        self.day_row_index = None
+        self.row_in_process_index = None
         self.r_cats_ser_by_positions = pd.Series()
         self.cells_df = pd.DataFrame()
         self.active_cell = None
@@ -83,15 +81,9 @@ class VedomostFiller:
                 for d in days}
         return days
 
-    @property
-    def changed_date(self):
-        date = self.day_row.date.at[self.day_row_index, 'DATE']
-        date = datetime.date.strftime(date,  '%d.%m.%y')
-        return date
-
     def change_the_day_row(self, date_form_tg):
-        self.day_row_index = self.days[date_form_tg]
-        self.md_instrument.vedomost = self.r_vedomost.loc[self.day_row_index:self.day_row_index]
+        self.row_in_process_index = self.days[date_form_tg]
+        self.md_instrument.vedomost = self.r_vedomost.loc[self.row_in_process_index:self.row_in_process_index]
         self.day_row = self.md_instrument
         self.day_row.get_frames_for_working()
         return self.day_row
@@ -104,43 +96,54 @@ class VedomostFiller:
         r.get_and_collect_r_name_col(self.day_row.accessory['DUTY'], 'duty')
         r.get_with_children_col()
         r.get_r_positions_col()
-        return r.mod_data.at[self.day_row_index, 'positions']
+        return r.mod_data.at[self.row_in_process_index, 'positions']
 
-    def filtering_by_positions(self):
-        if not self.day_row.vedomost.empty:
+    @property
+    def date_need_common_filling(self):
+        team_data = self.day_row.accessories.loc[self.row_in_process_index]['COM']
+        flag = True if len(team_data.split(',')) < 1 else False
+        return flag
+
+
+    def filtering_by(self, positions=False, category=None, only_private_categories=False):
+        filtered = []
+        if only_private_categories:
+            filtered = [i for i in self.day_row.categories.columns
+                        if i[0] == self.recipient[0].lower()]
+        elif category:
+            filtered = [i for i in self.day_row.categories.columns
+                        if i == category]
+        elif positions:
             filtered = [i for i in self.day_row.categories.columns
                         if i[0] in self.r_positions]
-            self.r_cats_ser_by_positions = \
-                self.day_row.categories.loc[self.day_row_index][filtered]
+
+        self.r_cats_ser_by_positions = \
+            self.day_row.categories.loc[self.row_in_process_index][filtered]
         return self.r_cats_ser_by_positions
 
-    def get_cells_df(self, category_name=''):
+    def get_cells_df(self):
         #self.r_cats_ser_by_positions = self.r_cats_ser_by_positions.replace('!', np.nan)
-        #print(self.r_cats_ser_by_positions)
-        if category_name:
-            self.active_cell = category_name
+        print(self.r_cats_ser_by_positions)
+        non_filled = self.r_cats_ser_by_positions.to_dict()
+        for cat in non_filled:
             cell = VedomostCell(self.prices,
                                 self.recipient,
-                                name=category_name,
-                                value=np.nan) # при выборе ячейки вручную, ее старое стирается
-            self.cells_df[cell.cat_name] = cell.extract_cell_data()
+                                name=cat,
+                                value=non_filled[cat])
+            if self.behavior == 'for filling':
+                if cell.can_be_filled:
+                    # print(cell.name, cell.old_value)
+                    # print(cell.can_be_filled)
+                    self.cells_df[cell.cat_name] = cell.extract_cell_data()
 
-        else:
-            non_filled = self.r_cats_ser_by_positions.to_dict()
-            for cat in non_filled:
-                cell = VedomostCell(self.prices,
-                                    self.recipient,
-                                    name=cat,
-                                    value=non_filled[cat])
-                if self.behavior == 'for filling':
-                    if cell.can_be_filled:
-                        # print(cell.name, cell.old_value)
-                        # print(cell.can_be_filled)
-                        self.cells_df[cell.cat_name] = cell.extract_cell_data()
+            elif self.behavior == 'for correction':
+                if cell.can_be_corrected:
+                    self.cells_df[cell.cat_name] = cell.extract_cell_data()
 
-                else:
-                    if cell.can_be_corrected:
-                        self.cells_df[cell.cat_name] = cell.extract_cell_data()
+            elif self.behavior == 'manually':
+                cell.revert_value()
+                self.cells_df[cell.cat_name] = cell.extract_cell_data()
+                self.active_cell = cell.cat_name
 
         return self.cells_df
 
@@ -166,18 +169,6 @@ class VedomostFiller:
             new = {i: new[i] for i in new if new[i]}
             filled = {i: new[i] for i in new if new[i] != old[i]}
         return filled
-
-    @property
-    def filled_cells_list_for_print(self):
-        return [f'{i} - "{self.already_filled_dict[i]}"'
-                for i in self.already_filled_dict]
-
-    @property
-    def all_filled_flag(self):
-        if not self.cell_names_list:
-            return True
-        else:
-            return False
 
     def change_a_cell(self, name_from_tg):
         self.active_cell = name_from_tg
@@ -211,27 +202,20 @@ class VedomostFiller:
             else:
                 self.cells_df.at['new_value', self.active_cell] = value_from_tg
 
-    def check_common_values(self):
-        pass
-    # прямо жуткая коллизия намечается с одновременным заполнением...
-
     def write_day_data_to_mother_frame(self):
         for c in self.already_filled_dict:
-            self.day_row.vedomost.at[self.day_row_index, c] \
+            self.day_row.vedomost.at[self.row_in_process_index, c] \
                 = self.already_filled_dict[c]
 
-        self.refresh_mf()
-        self.check_common_values()
-
-        self.mother_frame[self.day_row_index:self.day_row_index+1] \
+        self.mother_frame[self.row_in_process_index:self.row_in_process_index + 1] \
             = self.day_row.vedomost
 
     def change_done_mark(self):
         if self.all_filled_flag:
-            if pd.notna(self.mother_frame.at[self.day_row_index, 'DONE']):
-                self.mother_frame.at[self.day_row_index, 'DONE'] = 'Y'
+            if pd.notna(self.mother_frame.at[self.row_in_process_index, 'DONE']):
+                self.mother_frame.at[self.row_in_process_index, 'DONE'] = 'Y'
             else:
-                self.mother_frame.at[self.day_row_index, 'DONE'] = self.recipient[0]
+                self.mother_frame.at[self.row_in_process_index, 'DONE'] = self.recipient[0]
         # print(self.mother_frame.loc[self.day_row_index]['DONE'])
 
     def count_day_sum(self):
@@ -246,32 +230,47 @@ class VedomostFiller:
         ) as mf_writer:
             self.mother_frame.to_excel(mf_writer, sheet_name='vedomost', index=False)
 
+    @property
+    def all_filled_flag(self):
+        if not self.cell_names_list:
+            return True
+        else:
+            return False
+
+    @property
+    def changed_date(self):
+        date = self.day_row.date.at[self.row_in_process_index, 'DATE']
+        date = datetime.date.strftime(date,  '%d.%m.%y')
+        return date
+
+    @property
+    def filled_cells_list_for_print(self):
+        return [f'{i} - "{self.already_filled_dict[i]}"'
+                for i in self.already_filled_dict]
+
 
 if __name__ == '__main__':
-    month = 'nov23'
-    #pd.reset_option('display.max.columns')
-    filler = VedomostFiller(path=f'months/{month}/{month}.xlsx')
+    filler = VedomostFiller(path_to_vedomost)
     filler.get_mother_frame_and_prices()
-    filler.limiting('Egr', 'for filling')
-    #print(filler.r_vedomost)
+    filler.limiting('for filling', 'Egr')
     print(filler.days)
 
-    filler.change_the_day_row('11.11.23')
-    filler.filtering_by_positions()
-    # print(filler.r_cats_ser_by_positions)
+    filler.change_the_day_row('17.11.23')
+    filler.filtering_by(category=filler.r_siesta)
+    print(filler.r_cats_ser_by_positions)
 
     filler.get_cells_df()
-    cell = 'e:plan'
-    print(filler.cells_df[cell])
-    filler.change_a_cell(cell)
-    filler.fill_the_cell('B')
-    print(filler.cells_df[cell])
-    print(filler.already_filled_dict)
-    print(filler.cell_names_list)
-    print(filler.all_filled_flag)
-    filler.write_day_data_to_mother_frame()
-    filler.change_done_mark()
-    print(filler.day_row_after_filling)
+    print(filler.get_cells_df())
+    #cell = 'e:plan'
+    #print(filler.cells_df[cell])
+    #filler.change_a_cell(cell)
+    #filler.fill_the_cell('B')
+    #print(filler.cells_df[cell])
+    #print(filler.already_filled_dict)
+    #print(filler.cell_names_list)
+    #print(filler.all_filled_flag)
+    #filler.write_day_data_to_mother_frame()
+    #filler.change_done_mark()
     # filler.save_day_data()
 #    print(filler.day_row.vedomost)
 #    print(filler.mother_frame.loc[14:15])

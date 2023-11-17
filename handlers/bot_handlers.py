@@ -1,6 +1,7 @@
 import datetime
 import pandas as pd
 
+from aiogram import Bot
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import (Message, ReplyKeyboardRemove, CallbackQuery)
@@ -9,8 +10,9 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from keyboards import get_keyboard, get_filling_inline
 from MiddleWares import SetTimebyHandMiddleWare
 from handlers.UserDB import UserDataBase
+from My_token import TOKEN
 
-
+bot = Bot(TOKEN)
 UDB = UserDataBase()
 msg_del = [] # лист для удаления сообщений
 
@@ -69,7 +71,8 @@ async def cmd_sleep(message: Message):
 
     message_day = datetime.date.strftime(message_day, '%d.%m.%y')
     UDB.r_data.filler.change_the_day_row(message_day)
-    UDB.r_data.filler.get_cells_df(category)
+    UDB.r_data.filler.filtering_by(category=category)
+    UDB.r_data.filler.get_cells_df()
     UDB.r_data.filler.fill_the_cell(new_value)
     #print(message_day, category, new_value)
     #print(UDB.r_data.filler.active_cell)
@@ -114,7 +117,12 @@ async def get_categories_keyboard(message: Message):
 async def change_a_date(message: Message):
     UDB.r = message.from_user.first_name
     UDB.r_data.filler.change_the_day_row(message.text)
-    UDB.r_data.filler.filtering_by_positions()
+    if UDB.r_data.is_date_busy(UDB.rows_in_process):
+        UDB.r_data.filler.filtering_by(only_private_categories=True)
+        answer = f'Доступны только личные категории на данный момент'
+    else:
+        UDB.r_data.filler.filtering_by(positions=True)
+
     UDB.r_data.filler.get_cells_df()
     if not UDB.r_data.filler.cell_names_list:
         await message.reply("Все заполнено!",
