@@ -14,15 +14,10 @@ class VedomostFiller:
         self.date = datetime.date.today()
         self.path_to_mother_frame = PathToVedomost(self.date).to_vedomost
         self.path_to_temp_db = PathToVedomost().to_temp_db
-        self.md_instrument = cl.MonthData()
 
         # поле переменных для работы функций
-        self.mother_frame = pd.DataFrame()
-        self.prices = pd.DataFrame()
-        self.r_vedomost = pd.DataFrame()
 
-        self.day_row = []
-        self.row_in_process_index = None
+        self.day_row = pd.DataFrame()
         self.recipient = recipient
         self.r_cats_ser_by_positions = pd.Series()
         self.cells_df = pd.DataFrame()
@@ -31,12 +26,10 @@ class VedomostFiller:
         self.active_cell = None
 
     def __call__(self, *args, **kwargs):
-        rdb = DayRowsDB(self.path_to_temp_db)
-        if not rdb.contains(self.date):
-            self.mother_frame: pd.DataFrame = (
-                self.md_instrument.load_and_prepare_vedomost(self.path_to_mother_frame))
-            rdb.create_rows(self.mother_frame)
-        self.prices = self.md_instrument.get_price_frame(self.path_to_mother_frame)
+        day_db = DayRowsDB(self.path_to_temp_db)
+        mf: pd.DataFrame = pd.read_excel(self.path_to_mother_frame, sheet_name='vedomost')
+        mf['DATE'] = mf['DATE'].map(lambda date: date.date())
+        day_db.update(mf)
         return self
 
     @ property
@@ -46,16 +39,6 @@ class VedomostFiller:
     @ property
     def r_siesta(self):
         return f'{self.recipient[0].lower()}:siesta'
-
-    def get_mother_frame_and_prices(self, path_to_mother_frame=None):
-        if path_to_mother_frame:
-            self.path_to_mother_frame = path_to_mother_frame
-        self.mother_frame = self.md_instrument.load_and_prepare_vedomost(self.path_to_mother_frame)
-        self.prices = self.md_instrument.get_price_frame(self.path_to_mother_frame)
-
-    def limiting(self):
-        self.md_instrument.vedomost = self.mother_frame
-        self.r_vedomost = self.md_instrument.limiting(self.behavior, self.recipient)
 
     @property
     def days(self):
@@ -81,10 +64,11 @@ class VedomostFiller:
         return days
 
     def change_the_day_row(self, date_form_tg):
-        self.row_in_process_index = self.days[date_form_tg]
-        self.md_instrument.vedomost = self.r_vedomost.loc[self.row_in_process_index:self.row_in_process_index]
-        self.day_row: cl.MonthData = self.md_instrument
-        self.day_row.get_frames_for_working()
+        day_db = DayRowsDB(self.path_to_temp_db)
+        r_days = day_db.load_rows_dict_for(self.recipient)
+        self.day_row = DayRow(path=r_days[date_form_tg])
+        self.day_row.load_day_row()
+        print(self.day_row.date, self.day_row.mark, self.day_row.accessories, self.day_row.categories)
         return self.day_row
 
     @property
@@ -272,6 +256,7 @@ if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
                             behavior='for filling')
     filler()
+    filler.change_the_day_row('19.11.23')
     #filler.get_mother_frame_and_prices()
     #filler.limiting()
     #filler.change_the_day_row('17.11.23')
