@@ -23,8 +23,7 @@ filler_router.message.filter(F.chat.type == 'private')
 
 @filler_router.message(Command("fill"))
 async def cmd_fill(message: Message, greet=True):
-    UDB.add_new_recipient(message)
-    UDB.r_data.filler.limiting('for filling')
+    UDB.add_new_recipient(message, behavior='for filling')
     if UDB.r_data.filler.days:
         answer = "Привет! Формирую ведомость" if greet else "Формирую ведомость"
         await message.answer(answer)
@@ -38,7 +37,7 @@ async def cmd_fill(message: Message, greet=True):
 
 @filler_router.message(Command("correct"))
 async def cmd_correct(message: Message):
-    UDB.add_new_recipient(message)
+    UDB.add_new_recipient(message, behavior='for correction')
     UDB.r_data.filler.limiting('for correction')
     if UDB.r_data.filler.days:
         answer = "Привет! Формирую ведомость"
@@ -53,8 +52,8 @@ async def cmd_correct(message: Message):
 
 @filler_router.message(Command("sleep"))
 async def cmd_sleep(message: Message):
-    UDB.add_new_recipient(message)
-    UDB.r_data.filler.limiting('manually')
+    UDB.add_new_recipient(message, behavior='manually')
+    UDB.r_data.filler.limiting()
     message_day = datetime.datetime.now()
     message_time = message_day.time()
     #message_time = datetime.time(hour=11, minute=1)
@@ -93,12 +92,14 @@ async def finish_filling(message: Message):
         filled_for_answer = [f'За {UDB.r_data.filler.changed_date} Вы заполнили:']
         filled_for_answer.extend(UDB.r_data.filler.filled_cells_list_for_print)
         answer = "\n".join(filled_for_answer)
-        UDB.r_data.filler.write_day_data_to_mother_frame()
-        print(UDB.r_data.filler.behavior, UDB.r_data.filler.already_filled_dict, UDB.r_data.filler.all_filled_flag)
-        if UDB.r_data.filler.behavior in ['for filling', 'manually']:
-            UDB.r_data.filler.change_done_mark()
-        UDB.r_data.filler.save_day_data()
+        UDB.r_data.filler.collect_data_to_day_row()
+
+        if UDB.r_data.filler.is_row_filled:
+            UDB.r_data.filler.save_day_data_to_mother_frame()
+        else:
+            UDB.r_data.filler.save_day_data_to_temp_db()
         print(pd.Series(UDB.r_data.filler.already_filled_dict))
+        # нужен тестинг записи фреймов, потом чтение надо наладить
 
     UDB.remove_recipient(message)
     await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
@@ -116,27 +117,29 @@ async def get_categories_keyboard(message: Message):
     lambda message: message.text in UDB.db[message.from_user.first_name].filler.days))
 async def change_a_date(message: Message):
     UDB.r = message.from_user.first_name
+    answer = ['Обращаем внимание на отметки:',
+              '"не мог" - не выполнил по объективой причине (напр.: погода, вонь, лихорадка)',
+              '"забыл" - забыл какой была отметка']
+
     UDB.r_data.filler.change_the_day_row(message.text)
+    print(UDB.rows_in_process)
+    print(UDB.r_data.is_date_busy(UDB.rows_in_process))
     if UDB.r_data.is_date_busy(UDB.rows_in_process):
         UDB.r_data.filler.filtering_by(only_private_categories=True)
-        answer = f'Доступны только личные категории на данный момент'
+        answer.append(f'Доступны только личные категории на данный момент')
     else:
         UDB.r_data.filler.filtering_by(positions=True)
 
     UDB.r_data.filler.get_cells_df()
+
     if not UDB.r_data.filler.cell_names_list:
         await message.reply("Все заполнено!",
                             reply_markup=ReplyKeyboardRemove())
-
         UDB.r_data.filler.change_done_mark()
-        UDB.r_data.filler.save_day_data()
+        UDB.r_data.filler.save_day_data_to_mother_frame()
         await cmd_fill(message, greet=False) # перезапускаем прогу
-
     else:
         UDB.r_data.get_inlines()
-        answer = ['Обращаем внимание на отметки:',
-                  '"не мог" - не выполнил по объективой причине (напр.: погода, вонь, лихорадка)',
-                  '"забыл" - забыл какой была отметка']
         await message.reply('\n'.join(answer))
         await get_categories_keyboard(message)
 

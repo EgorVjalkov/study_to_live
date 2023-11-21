@@ -1,14 +1,19 @@
 import pandas as pd
-import numpy as np
 import datetime
 import classes as cl
 from VedomostCell import VedomostCell
-from config import path_to_vedomost
+from path_maker import PathToVedomost
+from day_row import DayRowsDB, DayRow
 
 
 class VedomostFiller:
-    def __init__(self, path='', recipient='', behavior=None):
-        self.path_to_mother_frame = path
+    def __init__(self,
+                 recipient: str = '',
+                 behavior: str = ''):
+
+        self.date = datetime.date.today()
+        self.path_to_mother_frame = PathToVedomost(self.date).to_vedomost
+        self.path_to_temp_db = PathToVedomost().to_temp_db
         self.md_instrument = cl.MonthData()
 
         # поле переменных для работы функций
@@ -16,7 +21,7 @@ class VedomostFiller:
         self.prices = pd.DataFrame()
         self.r_vedomost = pd.DataFrame()
 
-        self.day_row = pd.DataFrame()
+        self.day_row = []
         self.row_in_process_index = None
         self.recipient = recipient
         self.r_cats_ser_by_positions = pd.Series()
@@ -25,9 +30,14 @@ class VedomostFiller:
 
         self.active_cell = None
 
-    @property
-    def admin(self):
-        return True if self.recipient == 'Egr' else False
+    def __call__(self, *args, **kwargs):
+        rdb = DayRowsDB(self.path_to_temp_db)
+        if not rdb.contains(self.date):
+            self.mother_frame: pd.DataFrame = (
+                self.md_instrument.load_and_prepare_vedomost(self.path_to_mother_frame))
+            rdb.create_rows(self.mother_frame)
+        self.prices = self.md_instrument.get_price_frame(self.path_to_mother_frame)
+        return self
 
     @ property
     def r_sleeptime(self):
@@ -40,23 +50,12 @@ class VedomostFiller:
     def get_mother_frame_and_prices(self, path_to_mother_frame=None):
         if path_to_mother_frame:
             self.path_to_mother_frame = path_to_mother_frame
-        print(self.path_to_mother_frame)
         self.mother_frame = self.md_instrument.load_and_prepare_vedomost(self.path_to_mother_frame)
         self.prices = self.md_instrument.get_price_frame(self.path_to_mother_frame)
 
-    def refresh_day_row(self):
-        self.day_row = pd.DataFrame()
-        self.row_in_process_index = None
-        self.r_cats_ser_by_positions = pd.Series()
-        self.cells_df = pd.DataFrame()
-        self.active_cell = None
-
-    def limiting(self, behavior: str, r_name=''):
-        if r_name:
-            self.recipient = r_name
+    def limiting(self):
         self.md_instrument.vedomost = self.mother_frame
-        self.behavior = behavior
-        self.r_vedomost = self.md_instrument.limiting(behavior, self.recipient)
+        self.r_vedomost = self.md_instrument.limiting(self.behavior, self.recipient)
 
     @property
     def days(self):
@@ -84,7 +83,7 @@ class VedomostFiller:
     def change_the_day_row(self, date_form_tg):
         self.row_in_process_index = self.days[date_form_tg]
         self.md_instrument.vedomost = self.r_vedomost.loc[self.row_in_process_index:self.row_in_process_index]
-        self.day_row = self.md_instrument
+        self.day_row: cl.MonthData = self.md_instrument
         self.day_row.get_frames_for_working()
         return self.day_row
 
@@ -100,10 +99,9 @@ class VedomostFiller:
 
     @property
     def date_need_common_filling(self):
-        team_data = self.day_row.accessories.loc[self.row_in_process_index]['COM']
+        team_data = self.day_row.accessory.loc[self.row_in_process_index]['COM']
         flag = True if len(team_data.split(',')) < 1 else False
         return flag
-
 
     def filtering_by(self, positions=False, category=None, only_private_categories=False):
         filtered = []
@@ -202,26 +200,47 @@ class VedomostFiller:
             else:
                 self.cells_df.at['new_value', self.active_cell] = value_from_tg
 
-    def write_day_data_to_mother_frame(self):
+    def collect_data_to_day_row(self):
         for c in self.already_filled_dict:
             self.day_row.vedomost.at[self.row_in_process_index, c] \
                 = self.already_filled_dict[c]
-
-        self.mother_frame[self.row_in_process_index:self.row_in_process_index + 1] \
-            = self.day_row.vedomost
+        self.change_done_mark()
 
     def change_done_mark(self):
-        if self.all_filled_flag:
-            if pd.notna(self.mother_frame.at[self.row_in_process_index, 'DONE']):
-                self.mother_frame.at[self.row_in_process_index, 'DONE'] = 'Y'
-            else:
-                self.mother_frame.at[self.row_in_process_index, 'DONE'] = self.recipient[0]
-        # print(self.mother_frame.loc[self.day_row_index]['DONE'])
+        if self.is_row_filled:
+            self.day_row.vedomost.at[self.row_in_process_index, 'DONE'] = 'Y'
+        else:
+            if not self.cell_names_list:
+                self.day_row.vedomost.at[self.row_in_process_index, 'DONE'] = self.recipient[0]
 
     def count_day_sum(self):
         pass
 
-    def save_day_data(self):
+    @property
+    def is_row_filled(self) -> bool:
+        nans = [i for i in self.day_row.vedomost.loc[self.row_in_process_index] if pd.isna(i)]
+        return nans == []
+
+    def save_day_data_to_temp_db(self):
+        mark: str = self.day_row.vedomost.at[self.row_in_process_index, 'DONE']
+        date: str = self.changed_date.replace('.', '_')
+        if pd.notna(mark):
+            file_name = f'{date}_{mark}.xlsx'
+        else:
+            file_name = f'{date}.xlsx'
+        # нужно замутить замену файлов временных
+
+        file_path = f'{self.path_to_temp_db}/{file_name}'
+        with pd.ExcelWriter(
+                file_path,
+                mode='w',
+                engine='openpyxl'
+        ) as temp_writer:
+            self.day_row.vedomost.to_excel(temp_writer, sheet_name='vedomost', index=False)
+
+    def save_day_data_to_mother_frame(self):
+        self.mother_frame[self.row_in_process_index:self.row_in_process_index + 1] \
+            = self.day_row.vedomost
         with pd.ExcelWriter(
                 self.path_to_mother_frame,
                 mode='a',
@@ -229,13 +248,6 @@ class VedomostFiller:
                 if_sheet_exists='replace'
         ) as mf_writer:
             self.mother_frame.to_excel(mf_writer, sheet_name='vedomost', index=False)
-
-    @property
-    def all_filled_flag(self):
-        if not self.cell_names_list:
-            return True
-        else:
-            return False
 
     @property
     def changed_date(self):
@@ -248,29 +260,32 @@ class VedomostFiller:
         return [f'{i} - "{self.already_filled_dict[i]}"'
                 for i in self.already_filled_dict]
 
+    def refresh_day_row(self):
+        self.day_row = pd.DataFrame()
+        self.row_in_process_index = None
+        self.r_cats_ser_by_positions = pd.Series()
+        self.cells_df = pd.DataFrame()
+        self.active_cell = None
+
 
 if __name__ == '__main__':
-    filler = VedomostFiller(path_to_vedomost)
-    filler.get_mother_frame_and_prices()
-    filler.limiting('for filling', 'Egr')
-    print(filler.days)
+    filler = VedomostFiller(recipient='Egr',
+                            behavior='for filling')
+    filler()
+    #filler.get_mother_frame_and_prices()
+    #filler.limiting()
+    #filler.change_the_day_row('17.11.23')
+    #filler.filtering_by(positions=True)
+    #filler.get_cells_df()
+    #for i in filler.cell_names_list:
+    #    filler.change_a_cell(i)
+    #    filler.fill_the_cell('+')
 
-    filler.change_the_day_row('17.11.23')
-    filler.filtering_by(category=filler.r_siesta)
-    print(filler.r_cats_ser_by_positions)
-
-    filler.get_cells_df()
-    print(filler.get_cells_df())
-    #cell = 'e:plan'
-    #print(filler.cells_df[cell])
-    #filler.change_a_cell(cell)
-    #filler.fill_the_cell('B')
-    #print(filler.cells_df[cell])
-    #print(filler.already_filled_dict)
+    #filler.collect_data_to_day_row()
+    #print(filler.day_row.vedomost)
+    #print(filler.is_row_filled)
     #print(filler.cell_names_list)
-    #print(filler.all_filled_flag)
-    #filler.write_day_data_to_mother_frame()
-    #filler.change_done_mark()
-    # filler.save_day_data()
-#    print(filler.day_row.vedomost)
-#    print(filler.mother_frame.loc[14:15])
+    #if filler.is_row_filled:
+    #    filler.save_day_data_to_mother_frame()
+    #else:
+    #    filler.save_day_data_to_temp_db()
