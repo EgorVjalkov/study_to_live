@@ -3,7 +3,8 @@ import datetime
 import classes as cl
 from VedomostCell import VedomostCell
 from path_maker import PathToVedomost
-from day_row import DayRowsDB, DayRow
+from day_row import DayRow
+from row_db.DB_main import day_db
 
 
 class VedomostFiller:
@@ -17,8 +18,9 @@ class VedomostFiller:
 
         # поле переменных для работы функций
 
-        self.day_row = pd.DataFrame()
+        self.day_row: DayRow = DayRow()
         self.recipient = recipient
+        self.day_path_dict: list = []
         self.r_cats_ser_by_positions = pd.Series()
         self.cells_df = pd.DataFrame()
         self.behavior = behavior
@@ -26,10 +28,10 @@ class VedomostFiller:
         self.active_cell = None
 
     def __call__(self, *args, **kwargs):
-        day_db = DayRowsDB(self.path_to_temp_db)
         mf: pd.DataFrame = pd.read_excel(self.path_to_mother_frame, sheet_name='vedomost')
         mf['DATE'] = mf['DATE'].map(lambda date: date.date())
         day_db.update(mf)
+        self.day_path_dict = day_db.load_rows_dict_for(self.recipient, self.behavior)
         return self
 
     @ property
@@ -40,75 +42,63 @@ class VedomostFiller:
     def r_siesta(self):
         return f'{self.recipient[0].lower()}:siesta'
 
-    @property
-    def days(self):
-        days = self.r_vedomost['DATE'].to_dict()
-        if self.behavior:
-            if self.behavior == 'for filling':
-                days = {i: days[i] for i in days if days[i] <= datetime.date.today()}
+    #    days = self.r_vedomost['DATE'].to_dict()
+    #    if self.behavior:
+    #        if self.behavior == 'for filling':
+    #            days = {i: days[i] for i in days if days[i] <= datetime.date.today()}
 
-            elif self.behavior == 'for correction':
-                today = datetime.date.today()
-                yesterday = today - datetime.timedelta(days=1)
-                categories_f = self.r_vedomost.get(
-                    [cat for cat in self.r_vedomost if cat.islower()])
+    #        elif self.behavior == 'for correction':
+    #            today = datetime.date.today()
+    #            yesterday = today - datetime.timedelta(days=1)
+    #            categories_f = self.r_vedomost.get(
+    #                [cat for cat in self.r_vedomost if cat.islower()])
 
-                days_index = [i for i in days if days[i] in [yesterday, today]] #находим индекс вчера и сегодня
-                days_index = [i for i in days_index                         # проверяем по индексу
-                              if not all(categories_f.loc[i].map(pd.isna))] # нужно ли что то корректированть
+    #            days_index = [i for i in days if days[i] in [yesterday, today]] #находим индекс вчера и сегодня
+    #            days_index = [i for i in days_index                         # проверяем по индексу
+    #                          if not all(categories_f.loc[i].map(pd.isna))] # нужно ли что то корректированть
 
-                days = {i: days[i] for i in days_index}
+    #            days = {i: days[i] for i in days_index}
 
-        days = {datetime.date.strftime(days[d], '%d.%m.%y'): d
-                for d in days}
-        return days
+    #    days = {datetime.date.strftime(days[d], '%d.%m.%y'): d
+    #            for d in days}
+    #    return days
 
     def change_the_day_row(self, date_form_tg):
-        day_db = DayRowsDB(self.path_to_temp_db)
-        r_days = day_db.load_rows_dict_for(self.recipient)
-        self.day_row = DayRow(path=r_days[date_form_tg])
-        self.day_row.load_day_row()
-        print(self.day_row.date, self.day_row.mark, self.day_row.accessories, self.day_row.categories)
+        print(self.day_path_dict)
+        self.day_row = DayRow(path=self.day_path_dict[date_form_tg])
+        print(self.day_row.date, self.day_row.mark, self.day_row.acc_frame, self.day_row.categories)
         return self.day_row
 
     @property
     def r_positions(self):
-        r = cl.Recipient(self.recipient, self.day_row.date)
-        r.get_and_collect_r_name_col(self.day_row.accessory['COM'], 'children')
-        r.get_and_collect_r_name_col(self.day_row.accessory['PLACE'], 'place')
-        r.get_and_collect_r_name_col(self.day_row.accessory['DUTY'], 'duty')
+        r = cl.Recipient(self.recipient)
+        r.extract_data_by_recipient(self.day_row.acc_frame)
         r.get_with_children_col()
         r.get_r_positions_col()
-        return r.mod_data.at[self.row_in_process_index, 'positions']
-
-    @property
-    def date_need_common_filling(self):
-        team_data = self.day_row.accessory.loc[self.row_in_process_index]['COM']
-        flag = True if len(team_data.split(',')) < 1 else False
-        return flag
+        return r.mod_data.at[self.day_row.i, 'positions']
 
     def filtering_by(self, positions=False, category=None, only_private_categories=False):
-        filtered = []
+        filtered = list(self.day_row.categories.index)
+        print(filtered)
         if only_private_categories:
-            filtered = [i for i in self.day_row.categories.columns
+            filtered = [i for i in filtered
                         if i[0] == self.recipient[0].lower()]
         elif category:
-            filtered = [i for i in self.day_row.categories.columns
+            filtered = [i for i in filtered
                         if i == category]
         elif positions:
-            filtered = [i for i in self.day_row.categories.columns
+            filtered = [i for i in filtered
                         if i[0] in self.r_positions]
 
         self.r_cats_ser_by_positions = \
-            self.day_row.categories.loc[self.row_in_process_index][filtered]
+            self.day_row.categories[filtered]
         return self.r_cats_ser_by_positions
 
     def get_cells_df(self):
-        #self.r_cats_ser_by_positions = self.r_cats_ser_by_positions.replace('!', np.nan)
-        print(self.r_cats_ser_by_positions)
+        prices = pd.read_excel(self.path_to_mother_frame, sheet_name='price', index_col=0)
         non_filled = self.r_cats_ser_by_positions.to_dict()
         for cat in non_filled:
-            cell = VedomostCell(self.prices,
+            cell = VedomostCell(prices,
                                 self.recipient,
                                 name=cat,
                                 value=non_filled[cat])
@@ -200,11 +190,6 @@ class VedomostFiller:
     def count_day_sum(self):
         pass
 
-    @property
-    def is_row_filled(self) -> bool:
-        nans = [i for i in self.day_row.vedomost.loc[self.row_in_process_index] if pd.isna(i)]
-        return nans == []
-
     def save_day_data_to_temp_db(self):
         mark: str = self.day_row.vedomost.at[self.row_in_process_index, 'DONE']
         date: str = self.changed_date.replace('.', '_')
@@ -254,20 +239,18 @@ class VedomostFiller:
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
-                            behavior='for filling')
+                            behavior='manually')
     filler()
-    filler.change_the_day_row('19.11.23')
-    #filler.get_mother_frame_and_prices()
-    #filler.limiting()
-    #filler.change_the_day_row('17.11.23')
+    print(filler.day_path_dict)
+    #filler.change_the_day_row('21.11.23')
     #filler.filtering_by(positions=True)
     #filler.get_cells_df()
     #for i in filler.cell_names_list:
     #    filler.change_a_cell(i)
     #    filler.fill_the_cell('+')
 
-    #filler.collect_data_to_day_row()
-    #print(filler.day_row.vedomost)
+    ##filler.collect_data_to_day_row()
+    #print(filler.row_db.vedomost)
     #print(filler.is_row_filled)
     #print(filler.cell_names_list)
     #if filler.is_row_filled:

@@ -53,6 +53,10 @@ class Recipient:
         mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=[self.limit, self.limit+1])
         self.result_frame = pd.concat([self.date_frame.copy(), mini_frame])
 
+    @property
+    def rename_dict(self):
+        return {'COM': 'children', 'PLACE': 'place', 'DUTY': 'duty'}
+
     def create_output_dir(self, path_to_output, month):
         paths = [f'{path_to_output}/{month}', f'{path_to_output}/{month}/{self.r_name}']
         for p in paths:
@@ -146,15 +150,17 @@ class Recipient:
         coef_frame = self.mod_data.get([i for i in self.mod_data if 'coef' in i])
         self.mod_data['coefs'] = list(map(get_coef_dict, coef_frame.to_dict('index').values()))
 
+    def extract_data_by_recipient(self, acc_frame: pd.DataFrame):
+        columns = list(self.rename_dict.keys())
+        for column in acc_frame.get(columns):
+            self.get_and_collect_r_name_col(acc_frame[column], self.rename_dict[column])
+
     def get_mod_frame(
             self,
             acc_frame: pd.DataFrame,
             categories_frame: pd.DataFrame,
-            new_names_dict: dict
             ) -> pd.DataFrame:
-        columns = list(new_names_dict.keys())
-        for column in acc_frame.get(columns):
-            self.get_and_collect_r_name_col(acc_frame[column], new_names_dict[column])
+        self.extract_data_by_recipient(acc_frame)
         self.get_full_family_col(acc_frame['COM'])
         self.get_with_children_col()
         self.get_duty_coefficients_col()

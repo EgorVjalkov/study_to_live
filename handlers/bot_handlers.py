@@ -24,11 +24,11 @@ filler_router.message.filter(F.chat.type == 'private')
 @filler_router.message(Command("fill"))
 async def cmd_fill(message: Message, greet=True):
     UDB.add_new_recipient(message, behavior='for filling')
-    if UDB.r_data.filler.days:
+    if UDB.r_data.filler.day_path_dict:
         answer = "Привет! Формирую ведомость" if greet else "Формирую ведомость"
         await message.answer(answer)
         days_kb = ReplyKeyboardBuilder()
-        days_kb = get_keyboard(days_kb, UDB.r_data.filler.days)
+        days_kb = get_keyboard(days_kb, UDB.r_data.filler.day_path_dict)
         await message.answer("Дата?", reply_markup=days_kb)
     else:
         await message.answer("Привет! Все заполнено!")
@@ -39,11 +39,11 @@ async def cmd_fill(message: Message, greet=True):
 async def cmd_correct(message: Message):
     UDB.add_new_recipient(message, behavior='for correction')
     UDB.r_data.filler.limiting('for correction')
-    if UDB.r_data.filler.days:
+    if UDB.r_data.filler.day_path_dict:
         answer = "Привет! Формирую ведомость"
         await message.answer(answer)
         days_kb = ReplyKeyboardBuilder()
-        days_kb = get_keyboard(days_kb, UDB.r_data.filler.days)
+        days_kb = get_keyboard(days_kb, UDB.r_data.filler.day_path_dict)
         await message.answer("Дата?", reply_markup=days_kb)
     else:
         await message.answer("Привет! Нечего исправлять!")
@@ -94,7 +94,7 @@ async def finish_filling(message: Message):
         answer = "\n".join(filled_for_answer)
         UDB.r_data.filler.collect_data_to_day_row()
 
-        if UDB.r_data.filler.is_row_filled:
+        if UDB.r_data.filler.is_filled:
             UDB.r_data.filler.save_day_data_to_mother_frame()
         else:
             UDB.r_data.filler.save_day_data_to_temp_db()
@@ -114,7 +114,7 @@ async def get_categories_keyboard(message: Message):
 
 
 @router2.message(F.func(
-    lambda message: message.text in UDB.db[message.from_user.first_name].filler.days))
+    lambda message: message.text in UDB.db[message.from_user.first_name].filler.day_path_dict))
 async def change_a_date(message: Message):
     UDB.r = message.from_user.first_name
     answer = ['Обращаем внимание на отметки:',

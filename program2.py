@@ -24,10 +24,9 @@ def main():
 
         for r_name in recipients:
             # рефакторнуть???
-            rename_dict = {'COM': 'children', 'PLACE': 'place', 'DUTY': 'duty'}
             r = cl.Recipient(r_name, md.date)
             r.create_output_dir(f'output_files', month)
-            r.get_mod_frame(md.accessory, md.categories, rename_dict)
+            r.get_mod_frame(md.accessory, md.categories)
             r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
             r.get_r_vedomost(['Egr', 'Lera'], md.categories)
             # fltr = FrameForAnalyse(df=r.cat_data)
