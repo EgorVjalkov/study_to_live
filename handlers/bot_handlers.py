@@ -71,7 +71,7 @@ async def cmd_sleep(message: Message):
     message_day = datetime.date.strftime(message_day, '%d.%m.%y')
     UDB.r_data.filler.change_the_day_row(message_day)
     UDB.r_data.filler.filtering_by(category=category)
-    UDB.r_data.filler.get_cells_df()
+    UDB.r_data.filler.get_cells_ser()
     UDB.r_data.filler.fill_the_cell(new_value)
     #print(message_day, category, new_value)
     #print(UDB.r_data.filler.active_cell)
@@ -130,7 +130,7 @@ async def change_a_date(message: Message):
     else:
         UDB.r_data.filler.filtering_by(positions=True)
 
-    UDB.r_data.filler.get_cells_df()
+    UDB.r_data.filler.get_cells_ser()
 
     if not UDB.r_data.filler.cell_names_list:
         await message.reply("Все заполнено!",
@@ -150,7 +150,7 @@ async def change_a_category(message: Message):
     UDB.r = message.from_user.first_name
     cell_name = message.text
     UDB.r_data.inlines.remove(cell_name)
-    cell_data = UDB.r_data.filler.cells_df[cell_name]
+    cell_data = UDB.r_data.filler.cells_ser[cell_name]
 
     answer = cell_data['description']
     if not answer:

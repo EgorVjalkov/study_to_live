@@ -19,11 +19,10 @@ class VedomostFiller:
         # поле переменных для работы функций
 
         self.day_row: DayRow = DayRow()
-        self.recipient = recipient
-        self.day_path_dict: list = []
-        self.r_cats_ser_by_positions = pd.Series()
-        self.cells_df = pd.DataFrame()
-        self.behavior = behavior
+        self.recipient: str = recipient
+        self.day_path_dict: dict = {}
+        self.cells_ser: pd.Series = pd.Series()
+        self.behavior: str = behavior
 
         self.active_cell = None
 
@@ -42,31 +41,8 @@ class VedomostFiller:
     def r_siesta(self):
         return f'{self.recipient[0].lower()}:siesta'
 
-    #    days = self.r_vedomost['DATE'].to_dict()
-    #    if self.behavior:
-    #        if self.behavior == 'for filling':
-    #            days = {i: days[i] for i in days if days[i] <= datetime.date.today()}
-
-    #        elif self.behavior == 'for correction':
-    #            today = datetime.date.today()
-    #            yesterday = today - datetime.timedelta(days=1)
-    #            categories_f = self.r_vedomost.get(
-    #                [cat for cat in self.r_vedomost if cat.islower()])
-
-    #            days_index = [i for i in days if days[i] in [yesterday, today]] #находим индекс вчера и сегодня
-    #            days_index = [i for i in days_index                         # проверяем по индексу
-    #                          if not all(categories_f.loc[i].map(pd.isna))] # нужно ли что то корректированть
-
-    #            days = {i: days[i] for i in days_index}
-
-    #    days = {datetime.date.strftime(days[d], '%d.%m.%y'): d
-    #            for d in days}
-    #    return days
-
     def change_the_day_row(self, date_form_tg):
-        print(self.day_path_dict)
-        self.day_row = DayRow(path=self.day_path_dict[date_form_tg])
-        print(self.day_row.date, self.day_row.mark, self.day_row.acc_frame, self.day_row.categories)
+        self.day_row = DayRow(path=self.day_path_dict[date_form_tg]).load_day_row()
         return self.day_row
 
     @property
@@ -90,54 +66,55 @@ class VedomostFiller:
             filtered = [i for i in filtered
                         if i[0] in self.r_positions]
 
-        self.r_cats_ser_by_positions = \
+        self.cells_ser = \
             self.day_row.categories[filtered]
-        return self.r_cats_ser_by_positions
+        return self.cells_ser
 
-    def get_cells_df(self):
+    def get_cells_ser(self):
         prices = pd.read_excel(self.path_to_mother_frame, sheet_name='price', index_col=0)
-        non_filled = self.r_cats_ser_by_positions.to_dict()
-        for cat in non_filled:
+        for cat in self.cells_ser.index:
             cell = VedomostCell(prices,
                                 self.recipient,
                                 name=cat,
-                                value=non_filled[cat])
+                                value=self.cells_ser[cat])
             if self.behavior == 'for filling':
                 if cell.can_be_filled:
+                    self.cells_ser[cat] = cell
                     # print(cell.name, cell.old_value)
                     # print(cell.can_be_filled)
-                    self.cells_df[cell.cat_name] = cell.extract_cell_data()
+                    #self.cells_ser[cell.cat_name] = cell.extract_cell_data()
 
             elif self.behavior == 'for correction':
                 if cell.can_be_corrected:
-                    self.cells_df[cell.cat_name] = cell.extract_cell_data()
+                    #self.cells_ser[cell.cat_name] = cell.extract_cell_data()
+                    self.cells_ser[cat] = cell
 
             elif self.behavior == 'manually':
                 cell.revert_value()
-                self.cells_df[cell.cat_name] = cell.extract_cell_data()
+                self.cells_ser[cat] = cell
+                #self.cells_ser[cell.cat_name] = cell.extract_cell_data()
                 self.active_cell = cell.cat_name
 
-        return self.cells_df
+        return self.cells_ser
 
+# остановился здесь
     @property
     def cell_names_list(self):
         non_filled_list = []
-        if not self.cells_df.empty:
+        if not self.cells_ser.empty:
             if self.behavior == 'for filling':
-                non_filled = self.cells_df.loc['new_value'].map(lambda v: v is None)
+                non_filled = self.cells_ser.loc['new_value'].map(lambda v: v is None)
                 non_filled_list = [i for i in non_filled.index if non_filled[i]]
             else:
-                non_filled_list = list(self.cells_df.columns)
-                # вот здесь коллизия: нужно решить как сделать: если я делаю мануальное, то у меня заполняется селл_намес
-                # лист, а значит пробиается флаг на полное заполнение, ставится ложная метка! нужно фиксить
+                non_filled_list = list(self.cells_ser.columns)
         return non_filled_list
 
     @property
     def already_filled_dict(self):
         filled = []
-        if not self.cells_df.empty:
-            old = self.cells_df.loc['old_value'].to_dict()
-            new = self.cells_df.loc['new_value'].to_dict()
+        if not self.cells_ser.empty:
+            old = self.cells_ser.loc['old_value'].to_dict()
+            new = self.cells_ser.loc['new_value'].to_dict()
             new = {i: new[i] for i in new if new[i]}
             filled = {i: new[i] for i in new if new[i] != old[i]}
         return filled
@@ -145,14 +122,9 @@ class VedomostFiller:
     def change_a_cell(self, name_from_tg):
         self.active_cell = name_from_tg
         if self.behavior == 'for correction':
-            old_value = self.cells_df.at['old_value', self.active_cell]
-            print(old_value)
-            cell_for_correction = VedomostCell(self.prices,
-                                               self.recipient,
-                                               name=self.active_cell,
-                                               value=old_value)
+            cell_for_correction = self.cells_ser[self.active_cell]
             cell_for_correction.revert_value()
-            self.cells_df[self.active_cell] = cell_for_correction.extract_cell_data()
+            self.cells_ser[self.active_cell] = cell_for_correction
 
         return self.active_cell
 
@@ -161,18 +133,18 @@ class VedomostFiller:
             value_from_tg = 'can`t'
         elif value_from_tg == 'забыл':
             value_from_tg = '!'
-        cell_ser = self.cells_df[self.active_cell]
+        cell_ser = self.cells_ser[self.active_cell]
 
         if cell_ser['is_filled']:
-            self.cells_df.at['new_value', self.active_cell] = \
+            self.cells_ser.at['new_value', self.active_cell] = \
                 f'{cell_ser["old_value"]},{self.recipient[0]}{value_from_tg}'
 
         else:
             if cell_ser['has_private_value']:
-                self.cells_df.at['new_value', self.active_cell] = \
+                self.cells_ser.at['new_value', self.active_cell] = \
                     f'{self.recipient[0]}{value_from_tg}'
             else:
-                self.cells_df.at['new_value', self.active_cell] = value_from_tg
+                self.cells_ser.at['new_value', self.active_cell] = value_from_tg
 
     def collect_data_to_day_row(self):
         for c in self.already_filled_dict:
@@ -232,19 +204,22 @@ class VedomostFiller:
     def refresh_day_row(self):
         self.day_row = pd.DataFrame()
         self.row_in_process_index = None
-        self.r_cats_ser_by_positions = pd.Series()
-        self.cells_df = pd.DataFrame()
+        self.day_ser_filtered = pd.Series()
+        self.cells_ser = pd.DataFrame()
         self.active_cell = None
 
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
-                            behavior='manually')
+                            behavior='for filling')
     filler()
-    print(filler.day_path_dict)
-    #filler.change_the_day_row('21.11.23')
-    #filler.filtering_by(positions=True)
-    #filler.get_cells_df()
+    filler.change_the_day_row('22.11.23')
+    filler.filtering_by(positions=True)
+    cell_name = 'e:sleeptime'
+    filler.get_cells_ser()
+    print(filler.cells_ser.at[cell_name].old_value)
+    filler.change_a_cell(cell_name)
+    print(filler.cells_ser.at[cell_name].old_value)
     #for i in filler.cell_names_list:
     #    filler.change_a_cell(i)
     #    filler.fill_the_cell('+')

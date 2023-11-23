@@ -53,8 +53,10 @@ class DayRow:
         return nans == []
 
     def load_day_row(self):
-        self.day_row = pd.read_excel(self.path_to)
-        return self.day_row
+        self.day_row = pd.read_excel(self.path_to, index_col=0)
+        date = self.day_row.at[self.i, 'DATE']
+        self.day_row.at[self.i, 'DATE'] = date.date()
+        return self
 
     def create_row(self, path_to_file):
         with pd.ExcelWriter(

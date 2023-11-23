@@ -36,7 +36,6 @@ class DayRowsDB:
         return os.listdir(self.path_to_db)
 
     def update(self, mother_frame: pd.DataFrame):
-        print(mother_frame['DATE'], self.date)
         unfilled_rows: pd.DataFrame = mother_frame[mother_frame['DATE'] <= self.date]
         unfilled_rows: pd.DataFrame = unfilled_rows[unfilled_rows['DONE'] != 'Y']
         for index in unfilled_rows.index:
