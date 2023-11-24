@@ -20,9 +20,7 @@ class FillingUser:
 
     def __call__(self) -> VedomostFiller:
         self.filler = VedomostFiller(recipient=self.username_dict[self.r_name],
-                                     behavior=self.behavior)
-        self.filler.get_mother_frame_and_prices()
-        self.filler.limiting()
+                                     behavior=self.behavior).__call__()
         return self.filler
 
     @property
@@ -37,7 +35,7 @@ class FillingUser:
         return flag
 
     def get_inlines(self):
-        self.inlines.extend(self.filler.cell_names_list)
+        self.inlines.extend(self.filler.cells)
 
     def set_last_message(self, message: Message):
         self.last_message = message

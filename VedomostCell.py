@@ -12,24 +12,16 @@ class VedomostCell:
         self.new_value = np.nan
 
     @property
-    def cat_name(self):
-        return self.name
+    def new_cat_value(self):
+        return self.new_value
 
-    @cat_name.setter
-    def cat_name(self, category_name):
-        self.name = category_name
-
-    @property
-    def old_cat_value(self):
-        return self.old_value
-
-    @old_cat_value.setter
-    def old_cat_value(self, value):
-        self.old_value = value
+    @new_cat_value.setter
+    def new_cat_value(self, new_value):
+        self.new_value = new_value
 
     @property
     def category_data(self):
-        cat_data = self.prices[self.cat_name]
+        cat_data = self.prices[self.name]
         return cat_data
 
     @property
@@ -83,6 +75,9 @@ class VedomostCell:
     @property
     def can_be_corrected(self) -> bool:
         return not self.can_be_filled
+
+    def already_filled(self):
+        return self.old_value == self.new_value
 
     def revert_value(self):
         revert_old_value = np.nan  # очистка ячейки в дефолте

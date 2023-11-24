@@ -1,5 +1,6 @@
 import datetime
 import pandas as pd
+import numpy as np
 
 
 class DayRow:
@@ -53,7 +54,7 @@ class DayRow:
         return nans == []
 
     def load_day_row(self):
-        self.day_row = pd.read_excel(self.path_to, index_col=0)
+        self.day_row = pd.read_excel(self.path_to, index_col=0).fillna(np.nan)
         date = self.day_row.at[self.i, 'DATE']
         self.day_row.at[self.i, 'DATE'] = date.date()
         return self

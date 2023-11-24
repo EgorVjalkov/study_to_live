@@ -82,3 +82,4 @@ class DayRowsDB:
             f_name_for_tg = convert_date_from(f_name)
             self.db[f_name_for_tg] = f_path
         return self.db
+
