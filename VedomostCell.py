@@ -76,8 +76,9 @@ class VedomostCell:
     def can_be_corrected(self) -> bool:
         return not self.can_be_filled
 
+    @property
     def already_filled(self):
-        return self.old_value == self.new_value
+        return str(self.old_value) != str(self.new_value)
 
     def revert_value(self):
         revert_old_value = np.nan  # очистка ячейки в дефолте

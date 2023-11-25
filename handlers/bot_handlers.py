@@ -131,7 +131,7 @@ async def change_a_date(message: Message):
 
     UDB.r_data.filler.get_cells_ser()
 
-    if not UDB.r_data.filler.cells:
+    if not UDB.r_data.filler.unfilled_cells:
         await message.reply("Все заполнено!",
                             reply_markup=ReplyKeyboardRemove())
         UDB.r_data.filler.change_done_mark()

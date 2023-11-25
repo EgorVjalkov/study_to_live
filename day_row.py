@@ -20,6 +20,11 @@ class DayRow:
         cf: pd.DataFrame = self.day_row[[i for i in self.day_row.columns if i.find(':') == 1]]
         return cf.loc[self.i]
 
+    @categories.setter
+    def categories(self, categories_dict):
+        for cat in categories_dict:
+            self.day_row.at[self.i, cat] = categories_dict[cat]
+
     @property
     def acc_frame(self) -> pd.DataFrame:
         af: pd.DataFrame = self.day_row[[i for i in self.day_row.columns if not i.find(':') == 1]]
@@ -28,6 +33,10 @@ class DayRow:
     @property
     def mark(self):
         return self.day_row.at[self.i, 'DONE']
+
+    @mark.setter
+    def mark(self, mark):
+        self.day_row.at[self.i, 'DONE'] = mark
 
     @property
     def is_mark_filled(self) -> bool:

@@ -60,7 +60,6 @@ class VedomostFiller:
 
     def filtering_by(self, positions=False, category=None, only_private_categories=False):
         filtered = list(self.day_row.categories.index)
-        print(filtered)
         if only_private_categories:
             filtered = [i for i in filtered
                         if i[0] == self.recipient[0].lower()]
@@ -77,13 +76,11 @@ class VedomostFiller:
 
     def get_cells_ser(self):
         prices = pd.read_excel(self.path_to_mother_frame, sheet_name='price', index_col=0)
-        self.cells_ser = self.cells_ser.fillna(np.nan)
         for cat in self.cells_ser.index:
             cell = VedomostCell(prices,
                                 self.recipient,
                                 name=cat,
                                 value=self.cells_ser[cat])
-            # меняем нан на что-то другое!!!
             if self.behavior == 'for filling':
                 if cell.can_be_filled:
                     self.cells_ser[cat] = cell
@@ -98,20 +95,19 @@ class VedomostFiller:
                 self.active_cell = cell.name
 
         filtered = self.cells_ser.map(lambda i: isinstance(i, VedomostCell))
-        print(filtered)
         self.cells_ser = self.cells_ser[filtered == True]
 
         return self.cells_ser
 
     @property
-    def cells(self):
-        return list(self.cells_ser.index)
+    def unfilled_cells(self):
+        unfilled = [i for i in self.cells_ser.index if i not in self.already_filled_dict]
+        return unfilled
 
     @property
     def already_filled_dict(self):
-        filled = []
+        filled = {}
         if not self.cells_ser.empty:
-            print(self.cells_ser)
             filled = self.cells_ser.map(lambda cell: cell.new_value if cell.already_filled else None).to_dict()
             filled = {i: filled[i] for i in filled if filled[i]}
         return filled
@@ -143,17 +139,15 @@ class VedomostFiller:
         self.cells_ser[cell.name] = cell
 
     def collect_data_to_day_row(self):
-        for c in self.already_filled_dict:
-            self.day_row.vedomost.at[self.row_in_process_index, c] \
-                = self.already_filled_dict[c]
+        self.day_row.categories = self.already_filled_dict
         self.change_done_mark()
 
     def change_done_mark(self):
-        if self.is_row_filled:
-            self.day_row.vedomost.at[self.row_in_process_index, 'DONE'] = 'Y'
+        if self.day_row.is_filled:
+            self.day_row.mark = 'Y'
         else:
-            if not self.cells:
-                self.day_row.vedomost.at[self.row_in_process_index, 'DONE'] = self.recipient[0]
+            if not self.unfilled_cells:
+                self.day_row.mark = self.recipient[0]
 
     def count_day_sum(self):
         pass
@@ -211,17 +205,14 @@ if __name__ == '__main__':
     filler()
     filler.change_the_day_row('22.11.23')
     filler.filtering_by(positions=True)
-    cell_name = 'e:sleeptime'
     filler.get_cells_ser()
-    #print(filler.cells)
-    filler.change_a_cell(cell_name)
-    filler.fill_the_cell('23:45')
-    print(filler.already_filled_dict)
-    #for i in filler.cell_names_list:
-    #    filler.change_a_cell(i)
-    #    filler.fill_the_cell('+')
+    for i in filler.unfilled_cells:
+        filler.change_a_cell(i)
+        filler.fill_the_cell('+')
 
-    ##filler.collect_data_to_day_row()
+    filler.collect_data_to_day_row()
+    print(filler.day_row.categories)
+    print(filler.day_row.day_row)
     #print(filler.row_db.vedomost)
     #print(filler.is_row_filled)
     #print(filler.cell_names_list)

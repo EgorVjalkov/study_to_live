@@ -35,7 +35,7 @@ class FillingUser:
         return flag
 
     def get_inlines(self):
-        self.inlines.extend(self.filler.cells)
+        self.inlines.extend(self.filler.unfilled_cells)
 
     def set_last_message(self, message: Message):
         self.last_message = message
