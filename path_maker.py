@@ -31,7 +31,7 @@ class PathToVedomost:
     @property
     def to_temp_db(self):
         temp_dir = f'temp_db'
-        path_to_temp_db = Path(self.path_to_project, 'months', temp_dir)
+        path_to_temp_db = Path(self.path_to_project, 'row_db', temp_dir)
         make_dir_if_not_exist(path_to_temp_db)
         return path_to_temp_db
 

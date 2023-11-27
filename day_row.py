@@ -21,7 +21,7 @@ class DayRow:
         return cf.loc[self.i]
 
     @categories.setter
-    def categories(self, categories_dict):
+    def categories(self, categories_dict: dict):
         for cat in categories_dict:
             self.day_row.at[self.i, cat] = categories_dict[cat]
 
