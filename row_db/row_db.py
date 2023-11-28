@@ -84,10 +84,21 @@ class DayRowsDB:
     def temp_files(self):
         return os.listdir(self.path_to_db)
 
-    def clear_except(self, important_files):
-        for file in self.temp_files:
-            if not Converter(file_name=file).date_from_f_name in important_files:
-                os.remove(Path(self.path_to_db, file))
+    @property
+    def temp_files_paths_list(self):
+        return [Path(self.path_to_db, f_name) for f_name in self.temp_files]
+
+    def get_full_path(self, date_object):
+        path_part = Converter(date_object=date_object).to('path')
+        path_in_list = [f_path for f_path in self.temp_files_paths_list
+                        if path_part in f_path]
+        assert len(path_in_list) != 1, 'проблема с файлами'
+        return path_in_list[0]
+
+    def clear_except(self, important_paths):
+        for path in self.temp_files_paths_list:
+            if path not in important_paths:
+                os.remove(path)
 
     def write_to_mf(self, mother_frame: pd.DataFrame):
         pass
@@ -95,21 +106,28 @@ class DayRowsDB:
     def update(self, mother_frame: pd.DataFrame):
         unfilled_rows: pd.DataFrame = mother_frame[mother_frame['DATE'] <= self.date]
         unfilled_rows: pd.DataFrame = unfilled_rows[unfilled_rows['DONE'] != 'Y']
-        important_dates = unfilled_rows['DATE'].to_list()
-        if self.yesterday not in important_dates:
-            important_dates.append(self.yesterday)
-        important_dates = [Converter(date_object=i).to('path') for i in important_dates]
-        self.clear_except(important_dates)
-        for date in important_dates:
-            if self.contains(date):
-                self.match_rows()
+        important_dates: pd.Series = unfilled_rows['DATE']
+        yesterday_ser = mother_frame[mother_frame['DATE'] == self.yesterday]['DATE']
+        print(yesterday_ser)
+        if self.yesterday not in important_dates.values:
+            important_dates = pd.concat([important_dates,
+                                         pd.Series(self.yesterday)])
+
+        #print(important_dates)
+        important_dates = important_dates.map(self.get_full_path)
+        self.clear_except(important_dates.values())
+        for i in important_dates:
+            if self.contains(important_dates[i]):
+                path = self.get_full_path(important_dates[i])
+                #self.match_rows(row_from_mf=mother_frame.loc[i],
+                                #row_from_db=DayRow(path=Path(self.path_to_db, )))
                 # остановился здесь, нужно змутить прогу на сравнение дней  и перезаись в результирующую
             else:
-                self.create_row(mother_frame[index: index+1])
+                self.create_row(mother_frame[index: index + 1])
 
-    def contains(self, file_name_part) -> bool:
+    def contains(self, path) -> bool:
         flag: bool = False
-        files_list = [n for n in self.temp_files
+        files_list = [n for n in self.temp_files_paths_list
                       if file_name_part in n]
         if files_list:
             flag: bool = True
@@ -130,16 +148,16 @@ class DayRowsDB:
     def load_rows_dict_for(self, recipient: str, behavior: str) -> dict:
         if behavior == 'for filling':
             done_mark = recipient[0]
-            files_list = [f_name for f_name in self.temp_files
+            files_list = [f_name for f_name in self.temp_files_paths_list
                           if done_mark not in f_name]
         elif behavior == 'for correction':
-            files_list = [f_name for f_name in self.temp_files
+            files_list = [f_name for f_name in self.temp_files_paths_list
                           if 'empty' not in f_name]
             if files_list:
                 files_list = [f_name for f_name in files_list
                               if Converter(file_name=f_name).to('date') >= self.yesterday]
         else:
-            files_list = [f_name for f_name in self.temp_files
+            files_list = [f_name for f_name in self.temp_files_paths_list
                           if Converter(file_name=f_name).to('date') == self.date]
 
         for f_name in files_list:
