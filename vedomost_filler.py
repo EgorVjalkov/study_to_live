@@ -152,34 +152,6 @@ class VedomostFiller:
     def count_day_sum(self):
         pass
 
-    def save_day_data_to_temp_db(self):
-        mark: str = self.day_row.vedomost.at[self.row_in_process_index, 'DONE']
-        date: str = self.changed_date.replace('.', '_')
-        if pd.notna(mark):
-            file_name = f'{date}_{mark}.xlsx'
-        else:
-            file_name = f'{date}.xlsx'
-        # нужно замутить замену файлов временных
-
-        file_path = f'{self.path_to_temp_db}/{file_name}'
-        with pd.ExcelWriter(
-                file_path,
-                mode='w',
-                engine='openpyxl'
-        ) as temp_writer:
-            self.day_row.vedomost.to_excel(temp_writer, sheet_name='vedomost', index=False)
-
-    def save_day_data_to_mother_frame(self):
-        self.mother_frame[self.row_in_process_index:self.row_in_process_index + 1] \
-            = self.day_row.vedomost
-        with pd.ExcelWriter(
-                self.path_to_mother_frame,
-                mode='a',
-                engine='openpyxl',
-                if_sheet_exists='replace'
-        ) as mf_writer:
-            self.mother_frame.to_excel(mf_writer, sheet_name='vedomost', index=False)
-
     @property
     def changed_date(self):
         date = self.day_row.date.at[self.row_in_process_index, 'DATE']
