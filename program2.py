@@ -5,7 +5,7 @@ from analytic_utilities import FrameForAnalyse
 from BonusColumn import BonusColumn
 
 recipients = ['Egr', 'Lera']
-month = "oct23"
+month = "nov23"
 
 path_to_file = f'months/{month}/{month}.xlsx'
 show_calc = True

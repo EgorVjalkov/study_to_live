@@ -13,6 +13,9 @@ class CompCoef:
     def __init__(self, coef_data):
         self.coef_data = coef_data
 
+    def __repr__(self):
+        return f'CompCoef(coef_data={self.coef_data})'
+
     @property
     def severity_dict(self):
         name = self.coef_data[:self.coef_data.find('(')]
