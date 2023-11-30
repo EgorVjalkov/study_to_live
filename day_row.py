@@ -83,7 +83,6 @@ class DayRow:
         for value in existed_row.categories:
             pass
 
-
     def create_row(self, path_to_file):
         with pd.ExcelWriter(
                 path_to_file,

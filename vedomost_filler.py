@@ -1,9 +1,8 @@
 import pandas as pd
-import numpy as np
 import datetime
 import classes as cl
 from VedomostCell import VedomostCell
-from path_maker import PathToVedomost
+from path_maker import PathTo
 from day_row import DayRow
 from row_db.DB_main import day_db
 
@@ -14,8 +13,8 @@ class VedomostFiller:
                  behavior: str = ''):
 
         self.date = datetime.date.today()
-        self.path_to_mother_frame = PathToVedomost(self.date).to_vedomost
-        self.path_to_temp_db = PathToVedomost().to_temp_db
+        self.path_to_mother_frame = PathTo(self.date).vedomost
+        self.path_to_temp_db = PathTo().temp_db
 
         # поле переменных для работы функций
 
@@ -165,20 +164,21 @@ class VedomostFiller:
 
 
 if __name__ == '__main__':
-    filler = VedomostFiller(recipient='Egr',
-                            behavior='for filling')
-    filler()
-    filler.change_the_day_row('27.11.23')
-    filler.filtering_by(positions=True)
-    filler.get_cells_ser()
-    print(filler.day.filled_cells)
-    for i in filler.unfilled_cells:
-        filler.change_a_cell(i)
-        filler.fill_the_cell('+')
-    print(filler.day.filled_cells)
+    day_db.update()
+    #filler = VedomostFiller(recipient='Egr',
+    #                        behavior='for filling')
+    #filler()
+    #filler.change_the_day_row('27.11.23')
+    #filler.filtering_by(positions=True)
+    #filler.get_cells_ser()
+    #print(filler.day.filled_cells)
+    #for i in filler.unfilled_cells:
+    #    filler.change_a_cell(i)
+    #    filler.fill_the_cell('+')
+    #print(filler.day.filled_cells)
 
-    filler.collect_data_to_day_row()
-    day_db.create_row(filler.day)
+    #filler.collect_data_to_day_row()
+    #day_db.create_row(filler.day)
     #print(filler.row_db.vedomost)
     #print(filler.is_row_filled)
     #print(filler.cell_names_list)

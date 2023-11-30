@@ -1,5 +1,6 @@
-from row_db.row_db import DayRowsDB
-from path_maker import PathToVedomost
+from row_db.row_db import UnfilledRowsDB
+from path_maker import PathTo
 
-path = PathToVedomost().to_temp_db
-day_db = DayRowsDB(path)
+path_to_temp_db = PathTo().temp_db
+path_to_mother_frame = PathTo().vedomost
+day_db = UnfilledRowsDB(path_to_temp_db, path_to_mother_frame)

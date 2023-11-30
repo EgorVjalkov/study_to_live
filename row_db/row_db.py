@@ -6,6 +6,10 @@ from pathlib import Path
 from day_row import DayRow
 
 
+today: datetime.date = datetime.date.today()
+yesterday: datetime.date = today - datetime.timedelta(days=1)
+
+
 class Converter:
     def __init__(self,
                  file_name: str = '',
@@ -67,78 +71,98 @@ class Converter:
 #print(a)
 
 
-class DayRowsDB:
-    def __init__(self, path_to: str):
-        self.date: datetime.date = datetime.date.today()
-        self.path_to_db = path_to
-        self.db = {} #'<-- чтоб не путаться нвдо сделать ее DFэ'
+class MirrorDB:
+    def __init__(self):
+        self.db_mirror = pd.Series()
+
+    def __repr__(self):
+        for_print = [f'{i}: {self.db_mirror.at[i]}'
+                     for i in self.db_mirror.index]
+        return f'MirrorDB({", ".join(for_print)})'
+
+    def update(self, db: pd.DataFrame):
+        self.db_mirror = db.get(['DATE', 'DONE']).set_index('DATE')['DONE']
+        return self.db_mirror
+
+
+class UnfilledRowsDB:
+    def __init__(self, path_to_db: Path, path_to_mf: Path):
+        self.mirror: pd.Series = pd.Series()
+        self.path_to_db = path_to_db
+        self.path_to_mf = path_to_mf
+
+    def __repr__(self):
+        for_print = [f'{i}: {self.mirror.at[i]}'
+                     for i in self.mirror.index]
+        return f'DB({", ".join(for_print)})'
+
+    def __call__(self, *args, **kwargs):
+        self.mirror = MirrorDB().update(self.db)
 
     @property
-    def yesterday(self):
-        return self.date - datetime.timedelta(days=1)
+    def exists(self):
+        return os.path.isfile(self.path_to_db)
 
     @property
-    def temp_files(self) -> list:
-        return os.listdir(self.path_to_db)
+    def db(self) -> pd.DataFrame:
+        db = pd.read_excel(self.path_to_db, index_col=0)
+        db['DATE'] = db['DATE'].map(lambda date_: date_.date())
+        return db
 
     @property
-    def temp_files_paths_dict(self) -> dict:
-        return {f_name: Path(self.path_to_db, f_name) for f_name in self.temp_files}
+    def mother_frame(self) -> pd.DataFrame:
+        mf: pd.DataFrame = pd.read_excel(self.path_to_mf, sheet_name='vedomost')
+        mf['DATE'] = mf['DATE'].map(lambda date_: date_.date())
+        return mf
 
     @property
-    def empty_rows_paths(self):
-        return {self.temp_files_paths_dict[f_name] for f_name
-                in self.temp_files_paths_dict if 'empty' in f_name}
+    def is_newer_than_mf(self) -> bool:
+        date_temp_db = os.path.getmtime(self.path_to_db)
+        date_mf_db = os.path.getmtime(self.path_to_mf)
+        return date_temp_db > date_mf_db # <- временный новее
 
-    def get_full_path(self, date_object: datetime.date) -> Path | None:
-        path_part = Converter(date_object=date_object).to('path')
-        path_in_list = [self.temp_files_paths_dict[f_name]
-                        for f_name in self.temp_files_paths_dict
-                        if path_part in f_name]
-        assert len(path_in_list) <= 1, 'несколько файлов'
-        return path_in_list[0] if path_in_list else None
+    @property
+    def days_tg_format(self) -> list:
+        return [Converter(date_object=date_).to('str')
+                for date_ in self.mirror.index]
 
-    def clear_except(self, important_paths: pd.Series):
-        for path in self.temp_files_paths_dict.values():
-            if path not in important_paths.values:
-                os.remove(path)
+    @staticmethod
+    def update_temp_db(mother_frame: pd.DataFrame,
+                       temp_db: pd.DataFrame) -> pd.DataFrame:
+        date_filter = mother_frame['DATE'].map(lambda date_: date_ in (yesterday, today))
+        update_from_mf = mother_frame[date_filter == True]
+        for i in update_from_mf.index:
+            if i not in temp_db.index:
+                temp_db.loc[i] = update_from_mf.loc[i]
+        return temp_db
 
-    def write_filled_to_mf_and_del(self, mother_frame: pd.DataFrame, path_to_mf: Path):
-        for f_name in self.temp_files_paths_dict:
-            if 'Y' in f_name:
-                filled_row: DayRow = DayRow(path=self.temp_files_paths_dict[f_name]).load_day_row()
-                mother_frame.loc[filled_row.i] = filled_row.row
-                os.remove(self.temp_files_paths_dict[f_name])
-
-        with pd.ExcelWriter(path=path_to_mf,
-                            mode='a',
-                            engine='openpyxl',
-                            if_sheet_exists='replace'
-                            ) as mf_writer:
-            mother_frame.to_excel(mf_writer, sheet_name='vedomost', index=False)
-
-    def update(self, mother_frame: pd.DataFrame, path_to_mf: Path):
-        unfilled_rows: pd.DataFrame = mother_frame[mother_frame['DATE'] <= self.date]
+    @staticmethod
+    def replace_temp_db(mother_frame: pd.DataFrame) -> pd.DataFrame:
+        unfilled_rows: pd.DataFrame = mother_frame[mother_frame['DATE'] <= today]
         unfilled_rows: pd.DataFrame = unfilled_rows[unfilled_rows['DONE'] != 'Y']
-        important_dates: pd.Series = unfilled_rows['DATE']
-        if self.yesterday not in important_dates.values:
-            yesterday_ser: pd.Series = mother_frame[mother_frame['DATE'] == self.yesterday]['DATE']
-            important_dates = pd.concat([important_dates, yesterday_ser])
-        important_paths = important_dates.map(self.get_full_path)
-        print(important_paths)
-        self.clear_except(important_paths)
-        self.write_filled_to_mf_and_del(mother_frame, path_to_mf)
-        for i in important_paths.index:
-            path_ = important_paths[i]
-            print(path_)
-            if not path_:
-                self.create_row(mother_frame[i:i+1])
+        db_from_mf = unfilled_rows
+        if yesterday not in db_from_mf['DATE'].values:
+            yesterday_row: pd.DataFrame = mother_frame[mother_frame['DATE'] == yesterday]
+            db_from_mf = pd.concat([yesterday_row, db_from_mf]).sort_index()
+        return db_from_mf
 
-    def contains(self, date_object: datetime.date):
-        date_part = Converter(date_object=date_object).to('path')
-        print(date_part)
-        file = [f for f in self.temp_files if date_part in f]
-        return True if file else False
+    def save_temp_db(self, temp_db: pd.DataFrame):
+        with pd.ExcelWriter(path=self.path_to_db,
+                            mode='w',
+                            engine='openpyxl',
+                            ) as writer:
+            temp_db.to_excel(writer)
+
+    def update(self):
+        mother_frame = self.mother_frame
+        if not self.exists or not self.is_newer_than_mf:
+            temp_db = self.replace_temp_db(mother_frame)
+        else:
+            #temp_db = self.db
+            #temp_db = self.update_temp_db(mother_frame, temp_db)
+            temp_db = self.update_temp_db(mother_frame, self.db)
+        self.mirror = MirrorDB().update(temp_db)
+        self.save_temp_db(temp_db)
 
     def create_row(self, row: DayRow) -> DayRow:
         if self.contains(row.date):
