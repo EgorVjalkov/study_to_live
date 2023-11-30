@@ -71,7 +71,7 @@ class DayRowsDB:
     def __init__(self, path_to: str):
         self.date: datetime.date = datetime.date.today()
         self.path_to_db = path_to
-        self.db = {}
+        self.db = {} #'<-- чтоб не путаться нвдо сделать ее DFэ'
 
     @property
     def yesterday(self):
@@ -85,15 +85,21 @@ class DayRowsDB:
     def temp_files_paths_dict(self) -> dict:
         return {f_name: Path(self.path_to_db, f_name) for f_name in self.temp_files}
 
+    @property
+    def empty_rows_paths(self):
+        return {self.temp_files_paths_dict[f_name] for f_name
+                in self.temp_files_paths_dict if 'empty' in f_name}
+
     def get_full_path(self, date_object: datetime.date) -> Path | None:
         path_part = Converter(date_object=date_object).to('path')
-        path_in_list = [f_name for f_name in self.temp_files_paths_dict
+        path_in_list = [self.temp_files_paths_dict[f_name]
+                        for f_name in self.temp_files_paths_dict
                         if path_part in f_name]
         assert len(path_in_list) <= 1, 'несколько файлов'
         return path_in_list[0] if path_in_list else None
 
     def clear_except(self, important_paths: pd.Series):
-        for path in self.temp_files_paths_dict:
+        for path in self.temp_files_paths_dict.values():
             if path not in important_paths.values:
                 os.remove(path)
 
@@ -101,7 +107,7 @@ class DayRowsDB:
         for f_name in self.temp_files_paths_dict:
             if 'Y' in f_name:
                 filled_row: DayRow = DayRow(path=self.temp_files_paths_dict[f_name]).load_day_row()
-                mother_frame.loc[filled_row.i] = filled_row.day_row
+                mother_frame.loc[filled_row.i] = filled_row.row
                 os.remove(self.temp_files_paths_dict[f_name])
 
         with pd.ExcelWriter(path=path_to_mf,
@@ -119,6 +125,7 @@ class DayRowsDB:
             yesterday_ser: pd.Series = mother_frame[mother_frame['DATE'] == self.yesterday]['DATE']
             important_dates = pd.concat([important_dates, yesterday_ser])
         important_paths = important_dates.map(self.get_full_path)
+        print(important_paths)
         self.clear_except(important_paths)
         self.write_filled_to_mf_and_del(mother_frame, path_to_mf)
         for i in important_paths.index:
@@ -127,9 +134,23 @@ class DayRowsDB:
             if not path_:
                 self.create_row(mother_frame[i:i+1])
 
-    def create_row(self, row: pd.DataFrame):
-        row = DayRow(day_row=row)
-        date_part = Converter(date_object=row.date).to('path')
+    def contains(self, date_object: datetime.date):
+        date_part = Converter(date_object=date_object).to('path')
+        print(date_part)
+        file = [f for f in self.temp_files if date_part in f]
+        return True if file else False
+
+    def create_row(self, row: DayRow) -> DayRow:
+        if self.contains(row.date):
+            full_path: Path = self.get_full_path(row.date)
+            print(full_path)
+            if full_path in self.empty_rows_paths:
+                os.remove(full_path)
+            else:
+                existed_row: DayRow = DayRow(path=full_path).load_day_row()
+                print(f'existed {existed_row}')
+                row.concat_row_with(existed_row)
+
         if row.is_mark_filled:
             path_to_file = Path(self.path_to_db, f'{date_part}({row.mark}).xlsx')
         else:
@@ -138,6 +159,9 @@ class DayRowsDB:
             else:
                 path_to_file = Path(self.path_to_db, f'{date_part}.xlsx')
         row.create_row(path_to_file)
+
+    def concat_rows(self):
+        pass
 
     def load_rows_dict_for(self, recipient: str, behavior: str) -> dict:
         if behavior == 'for filling':

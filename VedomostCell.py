@@ -11,6 +11,12 @@ class VedomostCell:
         self.old_value = value
         self.new_value = np.nan
 
+    def __repr__(self):
+        if self.already_filled:
+            return f'Cell({self.name}, new: {self.new_value})'
+        else:
+            return f'Cell({self.name}, old: {self.old_value}'
+
     @property
     def new_cat_value(self):
         return self.new_value

@@ -19,7 +19,7 @@ class VedomostFiller:
 
         # поле переменных для работы функций
 
-        self.day_row: DayRow = DayRow()
+        self.day: DayRow = DayRow()
         self.recipient: str = recipient
         self.day_path_dict: dict = {}
         self.cells_ser: pd.Series = pd.Series()
@@ -30,7 +30,7 @@ class VedomostFiller:
     def __call__(self, *args, **kwargs):
         mf: pd.DataFrame = pd.read_excel(self.path_to_mother_frame, sheet_name='vedomost')
         mf['DATE'] = mf['DATE'].map(lambda date: date.date())
-        day_db.update(mf)
+        day_db.update(mf, self.path_to_mother_frame)
         self.day_path_dict = day_db.load_rows_dict_for(self.recipient, self.behavior)
         return self
 
@@ -47,19 +47,19 @@ class VedomostFiller:
         return f'{self.recipient[0].lower()}:siesta'
 
     def change_the_day_row(self, date_form_tg):
-        self.day_row = DayRow(path=self.day_path_dict[date_form_tg]).load_day_row()
-        return self.day_row
+        self.day = DayRow(path=self.day_path_dict[date_form_tg]).load_day_row()
+        return self.day
 
     @property
     def r_positions(self):
         r = cl.Recipient(self.recipient)
-        r.extract_data_by_recipient(self.day_row.acc_frame)
+        r.extract_data_by_recipient(self.day.acc_frame)
         r.get_with_children_col()
         r.get_r_positions_col()
-        return r.mod_data.at[self.day_row.i, 'positions']
+        return r.mod_data.at[self.day.i, 'positions']
 
     def filtering_by(self, positions=False, category=None, only_private_categories=False):
-        filtered = list(self.day_row.categories.index)
+        filtered = list(self.day.categories.index)
         if only_private_categories:
             filtered = [i for i in filtered
                         if i[0] == self.recipient[0].lower()]
@@ -71,7 +71,7 @@ class VedomostFiller:
                         if i[0] in self.r_positions]
 
         self.cells_ser = \
-            self.day_row.categories[filtered]
+            self.day.categories[filtered]
         return self.cells_ser
 
     def get_cells_ser(self):
@@ -139,52 +139,46 @@ class VedomostFiller:
         self.cells_ser[cell.name] = cell
 
     def collect_data_to_day_row(self):
-        self.day_row.categories = self.already_filled_dict
+        self.day.categories = self.already_filled_dict
         self.change_done_mark()
 
     def change_done_mark(self):
-        if self.day_row.is_filled:
-            self.day_row.mark = 'Y'
+        if self.day.is_filled:
+            self.day.mark = 'Y'
         else:
             if not self.unfilled_cells:
-                self.day_row.mark = self.recipient[0]
+                self.day.mark = self.recipient[0]
 
     def count_day_sum(self):
         pass
 
     @property
     def changed_date(self):
-        date = self.day_row.date.at[self.row_in_process_index, 'DATE']
+        date = self.day.date
         date = datetime.date.strftime(date,  '%d.%m.%y')
         return date
 
     @property
     def filled_cells_list_for_print(self):
-        return [f'{i} - "{self.already_filled_dict[i]}"'
-                for i in self.already_filled_dict]
-
-    def refresh_day_row(self):
-        self.day_row = pd.DataFrame()
-        self.row_in_process_index = None
-        self.day_ser_filtered = pd.Series()
-        self.cells_ser = pd.DataFrame()
-        self.active_cell = None
+        return [f'{c} - "{self.already_filled_dict[c]}"'
+                for c in self.already_filled_dict]
 
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
                             behavior='for filling')
     filler()
-    filler.change_the_day_row('22.11.23')
+    filler.change_the_day_row('27.11.23')
     filler.filtering_by(positions=True)
     filler.get_cells_ser()
+    print(filler.day.filled_cells)
     for i in filler.unfilled_cells:
         filler.change_a_cell(i)
         filler.fill_the_cell('+')
+    print(filler.day.filled_cells)
 
     filler.collect_data_to_day_row()
-    print(filler.day_row.categories)
-    print(filler.day_row.day_row)
+    day_db.create_row(filler.day)
     #print(filler.row_db.vedomost)
     #print(filler.is_row_filled)
     #print(filler.cell_names_list)
