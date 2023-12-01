@@ -351,7 +351,7 @@ class CategoryData:
         self.mod_frame = mf
 
     @property
-    def non_private_category(self):
+    def is_not_private_category(self):
         return self.recipient[0].lower() != self.name[0]
 
     def find_a_price(self, result, positions):
@@ -427,13 +427,14 @@ class CategoryData:
         if price in ['can`t', 'wishn`t']:
             return coef, price
         else:
-            if full_family_flag and price > 0 and self.non_private_category:
-                price *= 0.5
-                reduced = True
-
             coef = abs(price) * coef
-            price += coef
-            return round(coef, 2), round(price, 2)
+            if full_family_flag and price > 0 and self.is_not_private_category:
+                reduced_price = 0.5 * price
+                coefed_price = reduced_price + coef
+                print(f'{price} --> {reduced_price}')
+            else:
+                coefed_price = price + coef
+            return round(coef, 2), round(coefed_price, 2)
 
     def add_coef_and_result_column(self, show_calculation=False):
         coefs_list = list(map(self.count_a_modification,
