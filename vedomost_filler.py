@@ -1,3 +1,4 @@
+import datetime
 import pandas as pd
 import datetime
 import classes as cl
@@ -10,9 +11,10 @@ from row_db.DB_main import day_db
 class VedomostFiller:
     def __init__(self,
                  recipient: str = '',
-                 behavior: str = ''):
+                 behavior: str = '',
+                 date: datetime.date = datetime.date.today()):
 
-        self.date = datetime.date.today()
+        self.date = date
         self.path_to_mother_frame = PathTo(self.date).vedomost
         self.path_to_temp_db = PathTo().temp_db
 
@@ -20,22 +22,20 @@ class VedomostFiller:
 
         self.day: DayRow = DayRow()
         self.recipient: str = recipient
-        self.day_path_dict: dict = {}
+        self.row_index_ser = None
         self.cells_ser: pd.Series = pd.Series()
         self.behavior: str = behavior
 
         self.active_cell = None
 
     def __call__(self, *args, **kwargs):
-        mf: pd.DataFrame = pd.read_excel(self.path_to_mother_frame, sheet_name='vedomost')
-        mf['DATE'] = mf['DATE'].map(lambda date: date.date())
-        day_db.update(mf, self.path_to_mother_frame)
-        self.day_path_dict = day_db.load_rows_dict_for(self.recipient, self.behavior)
+        day_db.update()
+        self.row_index_ser: pd.Series = day_db.load_rows_for(self.recipient, self.behavior)
         return self
 
     @property
     def days(self) -> list:
-        return list(self.day_path_dict.keys())
+        return self.row_index_ser.index.to_list()
 
     @ property
     def r_sleeptime(self):
@@ -46,7 +46,7 @@ class VedomostFiller:
         return f'{self.recipient[0].lower()}:siesta'
 
     def change_the_day_row(self, date_form_tg):
-        self.day = DayRow(path=self.day_path_dict[date_form_tg]).load_day_row()
+        self.day = DayRow(path=self.row_index_ser[date_form_tg]).load_day_row()
         return self.day
 
     @property
@@ -164,10 +164,12 @@ class VedomostFiller:
 
 
 if __name__ == '__main__':
-    day_db.update()
-    #filler = VedomostFiller(recipient='Egr',
-    #                        behavior='for filling')
-    #filler()
+    filler = VedomostFiller(recipient='Egr',
+                            behavior='manually',
+                            date=datetime.date(day=29, month=11, year=2023))
+    filler()
+    print(filler.row_index_ser)
+    print(filler.days)
     #filler.change_the_day_row('27.11.23')
     #filler.filtering_by(positions=True)
     #filler.get_cells_ser()

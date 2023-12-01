@@ -1,5 +1,4 @@
 import datetime
-from datetime import date
 import pandas as pd
 import os
 from pathlib import Path
@@ -71,33 +70,35 @@ class Converter:
 #print(a)
 
 
-class MirrorDB:
+class Mirror:
     def __init__(self):
-        self.db_mirror = pd.Series()
+        self.frame = pd.DataFrame
 
     def __repr__(self):
-        for_print = [f'{i}: {self.db_mirror.at[i]}'
-                     for i in self.db_mirror.index]
+        for_print = [f'{i}: {self.frame.at[i]}'
+                     for i in self.frame.index]
         return f'MirrorDB({", ".join(for_print)})'
 
     def update(self, db: pd.DataFrame):
-        self.db_mirror = db.get(['DATE', 'DONE']).set_index('DATE')['DONE']
-        return self.db_mirror
+        self.frame = db.get(['DATE', 'DONE'])
+        self.frame['date_from_tg'] = self.frame['DATE'].map(
+            lambda date_: Converter(date_object=date_).to('str'))
+        return self.frame
 
 
 class UnfilledRowsDB:
     def __init__(self, path_to_db: Path, path_to_mf: Path):
-        self.mirror: pd.Series = pd.Series()
+        self.mirror_frame: pd.Series = pd.Series()
         self.path_to_db = path_to_db
         self.path_to_mf = path_to_mf
 
     def __repr__(self):
-        for_print = [f'{i}: {self.mirror.at[i]}'
-                     for i in self.mirror.index]
+        for_print = [f'{i}: {self.mirror_frame.at[i]}'
+                     for i in self.mirror_frame.index]
         return f'DB({", ".join(for_print)})'
 
-    def __call__(self, *args, **kwargs):
-        self.mirror = MirrorDB().update(self.db)
+    #def __call__(self, *args, **kwargs):
+    #    self.mirror = Mirror().update(self.db)
 
     @property
     def exists(self):
@@ -120,11 +121,6 @@ class UnfilledRowsDB:
         date_temp_db = os.path.getmtime(self.path_to_db)
         date_mf_db = os.path.getmtime(self.path_to_mf)
         return date_temp_db > date_mf_db # <- временный новее
-
-    @property
-    def days_tg_format(self) -> list:
-        return [Converter(date_object=date_).to('str')
-                for date_ in self.mirror.index]
 
     @staticmethod
     def update_temp_db(mother_frame: pd.DataFrame,
@@ -158,10 +154,8 @@ class UnfilledRowsDB:
         if not self.exists or not self.is_newer_than_mf:
             temp_db = self.replace_temp_db(mother_frame)
         else:
-            #temp_db = self.db
-            #temp_db = self.update_temp_db(mother_frame, temp_db)
             temp_db = self.update_temp_db(mother_frame, self.db)
-        self.mirror = MirrorDB().update(temp_db)
+        self.mirror_frame = Mirror().update(temp_db)
         self.save_temp_db(temp_db)
 
     def create_row(self, row: DayRow) -> DayRow:
@@ -184,26 +178,14 @@ class UnfilledRowsDB:
                 path_to_file = Path(self.path_to_db, f'{date_part}.xlsx')
         row.create_row(path_to_file)
 
-    def concat_rows(self):
-        pass
-
-    def load_rows_dict_for(self, recipient: str, behavior: str) -> dict:
-        if behavior == 'for filling':
-            done_mark = recipient[0]
-            files_list = [f_name for f_name in self.temp_files_paths_dict
-                          if done_mark not in f_name]
-        elif behavior == 'for correction':
-            files_list = [f_name for f_name in self.temp_files_paths_dict
-                          if 'empty' not in f_name]
-            if files_list:
-                files_list = [f_name for f_name in files_list
-                              if Converter(file_name=f_name).to('date') >= self.yesterday]
+    def load_rows_for(self, recipient: str, by_behavior: str) -> pd.Series:
+        if by_behavior == 'for filling':
+            r_done_mark = recipient[0]
+            days_frame: pd.DataFrame = self.mirror_frame[self.mirror_frame['DONE'] != r_done_mark]
+        elif by_behavior == 'for correction':
+            days_frame: pd.DataFrame = self.mirror_frame[self.mirror_frame['DONE'] != 'empty']
+            days_frame: pd.DataFrame = days_frame[days_frame['DATE'] >= yesterday]
         else:
-            files_list = [f_name for f_name in self.temp_files_paths_dict
-                          if Converter(file_name=f_name).to('date') == self.date]
-
-        for f_name in files_list:
-            f_path = Path(self.path_to_db, f'{f_name}')
-            f_name_for_tg = Converter(file_name=f_name).to('str')
-            self.db[f_name_for_tg] = f_path
-        return self.db
+            days_frame: pd.DataFrame = self.mirror_frame[self.mirror_frame['DATE'] == today]
+        days_frame['row_index'] = days_frame.index
+        return days_frame.set_index('date_from_tg')['row_index']
