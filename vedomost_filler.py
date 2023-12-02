@@ -1,9 +1,8 @@
-import datetime
 import pandas as pd
 import datetime
 import classes as cl
 from VedomostCell import VedomostCell
-from path_maker import PathTo
+from path_maker import PathBy
 from day_row import DayRow
 from row_db.DB_main import day_db
 
@@ -15,8 +14,8 @@ class VedomostFiller:
                  date: datetime.date = datetime.date.today()):
 
         self.date = date
-        self.path_to_mother_frame = PathTo(self.date).vedomost
-        self.path_to_temp_db = PathTo().temp_db
+        self.path_to_mother_frame = PathBy(self.date).to_vedomost
+        self.path_to_temp_db = PathBy().to_temp_db
 
         # поле переменных для работы функций
 
@@ -33,10 +32,6 @@ class VedomostFiller:
         self.row_index_ser: pd.Series = day_db.load_rows_for(self.recipient, self.behavior)
         return self
 
-    @property
-    def days(self) -> list:
-        return self.row_index_ser.index.to_list()
-
     @ property
     def r_sleeptime(self):
         return f'{self.recipient[0].lower()}:sleeptime'
@@ -44,6 +39,10 @@ class VedomostFiller:
     @ property
     def r_siesta(self):
         return f'{self.recipient[0].lower()}:siesta'
+
+    @property
+    def days(self) -> list:
+        return self.row_index_ser.index.to_list()
 
     def change_the_day_row(self, date_form_tg):
         self.day = DayRow(path=self.row_index_ser[date_form_tg]).load_day_row()
@@ -147,6 +146,8 @@ class VedomostFiller:
         else:
             if not self.unfilled_cells:
                 self.day.mark = self.recipient[0]
+            else:
+                self.day.mark = 'at work'
 
     def count_day_sum(self):
         pass
@@ -164,12 +165,12 @@ class VedomostFiller:
 
 
 if __name__ == '__main__':
-    filler = VedomostFiller(recipient='Egr',
-                            behavior='manually',
-                            date=datetime.date(day=29, month=11, year=2023))
-    filler()
-    print(filler.row_index_ser)
-    print(filler.days)
+    day_db.update()
+    #filler = VedomostFiller(recipient='Egr',
+    #                        behavior='for filling')
+    #filler()
+    #print(filler.row_index_ser)
+    #print(filler.days)
     #filler.change_the_day_row('27.11.23')
     #filler.filtering_by(positions=True)
     #filler.get_cells_ser()

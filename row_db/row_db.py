@@ -2,6 +2,7 @@ import datetime
 import pandas as pd
 import os
 from pathlib import Path
+from path_maker import PathBy
 from day_row import DayRow
 
 
@@ -72,55 +73,68 @@ class Converter:
 
 class Mirror:
     def __init__(self):
-        self.frame = pd.DataFrame
+        self.frame = pd.DataFrame()
 
-    def __repr__(self):
-        for_print = [f'{i}: {self.frame.at[i]}'
-                     for i in self.frame.index]
-        return f'MirrorDB({", ".join(for_print)})'
-
-    def update(self, db: pd.DataFrame):
-        self.frame = db.get(['DATE', 'DONE'])
-        self.frame['date_from_tg'] = self.frame['DATE'].map(
-            lambda date_: Converter(date_object=date_).to('str'))
+    def update(self, dbs: list):
+        mirrors = []
+        for db in dbs:
+            frame = db.get(['DATE', 'DONE'])
+            frame['date_from_tg'] = frame['DATE'].map(
+                lambda date_: Converter(date_object=date_).to('str'))
+            frame['row_index'] = frame.index
+            frame['path_to_mf'] = frame['DATE'].map(lambda date_: PathBy(date=date_).to_vedomost)
+            frame['path_to_db'] = frame['DATE'].map(lambda date_: PathBy(date=date_).to_months_temp_db)
+            mirrors.append(frame)
+        if len(mirrors) > 1:
+            self.frame = pd.concat(mirrors)
+        else:
+            self.frame = mirrors[0]
         return self.frame
 
 
 class UnfilledRowsDB:
-    def __init__(self, path_to_db: Path, path_to_mf: Path):
-        self.mirror_frame: pd.Series = pd.Series()
-        self.path_to_db = path_to_db
-        self.path_to_mf = path_to_mf
+    def __init__(self):
+        self.path_to_db = PathBy().to_temp_db
+        self.mirror = None
 
     def __repr__(self):
-        for_print = [f'{i}: {self.mirror_frame.at[i]}'
-                     for i in self.mirror_frame.index]
-        return f'DB({", ".join(for_print)})'
-
-    #def __call__(self, *args, **kwargs):
-    #    self.mirror = Mirror().update(self.db)
+        s_for_print: pd.Series = self.mirror_frame.set_index('date_from_tg')['DONE']
+        list_ = [f'{i}: {s_for_print[i]}' for i in s_for_print.index]
+        return f'DB({", ".join(list_)})'
 
     @property
-    def exists(self):
-        return os.path.isfile(self.path_to_db)
+    def months_db_paths(self) -> list:
+        files = os.listdir(self.path_to_db)
+        return [Path(self.path_to_db, file_name) for file_name in files]
 
     @property
-    def db(self) -> pd.DataFrame:
-        db = pd.read_excel(self.path_to_db, index_col=0)
-        db['DATE'] = db['DATE'].map(lambda date_: date_.date())
-        return db
+    def mirror_frame(self) -> pd.DataFrame:
+        self.mirror = pd.DataFrame()
+        dbs = []
+        if self.months_db_paths:
+            for p in self.months_db_paths:
+                dbs.append(self.get_frame(p))
+            self.mirror: pd.DataFrame = Mirror().update(dbs)
+        return self.mirror
 
-    @property
-    def mother_frame(self) -> pd.DataFrame:
-        mf: pd.DataFrame = pd.read_excel(self.path_to_mf, sheet_name='vedomost')
-        mf['DATE'] = mf['DATE'].map(lambda date_: date_.date())
-        return mf
+    @staticmethod
+    def get_frame(path, sheet_name='') -> pd.DataFrame:
+        if sheet_name:
+            frame: pd.DataFrame = pd.read_excel(path, sheet_name=sheet_name)
+        else:
+            frame: pd.DataFrame = pd.read_excel(path)
+        #print(frame)
+        frame['DATE'] = frame['DATE'].map(lambda date_: date_.date())
+        return frame
 
-    @property
-    def is_newer_than_mf(self) -> bool:
-        date_temp_db = os.path.getmtime(self.path_to_db)
-        date_mf_db = os.path.getmtime(self.path_to_mf)
-        return date_temp_db > date_mf_db # <- временный новее
+    def contains(self, path_to_db):
+        return path_to_db in self.months_db_paths
+
+    @staticmethod
+    def mf_is_newer_than_db(path_to_mf: Path, path_to_db: Path) -> bool:
+        date_temp_db = os.path.getmtime(path_to_db)
+        date_mf_db = os.path.getmtime(path_to_mf)
+        return date_mf_db > date_temp_db # <- материнский новее
 
     @staticmethod
     def update_temp_db(mother_frame: pd.DataFrame,
@@ -142,21 +156,45 @@ class UnfilledRowsDB:
             db_from_mf = pd.concat([yesterday_row, db_from_mf]).sort_index()
         return db_from_mf
 
-    def save_temp_db(self, temp_db: pd.DataFrame):
-        with pd.ExcelWriter(path=self.path_to_db,
+    @staticmethod
+    def save_temp_db(path: Path, temp_db: pd.DataFrame):
+        with pd.ExcelWriter(path=path,
                             mode='w',
                             engine='openpyxl',
                             ) as writer:
-            temp_db.to_excel(writer)
+            temp_db.to_excel(writer, index=True)
+
+    # есть мыслишка, что надо в зеркале оставлять ссылку на материнский фрейм. и если в бд их заявлено 2, сверять с обоими
+    # и уже потом поступать как надо
 
     def update(self):
-        mother_frame = self.mother_frame
-        if not self.exists or not self.is_newer_than_mf:
-            temp_db = self.replace_temp_db(mother_frame)
-        else:
-            temp_db = self.update_temp_db(mother_frame, self.db)
-        self.mirror_frame = Mirror().update(temp_db)
-        self.save_temp_db(temp_db)
+        dbs = {}
+        if not self.contains(PathBy(today).to_months_temp_db):
+            mf = self.get_frame(path=PathBy(today).to_vedomost, sheet_name='vedomost')
+            dbs[PathBy().to_months_temp_db] = self.replace_temp_db(mf)
+
+        mirror: pd.DataFrame = self.mirror_frame
+        paths: pd.DataFrame = mirror.get(['path_to_mf', 'path_to_db']).drop_duplicates()
+        print(paths)
+        for row in paths.index:
+            # замуть с индексацией
+            paths = paths.loc[row]
+            print(paths)
+            path_to_mf, path_to_db = paths[0], paths[1]
+            mf = self.get_frame(path=path_to_mf, sheet_name='vedomost')
+            if (not self.contains(path_to_db) |
+                    self.mf_is_newer_than_db(path_to_db, path_to_mf)):
+                dbs[path_to_db] = self.replace_temp_db(mf)
+            else:
+                temp_db = self.get_frame(path_to_db)
+                dbs[path_to_db] = self.update_temp_db(mf, temp_db)
+
+        for path in dbs:
+            self.save_temp_db(path, dbs[path])
+
+        #mother_frame = self.mother_frame
+        #print(self.mother_frame)
+        #self.save_temp_db(temp_db)
 
     def create_row(self, row: DayRow) -> DayRow:
         if self.contains(row.date):
@@ -181,11 +219,10 @@ class UnfilledRowsDB:
     def load_rows_for(self, recipient: str, by_behavior: str) -> pd.Series:
         if by_behavior == 'for filling':
             r_done_mark = recipient[0]
-            days_frame: pd.DataFrame = self.mirror_frame[self.mirror_frame['DONE'] != r_done_mark]
+            days_frame: pd.DataFrame = self.mirror[self.mirror['DONE'] != r_done_mark]
         elif by_behavior == 'for correction':
-            days_frame: pd.DataFrame = self.mirror_frame[self.mirror_frame['DONE'] != 'empty']
+            days_frame: pd.DataFrame = self.mirror[self.mirror['DONE'] != 'empty']
             days_frame: pd.DataFrame = days_frame[days_frame['DATE'] >= yesterday]
         else:
-            days_frame: pd.DataFrame = self.mirror_frame[self.mirror_frame['DATE'] == today]
-        days_frame['row_index'] = days_frame.index
+            days_frame: pd.DataFrame = self.mirror[self.mirror['DATE'] == today]
         return days_frame.set_index('date_from_tg')['row_index']
