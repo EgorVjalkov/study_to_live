@@ -72,8 +72,23 @@ class Converter:
 
 
 class Mirror:
-    def __init__(self):
-        self.frame = pd.DataFrame()
+    def __init__(self, frame: pd.DataFrame):
+        #self.frame: pd.DataFrame = pd.DataFrame()
+        self.frame = frame
+        self.path_to_db = PathBy().to_temp_db
+
+    def update_by_date(self):
+        last_day = self.frame['DATE'].max(axis=0)
+        last_day_index = max(self.frame.index)
+        delta = today - last_day
+        for day in range(1, delta.days+1):
+            date = last_day + datetime.timedelta(days=day)
+            done = 'empty'
+            index = last_day_index + day
+            self.frame = pd.concat([self.frame,
+                                    pd.DataFrame({'DATE': date, 'DONE': done},
+                                                 index=[index])])
+        print(self.frame)
 
     def update(self, dbs: list):
         mirrors = []
@@ -90,6 +105,16 @@ class Mirror:
         else:
             self.frame = mirrors[0]
         return self.frame
+
+
+mirror = Mirror(pd.DataFrame(
+    {'DATE': datetime.date(year=2023, month=12, day=1), 'DONE': 'L'},
+    index=[0]))
+
+print(mirror.frame)
+mirror.update_by_date()
+
+
 
 
 class UnfilledRowsDB:

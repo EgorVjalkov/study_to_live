@@ -30,7 +30,7 @@ class PathBy:
 
     @property
     def to_temp_db(self):
-        path_to_temp_db_dir = Path(self.path_to_project, 'row_db', 'temp_db')
+        path_to_temp_db_dir = Path(self.path_to_project, 'temp_db')
         make_dir_if_not_exist(path_to_temp_db_dir)
         return path_to_temp_db_dir
 
