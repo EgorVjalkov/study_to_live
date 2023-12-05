@@ -5,12 +5,9 @@ from pathlib import Path
 
 
 class DayRow:
-    def __init__(self,
-                 day_row: pd.DataFrame = pd.DataFrame(),
-                 path: Path = ''):
+    def __init__(self, day_row: pd.Series):
 
-        self.row: pd.DataFrame = day_row
-        self.path_to: Path = path
+        self.row = day_row
 
     def __repr__(self):
         return f'DayRow({self.categories.to_dict()})'
@@ -38,7 +35,7 @@ class DayRow:
     def filled_cells(self):
         filled_flag_ser = self.categories.map(pd.notna)
         print(filled_flag_ser)
-        filled = self.categories[filled_flag_ser==True]
+        filled = self.categories[filled_flag_ser == True]
         return filled
 
     @property
@@ -76,7 +73,7 @@ class DayRow:
     def load_day_row(self):
         self.row = pd.read_excel(self.path_to, index_col=0).fillna(np.nan)
         date = self.row.at[self.i, 'DATE']
-        self.row.at[self.i, 'DATE'] = date.date()
+        self.row.at[self.i, 'DATE'] = date.changed_date()
         return self
 
     def concat_row_with(self, existed_row):

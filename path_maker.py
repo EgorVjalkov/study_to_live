@@ -9,39 +9,41 @@ def make_dir_if_not_exist(path_: Path):
         os.mkdir(path_)
 
 
-class PathBy:
-    def __init__(self, date: datetime.date = datetime.date.today()):
-        self.date: datetime.date = date
+class PathMaker:
+    def __init__(self):
+        path_to_home = pathlib.Path.home()
+        self.path_to_project = Path(path_to_home, 'study_to_live')
 
     @property
-    def path_to_project(self):
-        return pathlib.Path.cwd()
-
-    @property
-    def month(self):
-        return self.date.strftime('%b%y').lower()
-
-    @property
-    def to_vedomost(self):
-        path_to_vedomost_dir = Path(self.path_to_project, 'months', self.month)
-        make_dir_if_not_exist(path_to_vedomost_dir)
-        path_to_vedomost_xlsx = Path(path_to_vedomost_dir, f'{self.month}.xlsx')
-        return path_to_vedomost_xlsx
-
-    @property
-    def to_temp_db(self):
-        path_to_temp_db_dir = Path(self.path_to_project, 'temp_db')
+    def temp_db(self):
+        path_to_temp_db_dir = Path(self.path_to_project, 'row_db', 'temp_db')
         make_dir_if_not_exist(path_to_temp_db_dir)
         return path_to_temp_db_dir
 
-    @property
-    def to_months_temp_db(self):
-        path_to_temp_db_file = Path(self.to_temp_db, f'{self.month}_temp_db.xlsx')
+    @staticmethod
+    def get_month(date):
+        return date.strftime('%b%y').lower()
+
+    def vedomost_by(self, date: datetime.date):
+        month = self.get_month(date)
+        path_to_vedomost_dir = Path(self.path_to_project, 'months', month)
+        make_dir_if_not_exist(path_to_vedomost_dir)
+        path_to_vedomost_xlsx = Path(path_to_vedomost_dir, f'{month}.xlsx')
+        return path_to_vedomost_xlsx
+
+    def months_temp_db_by(self, date: datetime.date):
+        month = self.get_month(date)
+        path_to_temp_db_file = Path(self.temp_db, f'{month}_temp_db.xlsx')
         return path_to_temp_db_file
 
 
-if __name__ == '__main__':
-    path = PathBy()
-    p = path.to_vedomost
-    p2 = path.to_temp_db
-    print(p, p2)
+path_to = PathMaker()
+path_to_project = path_to.path_to_project
+print(path_to_project)
+
+
+#if __name__ == '__main__':
+#    p = path_to.vedomost_by(datetime.date.today())
+#    p2 = path_to.months_temp_db_by(datetime.date.today())
+#    print(p, p2)
+#

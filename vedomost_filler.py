@@ -2,37 +2,44 @@ import pandas as pd
 import datetime
 import classes as cl
 from VedomostCell import VedomostCell
-from path_maker import PathBy
 from day_row import DayRow
-from row_db.DB_main import day_db
+from DB_main import mirror
+from row_db.row_db import Converter
 
 
 class VedomostFiller:
     def __init__(self,
                  recipient: str = '',
-                 behavior: str = '',
-                 date: datetime.date = datetime.date.today()):
+                 behavior: str = ''):
 
-        self.date = date
-        self.path_to_mother_frame = PathBy(self.date).to_vedomost
-        self.path_to_temp_db = PathBy().to_temp_db
+        self.recipient = recipient
+        self.behavior = behavior
 
-        # поле переменных для работы функций
-
+        self.mark_ser = None
+        self.changed_date = None
         self.day: DayRow = DayRow()
-        self.recipient: str = recipient
-        self.row_index_ser = None
         self.cells_ser: pd.Series = pd.Series()
-        self.behavior: str = behavior
 
         self.active_cell = None
 
     def __call__(self, *args, **kwargs):
-        day_db.update()
-        self.row_index_ser: pd.Series = day_db.load_rows_for(self.recipient, self.behavior)
+        if mirror.need_scan:
+            mirror.update_after_scan()
+            mirror.update_by_date()
+        else:
+            mirror.update_by_date()
+        self.mark_ser: pd.Series = mirror.get_dates_for(self.recipient, by_behavior=self.behavior)
         return self
 
-    @ property
+    @property
+    def date(self):
+        return self.changed_date
+
+    @date.setter
+    def date(self, date):
+        self.changed_date = date
+
+    @property
     def r_sleeptime(self):
         return f'{self.recipient[0].lower()}:sleeptime'
 
@@ -42,10 +49,19 @@ class VedomostFiller:
 
     @property
     def days(self) -> list:
-        return self.row_index_ser.index.to_list()
+        days = self.mark_ser.index.to_list()
+        days: list = [Converter(date_object=date_).to('str') for date_
+                      in days]
+        return days
 
-    def change_the_day_row(self, date_form_tg):
-        self.day = DayRow(path=self.row_index_ser[date_form_tg]).load_day_row()
+    def change_a_day(self, date_form_tg):
+        self.date = Converter(date_in_str=date_form_tg).to('date_object')
+        day_mark = self.mark_ser[self.date]
+        if day_mark == 'empty':
+            day_row = mirror.load_('row', by_date=self.date, from_='mf')
+        else:
+            day_row = mirror.load_('row', by_date=self.date, from_='temp_db')
+        self.day = DayRow(day_row)
         return self.day
 
     @property
@@ -163,18 +179,19 @@ class VedomostFiller:
         return [f'{c} - "{self.already_filled_dict[c]}"'
                 for c in self.already_filled_dict]
 
+    @changed_date.setter
+    def changed_date(self, value):
+        self._changed_date = value
+
 
 if __name__ == '__main__':
-    day_db.update()
-    #filler = VedomostFiller(recipient='Egr',
-    #                        behavior='for filling')
-    #filler()
-    #print(filler.row_index_ser)
-    #print(filler.days)
-    #filler.change_the_day_row('27.11.23')
-    #filler.filtering_by(positions=True)
-    #filler.get_cells_ser()
-    #print(filler.day.filled_cells)
+    filler = VedomostFiller(recipient='Egr',
+                            behavior='for filling')
+    filler()
+    filler.change_a_day('03.12.23')
+    filler.filtering_by(positions=True)
+    filler.get_cells_ser()
+    print(filler.day.filled_cells)
     #for i in filler.unfilled_cells:
     #    filler.change_a_cell(i)
     #    filler.fill_the_cell('+')

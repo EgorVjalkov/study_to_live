@@ -68,7 +68,7 @@ async def cmd_sleep(message: Message):
         new_value = datetime.time.strftime(message_time, '%H:%M')
 
     message_day = datetime.date.strftime(message_day, '%d.%m.%y')
-    UDB.r_data.filler.change_the_day_row(message_day)
+    UDB.r_data.filler.change_a_day(message_day)
     UDB.r_data.filler.filtering_by(category=category)
     UDB.r_data.filler.get_cells_ser()
     UDB.r_data.filler.fill_the_cell(new_value)
@@ -120,7 +120,7 @@ async def change_a_date(message: Message):
               '"не мог" - не выполнил по объективой причине (напр.: погода, вонь, лихорадка)',
               '"забыл" - забыл какой была отметка']
 
-    UDB.r_data.filler.change_the_day_row(message.text)
+    UDB.r_data.filler.change_a_day(message.text)
     print(UDB.rows_in_process)
     print(UDB.r_data.is_date_busy(UDB.rows_in_process))
     if UDB.r_data.is_date_busy(UDB.rows_in_process):

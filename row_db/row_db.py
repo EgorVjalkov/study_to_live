@@ -2,8 +2,8 @@ import datetime
 import pandas as pd
 import os
 from pathlib import Path
-from path_maker import PathBy
 from day_row import DayRow
+from path_maker import PathMaker
 
 
 today: datetime.date = datetime.date.today()
@@ -72,65 +72,86 @@ class Converter:
 
 
 class Mirror:
-    def __init__(self, frame: pd.DataFrame):
-        #self.frame: pd.DataFrame = pd.DataFrame()
-        self.frame = frame
-        self.path_to_db = PathBy().to_temp_db
+    def __init__(self, path_maker: PathMaker,
+                 ser: pd.Series = pd.Series()):
+        self.series = ser
+        self.path_to = path_maker
+        self.path_to_db = self.path_to.temp_db
+
+    @property
+    def need_scan(self):
+        return self.series.empty
+
+    @property
+    def months_db_paths(self) -> list:
+        files = os.listdir(self.path_to_db)
+        return [Path(self.path_to_db, file_name) for file_name in files]
+
+    def update_after_scan(self):
+        series_list = []
+        for path in self.months_db_paths:
+            db_frame = self.load_('temp_db', by_path=path)
+            series_list.append(db_frame['DONE'])
+        if len(series_list) > 1:
+            self.series = pd.concat(series_list)
+        else:
+            self.series = series_list[0]
+        return self.series
 
     def update_by_date(self):
-        last_day = self.frame['DATE'].max(axis=0)
-        last_day_index = max(self.frame.index)
-        delta = today - last_day
+        last_date = max(self.series.index.to_list())
+        delta = today - last_date
         for day in range(1, delta.days+1):
-            date = last_day + datetime.timedelta(days=day)
+            date = last_date + datetime.timedelta(days=day)
             done = 'empty'
-            index = last_day_index + day
-            self.frame = pd.concat([self.frame,
-                                    pd.DataFrame({'DATE': date, 'DONE': done},
-                                                 index=[index])])
-        print(self.frame)
+            self.series = pd.concat(
+                [self.series,
+                 pd.Series({date: done})]).sort_index()
 
-    def update(self, dbs: list):
-        mirrors = []
-        for db in dbs:
-            frame = db.get(['DATE', 'DONE'])
-            frame['date_from_tg'] = frame['DATE'].map(
-                lambda date_: Converter(date_object=date_).to('str'))
-            frame['row_index'] = frame.index
-            frame['path_to_mf'] = frame['DATE'].map(lambda date_: PathBy(date=date_).to_vedomost)
-            frame['path_to_db'] = frame['DATE'].map(lambda date_: PathBy(date=date_).to_months_temp_db)
-            mirrors.append(frame)
-        if len(mirrors) > 1:
-            self.frame = pd.concat(mirrors)
+    def get_dates_for(self, recipient: str, by_behavior: str) -> pd.Series:
+        if by_behavior == 'for filling':
+            r_done_mark = recipient[0]
+            days_ser: pd.Series = self.series[self.series != r_done_mark]
+        elif by_behavior == 'for correction':
+            days_ser: pd.Series = self.series[self.series != 'empty']
+            days_ser: pd.Series = days_ser[days_ser.index >= yesterday]
         else:
-            self.frame = mirrors[0]
-        return self.frame
+            days_ser: pd.Series = self.series[self.series.index == today]
+        return days_ser
 
+    def load_(self,
+              data: str,
+              by_date=None,
+              by_path=None,
+              from_: str = '') -> pd.DataFrame:
 
-mirror = Mirror(pd.DataFrame(
-    {'DATE': datetime.date(year=2023, month=12, day=1), 'DONE': 'L'},
-    index=[0]))
+        if by_path:
+            path = by_path
+        else:
+            if data == 'mf' or from_ == 'mf':
+                path = self.path_to.vedomost_by(by_date)
+            else:
+                path = self.path_to.months_temp_db_by(by_date)
 
-print(mirror.frame)
-mirror.update_by_date()
+        frame_: pd.DataFrame = pd.read_excel(path, sheet_name='vedomost')
+        frame_['DATE'] = frame_['DATE'].map(lambda _date: _date.date())
+        frame_ = frame_.set_index('DATE')
+        print(frame_)
 
-
+        if data == 'row':
+            return frame_.loc[by_date]
+        else:
+            return frame_
 
 
 class UnfilledRowsDB:
     def __init__(self):
-        self.path_to_db = PathBy().to_temp_db
         self.mirror = None
 
     def __repr__(self):
         s_for_print: pd.Series = self.mirror_frame.set_index('date_from_tg')['DONE']
         list_ = [f'{i}: {s_for_print[i]}' for i in s_for_print.index]
         return f'DB({", ".join(list_)})'
-
-    @property
-    def months_db_paths(self) -> list:
-        files = os.listdir(self.path_to_db)
-        return [Path(self.path_to_db, file_name) for file_name in files]
 
     @property
     def mirror_frame(self) -> pd.DataFrame:
@@ -141,16 +162,6 @@ class UnfilledRowsDB:
                 dbs.append(self.get_frame(p))
             self.mirror: pd.DataFrame = Mirror().update(dbs)
         return self.mirror
-
-    @staticmethod
-    def get_frame(path, sheet_name='') -> pd.DataFrame:
-        if sheet_name:
-            frame: pd.DataFrame = pd.read_excel(path, sheet_name=sheet_name)
-        else:
-            frame: pd.DataFrame = pd.read_excel(path)
-        #print(frame)
-        frame['DATE'] = frame['DATE'].map(lambda date_: date_.date())
-        return frame
 
     def contains(self, path_to_db):
         return path_to_db in self.months_db_paths
@@ -194,9 +205,9 @@ class UnfilledRowsDB:
 
     def update(self):
         dbs = {}
-        if not self.contains(PathBy(today).to_months_temp_db):
-            mf = self.get_frame(path=PathBy(today).to_vedomost, sheet_name='vedomost')
-            dbs[PathBy().to_months_temp_db] = self.replace_temp_db(mf)
+        if not self.contains(PathMaker(today).to_months_temp_db):
+            mf = self.get_frame(path=PathMaker(today).to_vedomost, sheet_name='vedomost')
+            dbs[PathMaker().to_months_temp_db] = self.replace_temp_db(mf)
 
         mirror: pd.DataFrame = self.mirror_frame
         paths: pd.DataFrame = mirror.get(['path_to_mf', 'path_to_db']).drop_duplicates()
@@ -240,14 +251,3 @@ class UnfilledRowsDB:
             else:
                 path_to_file = Path(self.path_to_db, f'{date_part}.xlsx')
         row.create_row(path_to_file)
-
-    def load_rows_for(self, recipient: str, by_behavior: str) -> pd.Series:
-        if by_behavior == 'for filling':
-            r_done_mark = recipient[0]
-            days_frame: pd.DataFrame = self.mirror[self.mirror['DONE'] != r_done_mark]
-        elif by_behavior == 'for correction':
-            days_frame: pd.DataFrame = self.mirror[self.mirror['DONE'] != 'empty']
-            days_frame: pd.DataFrame = days_frame[days_frame['DATE'] >= yesterday]
-        else:
-            days_frame: pd.DataFrame = self.mirror[self.mirror['DATE'] == today]
-        return days_frame.set_index('date_from_tg')['row_index']
