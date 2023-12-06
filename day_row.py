@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 class DayRow:
-    def __init__(self, day_row: pd.Series):
+    def __init__(self, day_row: pd.Series = pd.Series()):
 
         self.row = day_row
 

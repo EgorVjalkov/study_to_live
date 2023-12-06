@@ -4,7 +4,7 @@ import classes as cl
 from VedomostCell import VedomostCell
 from day_row import DayRow
 from DB_main import mirror
-from row_db.row_db import Converter
+from row_db.mirror_db import Converter
 
 
 class VedomostFiller:
@@ -17,12 +17,13 @@ class VedomostFiller:
 
         self.mark_ser = None
         self.changed_date = None
-        self.day: DayRow = DayRow()
-        self.cells_ser: pd.Series = pd.Series()
+        self.day = None
+        self.cells_ser = None
 
         self.active_cell = None
 
     def __call__(self, *args, **kwargs):
+        print(mirror.need_scan)
         if mirror.need_scan:
             mirror.update_after_scan()
             mirror.update_by_date()
@@ -188,10 +189,11 @@ if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
                             behavior='for filling')
     filler()
-    filler.change_a_day('03.12.23')
-    filler.filtering_by(positions=True)
-    filler.get_cells_ser()
-    print(filler.day.filled_cells)
+    print(mirror.series)
+    #filler.change_a_day('03.12.23')
+    #filler.filtering_by(positions=True)
+    #filler.get_cells_ser()
+    #print(filler.day.filled_cells)
     #for i in filler.unfilled_cells:
     #    filler.change_a_cell(i)
     #    filler.fill_the_cell('+')
