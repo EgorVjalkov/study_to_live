@@ -24,7 +24,7 @@ class PathMaker:
     def get_month(date):
         return date.strftime('%b%y').lower()
 
-    def vedomost_by(self, date: datetime.date):
+    def mother_frame_by(self, date: datetime.date):
         month = self.get_month(date)
         path_to_vedomost_dir = Path(self.path_to_project, 'months', month)
         make_dir_if_not_exist(path_to_vedomost_dir)

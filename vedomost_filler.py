@@ -16,14 +16,13 @@ class VedomostFiller:
         self.behavior = behavior
 
         self.mark_ser = None
-        self.changed_date = None
         self.day = None
         self.cells_ser = None
+        self.path_to_mf = None
 
         self.active_cell = None
 
     def __call__(self, *args, **kwargs):
-        print(mirror.need_scan)
         if mirror.need_scan:
             mirror.update_after_scan()
             mirror.update_by_date()
@@ -31,14 +30,6 @@ class VedomostFiller:
             mirror.update_by_date()
         self.mark_ser: pd.Series = mirror.get_dates_for(self.recipient, by_behavior=self.behavior)
         return self
-
-    @property
-    def date(self):
-        return self.changed_date
-
-    @date.setter
-    def date(self, date):
-        self.changed_date = date
 
     @property
     def r_sleeptime(self):
@@ -56,22 +47,24 @@ class VedomostFiller:
         return days
 
     def change_a_day(self, date_form_tg):
-        self.date = Converter(date_in_str=date_form_tg).to('date_object')
-        day_mark = self.mark_ser[self.date]
+        date = Converter(date_in_str=date_form_tg).to('date_object')
+        self.path_to_mf = mirror.path_to.mother_frame_by(date)
+        day_mark = self.mark_ser[date]
         if day_mark == 'empty':
-            day_row = mirror.load_('row', by_date=self.date, from_='mf')
+            day_row = mirror.load_('row', by_date=date, from_='mf')
         else:
-            day_row = mirror.load_('row', by_date=self.date, from_='temp_db')
+            day_row = mirror.load_('row', by_date=date, from_='temp_db')
         self.day = DayRow(day_row)
         return self.day
 
     @property
     def r_positions(self):
+        acc_frame = pd.DataFrame(self.day.accessories).T
         r = cl.Recipient(self.recipient)
-        r.extract_data_by_recipient(self.day.acc_frame)
+        r.extract_data_by_recipient(acc_frame)
         r.get_with_children_col()
         r.get_r_positions_col()
-        return r.mod_data.at[self.day.i, 'positions']
+        return r.mod_data.at[self.day.date, 'positions']
 
     def filtering_by(self, positions=False, category=None, only_private_categories=False):
         filtered = list(self.day.categories.index)
@@ -90,7 +83,7 @@ class VedomostFiller:
         return self.cells_ser
 
     def get_cells_ser(self):
-        prices = pd.read_excel(self.path_to_mother_frame, sheet_name='price', index_col=0)
+        prices = pd.read_excel(self.path_to_mf, sheet_name='price', index_col=0)
         for cat in self.cells_ser.index:
             cell = VedomostCell(prices,
                                 self.recipient,
@@ -170,30 +163,23 @@ class VedomostFiller:
         pass
 
     @property
-    def changed_date(self):
-        date = self.day.date
-        date = datetime.date.strftime(date,  '%d.%m.%y')
-        return date
+    def date_to_str(self):
+        return Converter(date_object=self.date).to('str')
 
     @property
     def filled_cells_list_for_print(self):
         return [f'{c} - "{self.already_filled_dict[c]}"'
                 for c in self.already_filled_dict]
 
-    @changed_date.setter
-    def changed_date(self, value):
-        self._changed_date = value
-
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
                             behavior='for filling')
     filler()
-    print(mirror.series)
-    #filler.change_a_day('03.12.23')
-    #filler.filtering_by(positions=True)
-    #filler.get_cells_ser()
-    #print(filler.day.filled_cells)
+    filler.change_a_day('07.12.23')
+    filler.filtering_by(positions=True)
+    filler.get_cells_ser()
+    print(filler.cells_ser)
     #for i in filler.unfilled_cells:
     #    filler.change_a_cell(i)
     #    filler.fill_the_cell('+')
