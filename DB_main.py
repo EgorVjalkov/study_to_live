@@ -14,8 +14,6 @@ if mirror.no_dbs:
     mirror.init_temp_dbs()
 
 if __name__ == '__main__':
-    if mirror.no_dbs:
-        mirror.init_temp_dbs()
     if mirror.need_scan:
         mirror.update_after_scan()
         mirror.update_by_date()

@@ -19,6 +19,7 @@ class Mirror:
         return self.months_db_paths == []
 
     def init_temp_dbs(self):
+        print('init')
         for day in [week_before_day, today]:
             print(day)
             path = self.path_to.mother_frame_by(day)

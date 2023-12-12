@@ -164,7 +164,7 @@ class VedomostFiller:
 
     @property
     def date_to_str(self):
-        return Converter(date_object=self.date).to('str')
+        return Converter(date_object=self.day.date).to('str')
 
     @property
     def filled_cells_list_for_print(self):
