@@ -23,10 +23,7 @@ class VedomostFiller:
         self.active_cell = None
 
     def __call__(self, *args, **kwargs):
-        if mirror.need_scan:
-            mirror.update_after_scan()
-            mirror.update_by_date()
-        else:
+        if mirror.need_update:
             mirror.update_by_date()
         self.mark_ser: pd.Series = mirror.get_dates_for(self.recipient, by_behavior=self.behavior)
         return self
@@ -176,21 +173,15 @@ if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
                             behavior='for filling')
     filler()
-    filler.change_a_day('07.12.23')
+    filler.change_a_day('14.12.23')
     filler.filtering_by(positions=True)
     filler.get_cells_ser()
     print(filler.cells_ser)
-    #for i in filler.unfilled_cells:
-    #    filler.change_a_cell(i)
-    #    filler.fill_the_cell('+')
-    #print(filler.day.filled_cells)
-
-    #filler.collect_data_to_day_row()
-    #day_db.create_row(filler.day)
-    #print(filler.row_db.vedomost)
-    #print(filler.is_row_filled)
-    #print(filler.cell_names_list)
-    #if filler.is_row_filled:
-    #    filler.save_day_data_to_mother_frame()
-    #else:
-    #    filler.save_day_data_to_temp_db()
+    for i in filler.unfilled_cells:
+        filler.change_a_cell(i)
+        filler.fill_the_cell('+')
+    filler.collect_data_to_day_row()
+    print(filler.day.filled_cells)
+    print(filler.day.row)
+    # остановка на записи. далее решается куда писать эту дату. Если марка не Y то в базу данных.
+    # как это делать, здесь я и встал

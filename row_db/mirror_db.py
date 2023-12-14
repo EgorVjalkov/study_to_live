@@ -13,6 +13,7 @@ class Mirror:
         self.series = ser
         self.path_to = path_maker
         self.path_to_db = self.path_to.temp_db
+        self.last_date = today
 
     @property
     def no_dbs(self):
@@ -20,17 +21,24 @@ class Mirror:
 
     def init_temp_dbs(self):
         print('init')
-        for day in [week_before_day, today]:
+        series_list = []
+        if week_before_day.month == today.month:
+            day_list = [today]
+        else:
+            day_list = [week_before_day, today]
+        for day in day_list:
             print(day)
             path = self.path_to.mother_frame_by(day)
             mother_frame = self.load_('mf', by_path=path)
             temp_db = UnfilledRowsDB(self.path_to.months_temp_db_by(day))
-            temp_db.replace_temp_db(mother_frame)
+            db_frame = temp_db.replace_temp_db(mother_frame)
+            series_list.append(db_frame['DONE'])
             temp_db.save_temp_db()
+        self.update(series_list)
 
     @property
-    def need_scan(self):
-        return self.series.empty
+    def need_update(self):
+        return self.last_date < today
 
     @property
     def months_db_paths(self) -> list:
@@ -39,11 +47,12 @@ class Mirror:
             return [Path(self.path_to_db, file_name) for file_name in files]
         return files
 
-    def update_after_scan(self):
-        series_list = []
-        for path in self.months_db_paths:
-            db_frame = self.load_('temp_db', by_path=path)
-            series_list.append(db_frame['DONE'])
+    def update(self, series_list=None):
+        if not series_list:
+            series_list = []
+            for path in self.months_db_paths:
+                db_frame = self.load_('temp_db', by_path=path)
+                series_list.append(db_frame['DONE'])
         if len(series_list) > 1:
             self.series = pd.concat(series_list)
         else:
@@ -52,6 +61,8 @@ class Mirror:
         return self.series
 
     def update_by_date(self):
+        # здесь похоже даже к серии нет нуждф обращаться, т.к. ластдейт итак один, нужно только его обновлять, да?
+        self.last_date = today
         last_date = max(self.series.index.to_list())
         delta = today - last_date
         for day in range(1, delta.days+1):
