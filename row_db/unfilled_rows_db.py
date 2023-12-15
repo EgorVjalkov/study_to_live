@@ -10,6 +10,15 @@ class UnfilledRowsDB:
         self.path_to_temp_db = path_to_temp_db
         self.month_db = data_frame
 
+    def replace_temp_db(self, mother_frame: pd.DataFrame) -> pd.DataFrame:
+        unfilled_rows: pd.DataFrame = mother_frame[mother_frame.index <= today]
+        unfilled_rows: pd.DataFrame = unfilled_rows[unfilled_rows['DONE'] != 'Y']
+        if yesterday in mother_frame.index and yesterday not in unfilled_rows.index:
+            yesterday_row: pd.DataFrame = mother_frame[mother_frame['DATE'] == yesterday]
+            unfilled_rows = pd.concat([yesterday_row, unfilled_rows]).sort_index()
+        self.month_db = unfilled_rows
+        return self.month_db
+
     @staticmethod
     def mf_is_newer_than_db(path_to_mf: Path, path_to_db: Path) -> bool:
         date_temp_db = os.path.getmtime(path_to_db)
@@ -25,22 +34,6 @@ class UnfilledRowsDB:
             if i not in temp_db.index:
                 temp_db.loc[i] = update_from_mf.loc[i]
         return temp_db
-
-    def replace_temp_db(self, mother_frame: pd.DataFrame) -> pd.DataFrame:
-        unfilled_rows: pd.DataFrame = mother_frame[mother_frame.index <= today]
-        unfilled_rows: pd.DataFrame = unfilled_rows[unfilled_rows['DONE'] != 'Y']
-        if yesterday in mother_frame.index and yesterday not in unfilled_rows.index:
-            yesterday_row: pd.DataFrame = mother_frame[mother_frame['DATE'] == yesterday]
-            unfilled_rows = pd.concat([yesterday_row, unfilled_rows]).sort_index()
-        self.month_db = unfilled_rows
-        return self.month_db
-
-    def save_temp_db(self):
-        with pd.ExcelWriter(path=self.path_to_temp_db,
-                            mode='w',
-                            engine='openpyxl',
-                            ) as writer:
-            self.month_db.to_excel(writer, sheet_name='vedomost', index=True)
 
 #    def update(self):
 #        dbs = {}

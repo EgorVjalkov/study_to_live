@@ -5,6 +5,7 @@ from pathlib import Path
 from path_maker import PathMaker
 from row_db.unfilled_rows_db import UnfilledRowsDB
 from date_constants import yesterday, today, week_before_day
+from day_row import DayRow
 
 
 class Mirror:
@@ -29,7 +30,7 @@ class Mirror:
         for day in day_list:
             print(day)
             path = self.path_to.mother_frame_by(day)
-            mother_frame = self.load_('mf', by_path=path)
+            mother_frame = self.load_as_('mf', by_path=path)
             temp_db = UnfilledRowsDB(self.path_to.months_temp_db_by(day))
             db_frame = temp_db.replace_temp_db(mother_frame)
             series_list.append(db_frame['DONE'])
@@ -51,7 +52,7 @@ class Mirror:
         if not series_list:
             series_list = []
             for path in self.months_db_paths:
-                db_frame = self.load_('temp_db', by_path=path)
+                db_frame = self.load_as_('temp_db', by_path=path)
                 series_list.append(db_frame['DONE'])
         if len(series_list) > 1:
             self.series = pd.concat(series_list)
@@ -83,28 +84,64 @@ class Mirror:
             days_ser: pd.Series = self.series[self.series.index == today]
         return days_ser
 
-    def load_(self,
-              data: str,
-              by_date=None,
-              by_path=None,
-              from_: str = '') -> pd.DataFrame:
-
+    def get_path_to_(self,
+                     data_type: str,
+                     by_date=None,
+                     by_path=None,
+                     from_: str = '') -> Path:
         if by_path:
             path = by_path
         else:
-            if data in 'mf' or from_ == 'mf':
+            if data_type in 'mf' or from_ == 'mf':
                 path = self.path_to.mother_frame_by(by_date)
             else:
                 path = self.path_to.months_temp_db_by(by_date)
+        return path
 
+    def load_as_(self,
+                 data_type: str,
+                 by_date=None,
+                 by_path=None,
+                 from_: str = '') -> pd.DataFrame:
+        path = self.get_path_to_(data_type, by_date, by_path, from_)
         frame_: pd.DataFrame = pd.read_excel(path, sheet_name='vedomost')
         frame_['DATE'] = frame_['DATE'].map(lambda _date: _date.date())
         frame_ = frame_.set_index('DATE')
-
-        if data == 'row':
+        if data_type == 'row':
             return frame_.loc[by_date]
         else:
             return frame_
+
+    def write_as_(self,
+                  data_type: str,
+                  df: pd.DataFrame,
+                  by_date: datetime.date):
+        path = self.get_path_to_(data_type, by_date)
+        with pd.ExcelWriter(
+                path,
+                mode='a',
+                engine='openpyxl',
+                if_sheet_exists='replace'
+        ) as writer:
+            df.to_excel(writer, sheet_name='vedomost', index=True)
+
+    def del_filled_row(self, day_date: datetime.date) -> object:
+        temp_frame = self.load_as_('temp_db', by_date=day_date)
+        temp_frame = temp_frame[temp_frame.index != day_date]
+        self.write_as_('temp_db', temp_frame, day_date)
+        self.series = self.series.index != day_date  # <- рескан серии
+        return self
+
+    def save_day_data(self, day_data: DayRow):
+        if day_data.is_filled:
+            data_type = 'mf'
+            self.del_filled_row(day_data.date)
+        else:
+            data_type = 'temp_db'
+            self.series.at[day_data.date] = day_data.mark
+        frame = self.load_as_(data_type, by_date=day_data.date)
+        frame.loc[day_data.date] = day_data.row
+        self.write_as_(data_type, frame, day_data.date)
 
 
 class Converter:

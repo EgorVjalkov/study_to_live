@@ -48,9 +48,9 @@ class VedomostFiller:
         self.path_to_mf = mirror.path_to.mother_frame_by(date)
         day_mark = self.mark_ser[date]
         if day_mark == 'empty':
-            day_row = mirror.load_('row', by_date=date, from_='mf')
+            day_row = mirror.load_as_('row', by_date=date, from_='mf')
         else:
-            day_row = mirror.load_('row', by_date=date, from_='temp_db')
+            day_row = mirror.load_as_('row', by_date=date, from_='temp_db')
         self.day = DayRow(day_row)
         return self.day
 
@@ -181,6 +181,7 @@ if __name__ == '__main__':
         filler.change_a_cell(i)
         filler.fill_the_cell('+')
     filler.collect_data_to_day_row()
+    mirror.save_day_data(filler.day)
     print(filler.day.filled_cells)
     print(filler.day.row)
     # остановка на записи. далее решается куда писать эту дату. Если марка не Y то в базу данных.
