@@ -72,7 +72,7 @@ class UnfilledRowsDB:
         unfilled_rows: pd.DataFrame = mother_frame[mother_frame.index <= today]
         unfilled_rows: pd.DataFrame = unfilled_rows[unfilled_rows['DONE'] != 'Y']
         if yesterday in mother_frame.index and yesterday not in unfilled_rows.index:
-            yesterday_row: pd.DataFrame = mother_frame[mother_frame['DATE'] == yesterday]
+            yesterday_row: pd.DataFrame = mother_frame[mother_frame.index == yesterday]
             unfilled_rows = pd.concat([yesterday_row, unfilled_rows]).sort_index()
         self.month_db = unfilled_rows
         return self.month_db

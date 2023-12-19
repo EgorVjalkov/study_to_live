@@ -96,7 +96,6 @@ class Mirror:
         else:
             data_type = 'temp_db'
             self.series.at[day.date] = day.mark
-
         frame = temp_db.load_as_(data_type)
         frame.loc[day.date] = day.row
         temp_db.save_(frame, as_=data_type, mode='a')

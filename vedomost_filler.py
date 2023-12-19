@@ -152,6 +152,7 @@ class VedomostFiller:
         self.change_done_mark()
 
     def change_done_mark(self):
+        print(self.day.row)
         if self.day.is_filled:
             self.day.mark = 'Y'
         else:
@@ -186,7 +187,5 @@ if __name__ == '__main__':
         filler.fill_the_cell('+')
     filler.collect_data_to_day_row()
     mirror.save_day_data(filler.day)
-    print(filler.day.filled_cells)
-    print(filler.day.row)
     # остановка на записи. далее решается куда писать эту дату. Если марка не Y то в базу данных.
     # как это делать, здесь я и встал
