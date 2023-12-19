@@ -84,6 +84,7 @@ class VedomostFiller:
 
     def get_cells_ser(self):
         prices = pd.read_excel(self.path_to_mf, sheet_name='price', index_col=0)
+        print(self.cells_ser)
         for cat in self.cells_ser.index:
             cell = VedomostCell(prices,
                                 self.recipient,
@@ -126,10 +127,9 @@ class VedomostFiller:
             cell_for_correction = self.cells_ser[self.active_cell]
             cell_for_correction.revert_value()
             self.cells_ser[self.active_cell] = cell_for_correction
-
         return self.active_cell
 
-    def fill_the_cell(self, value_from_tg):
+    def fill_the_cell(self, value_from_tg) -> object:
         if value_from_tg == 'не мог':
             value_from_tg = 'can`t'
         elif value_from_tg == 'забыл':
@@ -145,6 +145,8 @@ class VedomostFiller:
             else:
                 cell.new_cat_value = value_from_tg
         self.cells_ser[cell.name] = cell
+        print(self.cells_ser[cell.name])
+        return self
 
     def collect_data_to_day_row(self):
         # здесь и есть точка входа для записи категории или вспоможенцв
@@ -152,7 +154,6 @@ class VedomostFiller:
         self.change_done_mark()
 
     def change_done_mark(self):
-        print(self.day.row)
         if self.day.is_filled:
             self.day.mark = 'Y'
         else:
@@ -175,17 +176,21 @@ class VedomostFiller:
 
 
 if __name__ == '__main__':
-    print(mirror.series)
-    filler = VedomostFiller(recipient='Lera',
-                            behavior='for filling')
+    print(mirror)
+    filler = VedomostFiller(recipient='Egr',
+                            behavior='for correction')
+    # муть с коррекцией. не работают флаги и не меняются значения
     filler()
-    filler.change_a_day('15.12.23')
+    filler.change_a_day('18.12.23')
     filler.filtering_by(positions=True)
     filler.get_cells_ser()
+    print(filler.cells_ser)
     for i in filler.unfilled_cells:
         filler.change_a_cell(i)
-        filler.fill_the_cell('+')
+        filler.fill_the_cell('=')
     filler.collect_data_to_day_row()
-    mirror.save_day_data(filler.day)
+    print(filler.cells_ser)
+    print(mirror)
+    #mirror.save_day_data(filler.day)
     # остановка на записи. далее решается куда писать эту дату. Если марка не Y то в базу данных.
     # как это делать, здесь я и встал

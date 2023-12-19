@@ -16,6 +16,15 @@ class Mirror:
         self.path_to_db = self.path_to.temp_db
         self.last_date = today
 
+    def __repr__(self):
+        if self.series.empty:
+            return 'Mirror(empty)'
+        else:
+            dict_ = self.series.to_dict()
+            dict_ = {Converter(date_object=k).to('str'): dict_[k]
+                           for k in dict_}
+            return f'Mirror({dict_})'
+
     @property
     def months_db_paths(self) -> list:
         files = os.listdir(self.path_to_db)
@@ -87,8 +96,6 @@ class Mirror:
     def save_day_data(self, day: DayRow) -> object:
         paths = self.get_paths_by(day.date)
         temp_db = UnfilledRowsDB(*paths)
-        print(temp_db.path_to_temp_db,
-              temp_db.path_to_mf)
         if day.is_filled:
             data_type = 'mf'
             temp_db.del_filled_row(day.date)
@@ -96,6 +103,8 @@ class Mirror:
         else:
             data_type = 'temp_db'
             self.series.at[day.date] = day.mark
+
+        print(f'{day.mark} --> {data_type}')
         frame = temp_db.load_as_(data_type)
         frame.loc[day.date] = day.row
         temp_db.save_(frame, as_=data_type, mode='a')
