@@ -17,6 +17,13 @@ class Mirror:
         self.last_date = today
 
     @property
+    def months_db_paths(self) -> list:
+        files = os.listdir(self.path_to_db)
+        if files:
+            return [Path(self.path_to_db, file_name) for file_name in files]
+        return files
+
+    @property
     def no_dbs(self):
         return self.months_db_paths == []
 
@@ -28,50 +35,39 @@ class Mirror:
         else:
             day_list = [week_before_day, today]
         for day in day_list:
-            print(day)
-            path = self.path_to.mother_frame_by(day)
-            mother_frame = self.load_as_('mf', by_path=path)
-            temp_db = UnfilledRowsDB(self.path_to.months_temp_db_by(day))
-            db_frame = temp_db.replace_temp_db(mother_frame)
+            temp_db = UnfilledRowsDB(self.path_to.months_temp_db_by(day),
+                                     self.path_to.mother_frame_by(day))
+            db_frame = temp_db.init_temp_db()
             series_list.append(db_frame['DONE'])
-            temp_db.save_temp_db()
-        self.update(series_list)
+            temp_db.save_(db_frame, as_='temp_db', mode='w')
+        self.update_by_dbs(series_list)
 
     @property
     def need_update(self):
         return self.last_date < today
 
-    @property
-    def months_db_paths(self) -> list:
-        files = os.listdir(self.path_to_db)
-        if files:
-            return [Path(self.path_to_db, file_name) for file_name in files]
-        return files
+    def update_by_date(self):
+        delta = today - self.last_date
+        for day in range(1, delta.days+1):
+            date = self.last_date + datetime.timedelta(days=day)
+            done = 'empty'
+            self.series = pd.concat(
+                [self.series,
+                 pd.Series({date: done})]).sort_index()
+        self.last_date = today
 
-    def update(self, series_list=None):
+    def update_by_dbs(self, series_list=None):
         if not series_list:
             series_list = []
             for path in self.months_db_paths:
-                db_frame = self.load_as_('temp_db', by_path=path)
-                series_list.append(db_frame['DONE'])
+                temp_db = UnfilledRowsDB(path).temp_db_from_file
+                series_list.append(temp_db['DONE'])
         if len(series_list) > 1:
             self.series = pd.concat(series_list)
         else:
             self.series = series_list[0]
         self.series = self.series.sort_index()
         return self.series
-
-    def update_by_date(self):
-        # здесь похоже даже к серии нет нуждф обращаться, т.к. ластдейт итак один, нужно только его обновлять, да?
-        self.last_date = today
-        last_date = max(self.series.index.to_list())
-        delta = today - last_date
-        for day in range(1, delta.days+1):
-            date = last_date + datetime.timedelta(days=day)
-            done = 'empty'
-            self.series = pd.concat(
-                [self.series,
-                 pd.Series({date: done})]).sort_index()
 
     def get_dates_for(self, recipient: str, by_behavior: str) -> pd.Series:
         if by_behavior == 'for filling':
@@ -84,64 +80,27 @@ class Mirror:
             days_ser: pd.Series = self.series[self.series.index == today]
         return days_ser
 
-    def get_path_to_(self,
-                     data_type: str,
-                     by_date=None,
-                     by_path=None,
-                     from_: str = '') -> Path:
-        if by_path:
-            path = by_path
-        else:
-            if data_type in 'mf' or from_ == 'mf':
-                path = self.path_to.mother_frame_by(by_date)
-            else:
-                path = self.path_to.months_temp_db_by(by_date)
-        return path
+    def get_paths_by(self, date: datetime.date = today) -> tuple:
+        return (self.path_to.months_temp_db_by(date),
+                self.path_to.mother_frame_by(date))
 
-    def load_as_(self,
-                 data_type: str,
-                 by_date=None,
-                 by_path=None,
-                 from_: str = '') -> pd.DataFrame:
-        path = self.get_path_to_(data_type, by_date, by_path, from_)
-        frame_: pd.DataFrame = pd.read_excel(path, sheet_name='vedomost')
-        frame_['DATE'] = frame_['DATE'].map(lambda _date: _date.date())
-        frame_ = frame_.set_index('DATE')
-        if data_type == 'row':
-            return frame_.loc[by_date]
-        else:
-            return frame_
-
-    def write_as_(self,
-                  data_type: str,
-                  df: pd.DataFrame,
-                  by_date: datetime.date):
-        path = self.get_path_to_(data_type, by_date)
-        with pd.ExcelWriter(
-                path,
-                mode='a',
-                engine='openpyxl',
-                if_sheet_exists='replace'
-        ) as writer:
-            df.to_excel(writer, sheet_name='vedomost', index=True)
-
-    def del_filled_row(self, day_date: datetime.date) -> object:
-        temp_frame = self.load_as_('temp_db', by_date=day_date)
-        temp_frame = temp_frame[temp_frame.index != day_date]
-        self.write_as_('temp_db', temp_frame, day_date)
-        self.series = self.series.index != day_date  # <- рескан серии
-        return self
-
-    def save_day_data(self, day_data: DayRow):
-        if day_data.is_filled:
+    def save_day_data(self, day: DayRow) -> object:
+        paths = self.get_paths_by(day.date)
+        temp_db = UnfilledRowsDB(*paths)
+        print(temp_db.path_to_temp_db,
+              temp_db.path_to_mf)
+        if day.is_filled:
             data_type = 'mf'
-            self.del_filled_row(day_data.date)
+            temp_db.del_filled_row(day.date)
+            self.series = self.series.index != day.date  # <- рескан серии
         else:
             data_type = 'temp_db'
-            self.series.at[day_data.date] = day_data.mark
-        frame = self.load_as_(data_type, by_date=day_data.date)
-        frame.loc[day_data.date] = day_data.row
-        self.write_as_(data_type, frame, day_data.date)
+            self.series.at[day.date] = day.mark
+
+        frame = temp_db.load_as_(data_type)
+        frame.loc[day.date] = day.row
+        temp_db.save_(frame, as_=data_type, mode='a')
+        return self
 
 
 class Converter:

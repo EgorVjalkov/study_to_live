@@ -1,3 +1,4 @@
+import datetime
 import pandas as pd
 from pathlib import Path
 import os
@@ -5,12 +6,69 @@ from date_constants import yesterday, today
 
 
 class UnfilledRowsDB:
-    def __init__(self, path_to_temp_db: Path,
-                 data_frame: pd.DataFrame = pd.DataFrame):
+    def __init__(self,
+                 path_to_temp_db: Path,
+                 path_to_mf=None,
+                 data_frame=None):
+
         self.path_to_temp_db = path_to_temp_db
+        self.path_to_mf = path_to_mf
         self.month_db = data_frame
 
-    def replace_temp_db(self, mother_frame: pd.DataFrame) -> pd.DataFrame:
+    def load_as_(self,
+                 data_type: str,
+                 by_date=None,
+                 from_: str = '') -> pd.Series | pd.DataFrame:
+        if data_type == 'mf' or from_ == 'mf':
+            path = self.path_to_mf
+        else:
+            path = self.path_to_temp_db
+        frame_: pd.DataFrame = pd.read_excel(path, sheet_name='vedomost')
+        frame_['DATE'] = frame_['DATE'].map(lambda _date: _date.date())
+        frame_ = frame_.set_index('DATE')
+        if data_type == 'row':
+            return frame_.loc[by_date]
+        else:
+            return frame_
+
+    def save_(self, frame: pd.DataFrame, as_: str, mode: str):
+        if as_ == 'mf':
+            path = self.path_to_mf
+        else:
+            path = self.path_to_temp_db
+        if mode == 'a':
+            if_sheet_exist = 'replace'
+        else:
+            if_sheet_exist = None
+
+        with pd.ExcelWriter(
+            path,
+            mode=mode,
+            if_sheet_exists=if_sheet_exist
+        ) as writer:
+            frame.to_excel(writer, sheet_name='vedomost')
+
+    def del_filled_row(self, day_date: datetime.date) -> object:
+        temp_frame = self.temp_db_from_file
+        temp_frame = temp_frame[temp_frame.index != day_date]
+        self.save_(temp_frame, as_='temp_db', mode='a')
+        return self
+
+    @property
+    def mf_from_file(self):
+        return self.load_as_('mf')
+
+    @property
+    def temp_db_from_file(self):
+        return self.load_as_('temp_db')
+
+    # нужен ли нам сеттер???
+    @temp_db_from_file.setter
+    def temp_db_from_file(self, db):
+        self.month_db = db
+
+    def init_temp_db(self) -> pd.DataFrame:
+        mother_frame = self.mf_from_file
         unfilled_rows: pd.DataFrame = mother_frame[mother_frame.index <= today]
         unfilled_rows: pd.DataFrame = unfilled_rows[unfilled_rows['DONE'] != 'Y']
         if yesterday in mother_frame.index and yesterday not in unfilled_rows.index:
@@ -18,6 +76,7 @@ class UnfilledRowsDB:
             unfilled_rows = pd.concat([yesterday_row, unfilled_rows]).sort_index()
         self.month_db = unfilled_rows
         return self.month_db
+
 
     @staticmethod
     def mf_is_newer_than_db(path_to_mf: Path, path_to_db: Path) -> bool:

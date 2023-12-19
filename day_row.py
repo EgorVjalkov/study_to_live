@@ -1,3 +1,4 @@
+import datetime
 from typing import Hashable
 import pandas as pd
 
@@ -45,7 +46,7 @@ class DayRow:
         return pd.notna(self.mark)
 
     @property
-    def date(self) -> Hashable:
+    def date(self) -> datetime.date:
         return self.row.name
 
     @property

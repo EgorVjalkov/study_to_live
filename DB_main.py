@@ -14,8 +14,8 @@ path_to = PathMaker()
 mirror = Mirror(path_to)
 if mirror.no_dbs:
     mirror.init_temp_dbs()
-mirror.update()
-print(mirror.series)
+else:
+    mirror.update_by_dbs()
 
 #if __name__ == '__main__':
 #    if mirror.need_scan:

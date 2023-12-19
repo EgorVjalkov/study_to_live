@@ -5,6 +5,7 @@ from VedomostCell import VedomostCell
 from day_row import DayRow
 from DB_main import mirror
 from row_db.mirror_db import Converter
+from row_db.unfilled_rows_db import UnfilledRowsDB
 
 
 class VedomostFiller:
@@ -47,10 +48,12 @@ class VedomostFiller:
         date = Converter(date_in_str=date_form_tg).to('date_object')
         self.path_to_mf = mirror.path_to.mother_frame_by(date)
         day_mark = self.mark_ser[date]
+        paths_by_date = mirror.get_paths_by(date)
+        temp_db = UnfilledRowsDB(*paths_by_date)
         if day_mark == 'empty':
-            day_row = mirror.load_as_('row', by_date=date, from_='mf')
+            day_row = temp_db.load_as_('row', by_date=date, from_='mf')
         else:
-            day_row = mirror.load_as_('row', by_date=date, from_='temp_db')
+            day_row = temp_db.load_as_('row', by_date=date, from_='temp_db')
         self.day = DayRow(day_row)
         return self.day
 
@@ -144,6 +147,7 @@ class VedomostFiller:
         self.cells_ser[cell.name] = cell
 
     def collect_data_to_day_row(self):
+        # здесь и есть точка входа для записи категории или вспоможенцв
         self.day.categories = self.already_filled_dict
         self.change_done_mark()
 
@@ -170,13 +174,13 @@ class VedomostFiller:
 
 
 if __name__ == '__main__':
-    filler = VedomostFiller(recipient='Egr',
+    print(mirror.series)
+    filler = VedomostFiller(recipient='Lera',
                             behavior='for filling')
     filler()
-    filler.change_a_day('14.12.23')
+    filler.change_a_day('15.12.23')
     filler.filtering_by(positions=True)
     filler.get_cells_ser()
-    print(filler.cells_ser)
     for i in filler.unfilled_cells:
         filler.change_a_cell(i)
         filler.fill_the_cell('+')
