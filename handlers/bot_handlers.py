@@ -14,7 +14,6 @@ from My_token import TOKEN
 
 bot = Bot(TOKEN)
 UDB = UserDataBase()
-msg_del = [] # лист для удаления сообщений
 
 
 filler_router = Router()

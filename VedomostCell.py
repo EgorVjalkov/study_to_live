@@ -84,7 +84,7 @@ class VedomostCell:
 
     @property
     def already_filled(self):
-        return str(self.old_value) != str(self.new_value)
+        return pd.notna(self.new_value) and str(self.old_value) != str(self.new_value)
 
     def revert_value(self):
         revert_old_value = np.nan  # очистка ячейки в дефолте

@@ -20,10 +20,8 @@ class Mirror:
         if self.series.empty:
             return 'Mirror(empty)'
         else:
-            dict_ = self.series.to_dict()
-            dict_ = {Converter(date_object=k).to('str'): dict_[k]
-                           for k in dict_}
-            return f'Mirror({dict_})'
+            return (f'Mirror:'
+                    f'{self.series}')
 
     @property
     def months_db_paths(self) -> list:
@@ -109,6 +107,10 @@ class Mirror:
         frame.loc[day.date] = day.row
         temp_db.save_(frame, as_=data_type, mode='a')
         return self
+
+    def load_prices_by(self, date: datetime.date):
+        path = self.path_to.mother_frame_by(date)
+        return pd.read_excel(path, sheet_name='price', index_col=0)
 
 
 class Converter:

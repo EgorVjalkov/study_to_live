@@ -1,5 +1,4 @@
 import pandas as pd
-import datetime
 import classes as cl
 from VedomostCell import VedomostCell
 from day_row import DayRow
@@ -46,7 +45,6 @@ class VedomostFiller:
 
     def change_a_day(self, date_form_tg):
         date = Converter(date_in_str=date_form_tg).to('date_object')
-        self.path_to_mf = mirror.path_to.mother_frame_by(date)
         day_mark = self.mark_ser[date]
         paths_by_date = mirror.get_paths_by(date)
         temp_db = UnfilledRowsDB(*paths_by_date)
@@ -83,8 +81,7 @@ class VedomostFiller:
         return self.cells_ser
 
     def get_cells_ser(self):
-        prices = pd.read_excel(self.path_to_mf, sheet_name='price', index_col=0)
-        print(self.cells_ser)
+        prices = mirror.load_prices_by(self.day.date)
         for cat in self.cells_ser.index:
             cell = VedomostCell(prices,
                                 self.recipient,
@@ -178,19 +175,16 @@ class VedomostFiller:
 if __name__ == '__main__':
     print(mirror)
     filler = VedomostFiller(recipient='Egr',
-                            behavior='for correction')
-    # муть с коррекцией. не работают флаги и не меняются значения
+                            behavior='for filling')
     filler()
-    filler.change_a_day('18.12.23')
+    filler.change_a_day('19.12.23')
     filler.filtering_by(positions=True)
     filler.get_cells_ser()
-    print(filler.cells_ser)
-    for i in filler.unfilled_cells:
-        filler.change_a_cell(i)
-        filler.fill_the_cell('=')
-    filler.collect_data_to_day_row()
-    print(filler.cells_ser)
-    print(mirror)
+    #print(filler.cells_ser)
+    #for i in filler.unfilled_cells:
+    #    filler.change_a_cell(i)
+    #    filler.fill_the_cell('+')
+    #filler.collect_data_to_day_row()
+    #print(filler.cells_ser)
     #mirror.save_day_data(filler.day)
-    # остановка на записи. далее решается куда писать эту дату. Если марка не Y то в базу данных.
-    # как это делать, здесь я и встал
+    #print(mirror)
