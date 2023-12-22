@@ -4,23 +4,18 @@ from vedomost_filler import VedomostFiller
 # тся вопрос о запуске филлера. Филлер он скачет от даты
 
 
-class FillingUser:
+class Session:
     def __init__(self, message: Message, behavior: str):
-        self.username_dict = {'Jegor': 'Egr', 'Валерия': 'Lera'}
-        self.r_name = message.from_user.first_name
-        self.r_id = message.from_user.id
-        self.behavior = behavior
+        self.username_dict = {'Jegor': 'Egr', 'Валерия': 'Lera'}  # здеся нужно по ID
+        self.admin = message.from_user.first_name
+        self.admin_id = message.from_user.id
+        self.filler = VedomostFiller(self.admin, behavior).__call__()
         self.last_message = None
         self.inlines = []
 
-    def __call__(self) -> VedomostFiller:
-        self.filler = VedomostFiller(recipient=self.username_dict[self.r_name],
-                                     behavior=self.behavior).__call__()
-        return self.filler
-
     @property
     def row_in_process(self) -> int:
-        return self.filler.row_in_process_index
+        return self.filler.day.date
 
     def is_date_busy(self, rows_in_process: list) -> bool:
         flag = False
@@ -36,35 +31,30 @@ class FillingUser:
         self.last_message = message
 
 
-class UserDataBase:
+class SessionDB:
     def __init__(self):
         self.db: dict = {}
-        self.active_recipient: str = ''
+        self.changed_date = None
 
     @property
-    def r(self) -> str:
-        return self.active_recipient
+    def date(self) -> str:
+        return self.changed_date
 
-    @r.setter
-    def r(self, recipient):
-        self.active_recipient = recipient
+    @date.setter
+    def date(self, new_date):
+        self.changed_date = new_date
 
     @property
-    def r_data(self) -> FillingUser:
+    def session(self) -> Session:
         return self.db[self.r]
 
     @property
-    def rows_in_process(self) -> list:
-        list_of_rows = []
-        for r in self.db:
-            row = self.db[r].filler.row_in_process_index
-            if row is not None:
-                list_of_rows.append(row)
-        return list_of_rows
+    def dates_in_process(self) -> list:
+        return list(self.db.keys())
 
-    def add_new_recipient(self, message: Message, behavior):
-        self.r = message.from_user.first_name
-        self.db[self.r] = FillingUser(message, behavior).__call__()
+   # def add_new_session(self, session: Message, behavior):
+   #     self.date = message.from_user.
+   #     self.db[self.r] = Session(message, behavior).__call__()
 
     def remove_recipient(self, message: Message):
         del self.db[message.from_user.first_name]
