@@ -286,7 +286,7 @@ class MonthData:
         else:
             self.mother_frame = pd.read_excel(self.path, sheet_name='vedomost', dtype='object')
         self.mother_frame = self.mother_frame.replace('CAN`T', 'can`t')
-        self.mother_frame['DATE'] = [i.changed_date() for i in self.mother_frame['DATE']]
+        self.mother_frame['DATE'] = [i.date() for i in self.mother_frame['DATE']]
         return self.mother_frame
 
     @property
