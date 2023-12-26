@@ -2,7 +2,6 @@ from My_token import TOKEN
 import asyncio
 import logging
 from aiogram import Bot, Dispatcher
-
 from handlers import new_handlers
 
 logging.basicConfig(level=logging.INFO)

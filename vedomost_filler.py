@@ -3,7 +3,7 @@ import classes as cl
 from VedomostCell import VedomostCell
 from day_row import DayRow
 from DB_main import mirror
-from row_db.mirror_db import Converter
+from row_db.mirror_db import Converter, Mirror
 from row_db.unfilled_rows_db import UnfilledRowsDB
 
 
@@ -171,20 +171,24 @@ class VedomostFiller:
         return [f'{c} - "{self.already_filled_dict[c]}"'
                 for c in self.already_filled_dict]
 
+    def save_day_data(self, mirror_: Mirror) -> object:
+        mirror_.save_day_data(self.day)
+        return self
+
 
 if __name__ == '__main__':
     print(mirror)
     filler = VedomostFiller(recipient='Egr',
                             behavior='for filling')
     filler()
-    filler.change_a_day('19.12.23')
+    filler.change_a_day('26.12.23')
     filler.filtering_by(positions=True)
     filler.get_cells_ser()
-    #print(filler.cells_ser)
-    #for i in filler.unfilled_cells:
-    #    filler.change_a_cell(i)
-    #    filler.fill_the_cell('+')
-    #filler.collect_data_to_day_row()
-    #print(filler.cells_ser)
-    #mirror.save_day_data(filler.day)
-    #print(mirror)
+    print(filler.cells_ser)
+    for i in filler.unfilled_cells:
+        filler.change_a_cell(i)
+        filler.fill_the_cell('+')
+    filler.collect_data_to_day_row()
+    filler.save_day_data(mirror)
+    print(filler.cells_ser)
+    print(mirror)

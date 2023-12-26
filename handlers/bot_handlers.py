@@ -9,7 +9,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 from keyboards import get_keyboard, get_filling_inline
 from MiddleWares import SetTimebyHandMiddleWare
-from handlers.UserDB import SessionDB
+from handlers.session_db import SessionDB
 from My_token import TOKEN
 
 bot = Bot(TOKEN)
