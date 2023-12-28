@@ -1,6 +1,6 @@
 import datetime
 from aiogram.types import Message
-from vedomost_filler import VedomostFiller
+from filler.vedomost_filler import VedomostFiller
 
 
 username_dict = {'Jegor': 'Egr', 'Валерия': 'Lera'}
@@ -51,6 +51,10 @@ class SessionDB:
     def session(self) -> Session:
         return self.db[self.r]
 
+    @session.setter
+    def session(self, session: Session):
+        self.db[self.r] = session
+
     def add_new_session_and_change_it(self, message: Message, behavior) -> Session:
         self.r = message.from_user.first_name
         self.db[self.r] = Session(message, behavior)
@@ -59,6 +63,10 @@ class SessionDB:
     def change_session(self, message: Message) -> Session:
         self.r = message.from_user.first_name
         return self.session
+
+    def refresh_session(self, session: Session):
+        self.session = session
+        return self
 
     @property
     def dates_in_process(self) -> list:

@@ -1,6 +1,6 @@
 import datetime
-from typing import Hashable
 import pandas as pd
+from utils.converter import Converter
 
 
 class DayRow:
@@ -8,7 +8,8 @@ class DayRow:
         self.row = day_row
 
     def __repr__(self):
-        return f'{self.date}({self.categories.to_dict()})'
+        date_ = Converter(date_object=self.date).to('str')
+        return f'DayRow {date_}: {self.mark}(filled: {self.filled_cells.index.to_list()})'
 
     @property
     def categories(self) -> pd.Series:
@@ -34,16 +35,17 @@ class DayRow:
         return filled
 
     @property
+    def is_filled(self) -> bool:
+        nans = [i for i in self.row if pd.isna(i)]
+        return nans == []
+
+    @property
     def mark(self):
-        return self.row.at['DONE']
+        return self.row.at['STATUS']
 
     @mark.setter
     def mark(self, mark):
-        self.row.at['DONE'] = mark
-
-    @property
-    def is_mark_filled(self) -> bool:
-        return pd.notna(self.mark)
+        self.row.at['STATUS'] = mark
 
     @property
     def date(self) -> datetime.date:
@@ -58,8 +60,3 @@ class DayRow:
     @property
     def is_empty(self) -> bool:
         return self.mark == 'empty'
-
-    @property
-    def is_filled(self) -> bool:
-        nans = [i for i in self.row if pd.isna(i)]
-        return nans == []

@@ -1,7 +1,6 @@
 import classes as cl
 import pandas as pd
 from testing import does_need_correction
-from analytic_utilities import FrameForAnalyse
 from BonusColumn import BonusColumn
 
 recipients = ['Egr', 'Lera']

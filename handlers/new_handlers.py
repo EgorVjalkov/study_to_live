@@ -6,10 +6,11 @@ from aiogram.filters import Command
 from aiogram.types import (Message, ReplyKeyboardRemove, CallbackQuery)
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
-from keyboards import get_keyboard, get_filling_inline
-from MiddleWares import SetTimebyHandMiddleWare
+from handlers.keyboards import get_keyboard, get_filling_inline
 from handlers.session_db import SessionDB, Session
 from My_token import TOKEN
+from DB_main import mirror
+from filler.vedomost_cell import VedomostCell
 
 bot = Bot(TOKEN)
 SDB = SessionDB()
@@ -74,12 +75,27 @@ async def cmd_sleep(message: Message):
     #print(message_day, category, new_value)
     #print(session.changed_date, session.filler.active_cell)
     #print(session.filler.already_filled_dict)
-    #await finish_filling(message)
+    await finish_filling(message)
 
 
 router2 = Router()
 router2.message.filter(F.from_user.first_name.in_(SDB.db))
 filler_router.include_router(router2)
+
+
+@router2.message(Command("finish"))
+async def finish_filling(message: Message):
+    s = SDB.change_session(message)
+    answer = 'Вы ничего не заполнили'
+    if s.filler.already_filled_dict:
+        filled_for_answer = [f'За {s.filler.date_to_str} Вы заполнили:']
+        filled_for_answer.extend(s.filler.filled_cells_list_for_print)
+        answer = "\n".join(filled_for_answer)
+        s.filler.collect_data_to_day_row()
+        mirror.save_day_data(s.filler.day)
+        print(s.filler.already_filled_dict)
+    SDB.remove_recipient(message)
+    await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
 
 
 async def get_categories_keyboard(message: Message):
@@ -99,17 +115,33 @@ async def change_a_date(message: Message):
               '"забыл" - забыл какой была отметка']
 
     s.filler.change_a_day(message.text)
-    s.filler.filtering_by(positions=True)
     s.filler.get_cells_ser()
+    SDB.refresh_session(s) # как это тестить???
+    # делаем сначала на одного, потом задумаемся о многочеловековом заполнении
     if not s.filler.unfilled_cells:
         await message.reply("Все заполнено!",
                             reply_markup=ReplyKeyboardRemove())
         s.filler.change_done_mark()
-        s.filler.save_day_data()
-        # сильно подумать надо, откуда, что берется. миррор в мире филлера, это другой миррор. Нужно видимо здесь
-        # новый экземпляр создавать, чтобы воспользоваться записью данных по дате и  заполненности
-        await cmd_fill(message, greet=False) # перезапускаем прогу
+        mirror.save_day_data(s.filler.day)
     else:
-        SDB.session.get_inlines()
+        s.get_inlines()
         await message.reply('\n'.join(answer))
         await get_categories_keyboard(message)
+
+
+@router2.message(F.func(
+    lambda message: message.text in SDB.change_session(message).inlines))
+async def change_a_category(message: Message):
+    s = SDB.change_session(message)
+    cell_name = message.text
+    s.inlines.remove(cell_name)
+    cell_data: VedomostCell = s.filler.cells_ser[cell_name]
+
+    callback = get_filling_inline(InlineKeyboardBuilder(), cell_data, s.inlines)
+    await message.answer(cell_data.print_old_value_by(s.filler.behavior),
+                         reply_markup=ReplyKeyboardRemove())
+    await message.answer(cell_data.print_description(), reply_markup=callback.as_markup())
+    s.set_last_message(message)
+    SDB.refresh_session(s)
+
+    # остановился на колбэках

@@ -1,6 +1,5 @@
 import pandas as pd
-import analytic_utilities as au
-
+from utils import analytic_utilities as au
 
 ff = au.FrameForAnalyse()
 

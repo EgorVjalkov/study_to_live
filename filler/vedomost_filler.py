@@ -1,10 +1,10 @@
 import pandas as pd
 import classes as cl
-from VedomostCell import VedomostCell
-from day_row import DayRow
+from filler.vedomost_cell import VedomostCell
+from filler.day_row import DayRow
 from DB_main import mirror
-from row_db.mirror_db import Converter, Mirror
 from row_db.unfilled_rows_db import UnfilledRowsDB
+from utils.converter import Converter
 
 
 class VedomostFiller:
@@ -26,6 +26,7 @@ class VedomostFiller:
         if mirror.need_update:
             mirror.update_by_date()
         self.mark_ser: pd.Series = mirror.get_dates_for(self.recipient, by_behavior=self.behavior)
+        print(self.mark_ser)
         return self
 
     @property
@@ -64,23 +65,24 @@ class VedomostFiller:
         r.get_r_positions_col()
         return r.mod_data.at[self.day.date, 'positions']
 
-    def filtering_by(self, positions=False, category=None, only_private_categories=False):
+    def filtering_(self, by_='positions'):
         filtered = list(self.day.categories.index)
-        if only_private_categories:
+        if by_ == 'private':
             filtered = [i for i in filtered
                         if i[0] == self.recipient[0].lower()]
-        elif category:
-            filtered = [i for i in filtered
-                        if i == category]
-        elif positions:
+
+        elif by_ == 'positions':
             filtered = [i for i in filtered
                         if i[0] in self.r_positions]
 
-        self.cells_ser = \
-            self.day.categories[filtered]
-        return self.cells_ser
+        else:
+            filtered = [i for i in filtered
+                        if i == by_]
 
-    def get_cells_ser(self):
+        return self.day.categories[filtered]
+
+    def get_cells_ser(self, by_: str = 'positions'):
+        self.cells_ser = self.filtering_(by_)
         prices = mirror.load_prices_by(self.day.date)
         for cat in self.cells_ser.index:
             cell = VedomostCell(prices,
@@ -107,7 +109,8 @@ class VedomostFiller:
 
     @property
     def unfilled_cells(self):
-        unfilled = [i for i in self.cells_ser.index if i not in self.already_filled_dict]
+        unfilled = [i for i in self.cells_ser.index
+                    if i not in self.already_filled_dict]
         return unfilled
 
     @property
@@ -150,11 +153,17 @@ class VedomostFiller:
         self.day.categories = self.already_filled_dict
         self.change_done_mark()
 
+    @property
+    def is_r_categories_filled(self) -> bool:
+        pos_ser = self.filtering_(by_='positions')
+        nans = pos_ser[pos_ser.map(lambda i: pd.isna(i)) == True]
+        return len(nans) == 0
+
     def change_done_mark(self):
         if self.day.is_filled:
             self.day.mark = 'Y'
         else:
-            if not self.unfilled_cells:
+            if self.is_r_categories_filled:
                 self.day.mark = self.recipient[0]
             else:
                 self.day.mark = 'at work'
@@ -171,24 +180,19 @@ class VedomostFiller:
         return [f'{c} - "{self.already_filled_dict[c]}"'
                 for c in self.already_filled_dict]
 
-    def save_day_data(self, mirror_: Mirror) -> object:
-        mirror_.save_day_data(self.day)
-        return self
-
 
 if __name__ == '__main__':
-    print(mirror)
-    filler = VedomostFiller(recipient='Egr',
+    filler = VedomostFiller(recipient='Lera',
                             behavior='for filling')
     filler()
-    filler.change_a_day('26.12.23')
-    filler.filtering_by(positions=True)
+    filler.change_a_day('27.12.23')
     filler.get_cells_ser()
     print(filler.cells_ser)
     for i in filler.unfilled_cells:
         filler.change_a_cell(i)
         filler.fill_the_cell('+')
     filler.collect_data_to_day_row()
-    filler.save_day_data(mirror)
+    mirror.save_day_data(filler.day)
     print(filler.cells_ser)
+    print(filler.day)
     print(mirror)

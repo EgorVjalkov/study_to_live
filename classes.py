@@ -2,7 +2,8 @@ import pandas as pd
 from statistics import mean
 import os
 from PriceMarkCalc import PriceMarkCalc
-import analytic_utilities as au
+from utils import analytic_utilities as au
+
 pd.set_option('display.max.columns', None)
 
 

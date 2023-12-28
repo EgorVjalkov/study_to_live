@@ -5,7 +5,7 @@ import pandas as pd
 class VedomostCell:
     def __init__(self, price_frame, recipient, name='', value=''):
         self.prices = price_frame
-        self.r_litera = recipient[0]
+        self.recipient = recipient
 
         self.name = name
         self.old_value = value
@@ -16,6 +16,10 @@ class VedomostCell:
             return f'Cell({self.name}, new: {self.new_value})'
         else:
             return f'Cell({self.name}, old: {self.old_value}'
+
+    @property
+    def r_litera(self):
+        return self.recipient[0]
 
     @property
     def new_cat_value(self):
@@ -106,6 +110,20 @@ class VedomostCell:
         }
         return pd.Series(cell_data)
 
+    def print_description(self):
+        answer = self.description
+        if not answer:
+            answer = 'Нажмите кнопку на экране'
+        else:
+            answer = '\n'.join(answer)
+        return answer
+
+    def print_old_value_by(self, behavior: str):
+        if behavior == 'for correction':
+            answer = f'Принято. Предыдущие значение - {self.old_value}'
+        else:
+            answer = 'Принято'
+        return answer
 
 #a = np.nan
 #print(pd.isna(a))
