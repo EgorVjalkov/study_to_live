@@ -1,4 +1,4 @@
-from row_db.mirror_db import Mirror
+from temp_db.mirror_db import Mirror
 from path_maker import PathMaker
 
 print('пуск')

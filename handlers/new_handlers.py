@@ -51,30 +51,25 @@ async def cmd_correct(message: Message):
 
 @filler_router.message(Command("sleep"))
 async def cmd_sleep(message: Message):
-    session = SDB.add_new_session_and_change_it(message, 'manually')
+    s = SDB.add_new_session_and_change_it(message, 'manually')
     message_day = datetime.datetime.now()
     message_time = message_day.time()
     #message_time = datetime.time(hour=11, minute=1)
     if message_time.hour in range(6, 21):
-        category = session.filler.r_siesta
+        category = s.filler.r_siesta
         new_value = '+'
     else:
         if message_time.hour in range(0, 6):
             message_time = datetime.time(hour=0, minute=0)
             message_day -= datetime.timedelta(days=1)
 
-        category = session.filler.r_sleeptime
+        category = s.filler.r_sleeptime
         new_value = datetime.time.strftime(message_time, '%H:%M')
 
     message_day = datetime.date.strftime(message_day, '%d.%m.%y')
-    session.filler.change_a_day(message_day)
-    session.filler.filtering_by(category=category)
-    session.filler.get_cells_ser()
-    session.filler.change_a_cell(category)
-    session.filler.fill_the_cell(new_value)
-    #print(message_day, category, new_value)
-    #print(session.changed_date, session.filler.active_cell)
-    #print(session.filler.already_filled_dict)
+    s.filler.change_a_day(message_day)
+    s.filler.get_cells_ser(by_=category)
+    s.filler.fill_the_cell(new_value)
     await finish_filling(message)
 
 

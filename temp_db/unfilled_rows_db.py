@@ -50,6 +50,7 @@ class UnfilledRowsDB:
 
     def del_filled_row(self, day_date: datetime.date) -> object:
         temp_frame = self.temp_db_from_file
+        print(day_date)
         temp_frame = temp_frame[temp_frame.index != day_date]
         self.save_(temp_frame, as_='temp_db', mode='a')
         return self
@@ -70,13 +71,12 @@ class UnfilledRowsDB:
     def init_temp_db(self) -> pd.DataFrame:
         mother_frame = self.mf_from_file
         unfilled_rows: pd.DataFrame = mother_frame[mother_frame.index <= today]
-        unfilled_rows: pd.DataFrame = unfilled_rows[unfilled_rows['DONE'] != 'Y']
+        unfilled_rows: pd.DataFrame = unfilled_rows[unfilled_rows['STATUS'] != 'Y']
         if yesterday in mother_frame.index and yesterday not in unfilled_rows.index:
             yesterday_row: pd.DataFrame = mother_frame[mother_frame.index == yesterday]
             unfilled_rows = pd.concat([yesterday_row, unfilled_rows]).sort_index()
         self.month_db = unfilled_rows
         return self.month_db
-
 
     @staticmethod
     def mf_is_newer_than_db(path_to_mf: Path, path_to_db: Path) -> bool:

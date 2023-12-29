@@ -2,5 +2,5 @@
 __pycache__/
 output_files/
 months
-row_db/temp_db
+temp_db/temp_db
 My_token.py
