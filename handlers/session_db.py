@@ -1,5 +1,5 @@
 import datetime
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from filler.vedomost_filler import VedomostFiller
 
 
@@ -60,8 +60,11 @@ class SessionDB:
         self.db[self.r] = Session(message, behavior)
         return self.session
 
-    def change_session(self, message: Message) -> Session:
-        self.r = message.from_user.first_name
+    def change_session(self, by_message: Message = None, by_name: str = None) -> Session:
+        if by_message:
+            self.r = by_message.from_user.first_name
+        elif by_name:
+            self.r = by_name
         return self.session
 
     def refresh_session(self, session: Session):
