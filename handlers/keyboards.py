@@ -13,8 +13,8 @@ def get_keyboard(keyboard, keys_list, rows=None):
     return keyboard.as_markup(resize_keyboard=True)
 
 
-def get_filling_inline(inline: InlineKeyboardBuilder, cell: VedomostCell, inlines: list):
-    r = cell.recipient
+def get_filling_inline(inline: InlineKeyboardBuilder, r_from_tg: str, cell: VedomostCell, inlines: list):
+    r = r_from_tg
     name = cell.name
     end_key = 'следующая' if inlines else 'завершить'
     if cell.keys:

@@ -17,7 +17,7 @@ class VedomostFiller:
 
         self.mark_ser = None
         self.day = None
-        self.cells_ser = None
+        self.cells_ser = pd.Series()
         self.path_to_mf = None
 
         self.active_cell = None
@@ -82,6 +82,7 @@ class VedomostFiller:
         return self.day.categories[filtered]
 
     def get_cells_ser(self, by_: str = 'positions'):
+        # нужно попробовать загружать категории по одиночке и сравнить производительность в моменте
         self.cells_ser = self.filtering_(by_)
         prices = mirror.load_prices_by(self.day.date)
         for cat in self.cells_ser.index:

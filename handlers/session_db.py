@@ -39,6 +39,9 @@ class SessionDB:
         self.db: dict = {}
         self.recipient = None
 
+    def __repr__(self):
+        return f'SessionDB({self.db.keys()})'
+
     @property
     def r(self) -> str:
         return self.recipient

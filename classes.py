@@ -182,6 +182,8 @@ class Recipient:
             # здесь можно упростить, т.. к. мы уже сделали пометки где есть личные отметки а где нет
             double_category_flag = [i for i in categories[column] if str(i)[0] in all_private_positions]
             if double_category_flag:
+                print(categories[column])
+
                 column_list = [PriceMarkCalc(result=i).prepare_named_result(self.r_name)
                                for i in categories[column]]
                 self.cat_data[column] = column_list

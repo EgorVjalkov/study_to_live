@@ -45,8 +45,9 @@ class Mirror:
             temp_db = UnfilledRowsDB(self.path_to.months_temp_db_by(day),
                                      self.path_to.mother_frame_by(day))
             db_frame = temp_db.init_temp_db()
-            series_list.append(db_frame['STATUS'])
-            temp_db.save_(db_frame, as_='temp_db', mode='w')
+            if not db_frame.empty:
+                series_list.append(db_frame['STATUS'])
+                temp_db.save_(db_frame, as_='temp_db', mode='w')
         self.update_by_dbs(series_list)
 
     @property
