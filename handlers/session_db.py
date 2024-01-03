@@ -34,6 +34,9 @@ class SessionDB:
         self.recipient = None
         self.busy_dates = []
 
+    def __repr__(self):
+        return f'SessionDB({self.db.keys()})'
+
     @property
     def r(self) -> str:
         return self.recipient

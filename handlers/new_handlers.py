@@ -36,6 +36,7 @@ async def greet_and_get_days(message: Message, session: Session):
         SDB.remove_recipient(message)
     print(session.filler.days)
     print(session.filler.behavior)
+    print(SDB)
 
 
 @filler_router.message(Command("fill"))
@@ -138,12 +139,13 @@ async def change_a_category(message: Message):
     s.inlines.remove(cell_name)
     cell_data: VedomostCell = s.filler.cells_ser[cell_name]
 
-    callback = get_filling_inline(InlineKeyboardBuilder(), cell_data, s.inlines)
+    callback = get_filling_inline(InlineKeyboardBuilder(), SDB.r, cell_data, s.inlines)
     await message.answer(cell_data.print_old_value_by(s.filler.behavior),
                          reply_markup=ReplyKeyboardRemove())
     await message.answer(cell_data.print_description(), reply_markup=callback.as_markup())
     s.set_last_message(message)
     SDB.refresh_session(s)
+    print(SDB)
 
 
 router3 = Router()
