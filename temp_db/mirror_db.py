@@ -84,8 +84,12 @@ class Mirror:
         elif by_behavior == 'for correction':
             days_ser: pd.Series = self.series[self.series != 'empty']
             days_ser: pd.Series = days_ser[days_ser.index >= yesterday]
+            if yesterday not in days_ser.index:
+                yesterday_ser = pd.Series({yesterday: 'Y'})
+                days_ser = pd.concat([yesterday_ser, days_ser])
         else:
             days_ser: pd.Series = self.series[self.series.index == today]
+        print(days_ser)
         return days_ser
 
     def get_paths_by(self, date: datetime.date = today) -> tuple:

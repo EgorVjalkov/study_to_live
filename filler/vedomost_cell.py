@@ -92,11 +92,12 @@ class VedomostCell:
 
     def revert_value(self):
         revert_old_value = np.nan  # очистка ячейки в дефолте
-        if self.is_filled and self.r_litera in self.old_value:  # очистка записи при наличии записи в ней
+        if self.is_filled and self.has_private_value:
             revert_old_value = [i for i in self.old_value.split(',')
                                 if self.r_litera not in i]
             revert_old_value = ''.join(revert_old_value)
         self.old_value = revert_old_value
+        print(self.old_value)
 
     def extract_cell_data(self):
         cell_data = {

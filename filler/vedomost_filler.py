@@ -49,7 +49,7 @@ class VedomostFiller:
         day_mark = self.mark_ser[date]
         paths_by_date = mirror.get_paths_by(date)
         temp_db = UnfilledRowsDB(*paths_by_date)
-        if day_mark == 'empty':
+        if day_mark in ['empty', 'Y']:
             day_row = temp_db.load_as_('row', by_date=date, from_='mf')
         else:
             day_row = temp_db.load_as_('row', by_date=date, from_='temp_db')
