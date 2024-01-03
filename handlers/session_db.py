@@ -1,6 +1,7 @@
 import datetime
 from aiogram.types import Message, CallbackQuery
 from filler.vedomost_filler import VedomostFiller
+from utils.converter import Converter
 
 
 username_dict = {'Jegor': 'Egr', 'Валерия': 'Lera'}
@@ -20,13 +21,6 @@ class Session:
         if self.filler.day:
             return self.filler.day.date
 
-    def is_date_busy(self, dates_in_process: list) -> bool:
-        flag = False
-        if self.filler.date_need_common_filling:
-            if self.changed_date in dates_in_process:
-                flag = True
-        return flag
-
     def get_inlines(self):
         self.inlines.extend(self.filler.unfilled_cells)
 
@@ -38,6 +32,7 @@ class SessionDB:
     def __init__(self):
         self.db: dict = {}
         self.recipient = None
+        self.busy_dates = []
 
     @property
     def r(self) -> str:
@@ -54,6 +49,14 @@ class SessionDB:
     @session.setter
     def session(self, session: Session):
         self.db[self.r] = session
+
+    @property
+    def dates_in_process(self):
+        return [self.db[r].changed_date for r in self.db]
+
+    def is_date_busy(self, date_from_tg):
+        date = Converter(date_in_str=date_from_tg).to('date_object')
+        return date in self.dates_in_process
 
     def add_new_session_and_change_it(self, message: Message, behavior) -> Session:
         self.r = message.from_user.first_name

@@ -6,6 +6,7 @@ from aiogram.filters import Command
 from aiogram.types import (Message, ReplyKeyboardRemove, CallbackQuery)
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
+from async_func import time_awaiting
 from handlers.keyboards import get_keyboard, get_filling_inline
 from handlers.session_db import SessionDB, Session
 from My_token import TOKEN
@@ -104,24 +105,29 @@ async def get_categories_keyboard(message: Message):
 @router2.message(F.func(
     lambda message: message.text in SDB.change_session(message).filler.days))
 async def change_a_date(message: Message):
-    s = SDB.change_session(by_message=message)
-    answer = ['Обращаем внимание на отметки:',
-              '"не мог" - не выполнил по объективой причине (напр.: погода, вонь, лихорадка)',
-              '"забыл" - забыл какой была отметка']
-
-    s.filler.change_a_day(message.text)
-    s.filler.get_cells_ser()
-    SDB.refresh_session(s) # как это тестить???
-    # делаем сначала на одного, потом задумаемся о многочеловековом заполнении
-    if not s.filler.unfilled_cells:
-        await message.reply("Все заполнено!",
+    is_busy = SDB.is_date_busy(message.text)
+    if is_busy:
+        await message.reply("Заполнение ведомости на эту дату в процессе. Я сообщу, когда это станет возможным",
                             reply_markup=ReplyKeyboardRemove())
-        s.filler.change_done_mark()
-        mirror.save_day_data(s.filler.day)
+        await time_awaiting(change_a_date, message, 10)
     else:
-        s.get_inlines()
-        await message.reply('\n'.join(answer))
-        await get_categories_keyboard(message)
+        s = SDB.change_session(by_message=message)
+        answer = ['Обращаем внимание на отметки:',
+                  '"не мог" - не выполнил по объективой причине (напр.: погода, вонь, лихорадка)',
+                  '"забыл" - забыл какой была отметка']
+        s.filler.change_a_day(message.text)
+        s.filler.get_cells_ser()
+        SDB.refresh_session(s) # как это тестить???
+        # делаем сначала на одного, потом задумаемся о многочеловековом заполнении
+        if not s.filler.unfilled_cells:
+            await message.reply("Все заполнено!",
+                                reply_markup=ReplyKeyboardRemove())
+            s.filler.change_done_mark()
+            mirror.save_day_data(s.filler.day)
+        else:
+            s.get_inlines()
+            await message.reply('\n'.join(answer))
+            await get_categories_keyboard(message)
 
 
 @router2.message(F.func(
