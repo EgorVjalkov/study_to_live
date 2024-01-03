@@ -27,6 +27,26 @@ class Session:
     def set_last_message(self, message: Message):
         self.last_message = message
 
+    def manually_fill_sleep_time(self, now: datetime.datetime):
+        message_day = now
+        message_time = message_day.time()
+        if message_time.hour in range(6, 21):
+            category = self.filler.r_siesta
+            new_value = '+'
+        else:
+            if message_time.hour in range(0, 6):
+                message_time = datetime.time(hour=0, minute=0)
+                message_day -= datetime.timedelta(days=1)
+
+            category = self.filler.r_sleeptime
+            new_value = datetime.time.strftime(message_time, '%H:%M')
+
+        message_day = datetime.date.strftime(message_day, '%d.%m.%y')
+        self.filler.change_a_day(message_day)
+        self.filler.get_cells_ser(by_=category)
+        self.filler.fill_the_cell(new_value)
+        return self.filler
+
 
 class SessionDB:
     def __init__(self):
@@ -58,8 +78,9 @@ class SessionDB:
         return [self.db[r].changed_date for r in self.db]
 
     def is_date_busy(self, date_from_tg):
-        date = Converter(date_in_str=date_from_tg).to('date_object')
-        return date in self.dates_in_process
+        if isinstance(date_from_tg, str):
+            date_from_tg = Converter(date_in_str=date_from_tg).to('date_object')
+        return date_from_tg in self.dates_in_process
 
     def add_new_session_and_change_it(self, message: Message, behavior) -> Session:
         self.r = message.from_user.first_name

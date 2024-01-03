@@ -52,27 +52,21 @@ async def cmd_correct(message: Message):
 
 
 @filler_router.message(Command("sleep"))
-async def cmd_sleep(message: Message):
-    s = SDB.add_new_session_and_change_it(message, 'manually')
-    message_day = datetime.datetime.now()
-    message_time = message_day.time()
-    #message_time = datetime.time(hour=11, minute=1)
-    if message_time.hour in range(6, 21):
-        category = s.filler.r_siesta
-        new_value = '+'
+async def cmd_sleep(message: Message,
+                    await_mode: bool = False,
+                    now: datetime.datetime = None):
+    if not now:
+        now = datetime.datetime.now()
+    print(now, datetime.datetime.now())
+    if SDB.is_date_busy(now.date()):
+        if not await_mode:
+            await message.reply("Запомнил! Запишу, когда это станет возможным",
+                                reply_markup=ReplyKeyboardRemove())
+        await time_awaiting(cmd_sleep, (message, True, now), 10)
     else:
-        if message_time.hour in range(0, 6):
-            message_time = datetime.time(hour=0, minute=0)
-            message_day -= datetime.timedelta(days=1)
-
-        category = s.filler.r_sleeptime
-        new_value = datetime.time.strftime(message_time, '%H:%M')
-
-    message_day = datetime.date.strftime(message_day, '%d.%m.%y')
-    s.filler.change_a_day(message_day)
-    s.filler.get_cells_ser(by_=category)
-    s.filler.fill_the_cell(new_value)
-    await finish_filling(message)
+        s = SDB.add_new_session_and_change_it(message, 'manually')
+        s.manually_fill_sleep_time(now)
+        await finish_filling(message)
 
 
 router2 = Router()
