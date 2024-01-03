@@ -105,12 +105,13 @@ async def get_categories_keyboard(message: Message):
 
 @router2.message(F.func(
     lambda message: message.text in SDB.change_session(message).filler.days))
-async def change_a_date(message: Message):
+async def change_a_date(message: Message, await_mode=False):
     is_busy = SDB.is_date_busy(message.text)
     if is_busy:
-        await message.reply("Заполнение ведомости на эту дату в процессе. Я сообщу, когда это станет возможным",
-                            reply_markup=ReplyKeyboardRemove())
-        await time_awaiting(change_a_date, message, 10)
+        if not await_mode:
+            await message.reply("Заполнение ведомости на эту дату в процессе. Я сообщу, когда это станет возможным",
+                                reply_markup=ReplyKeyboardRemove())
+        await time_awaiting(change_a_date, (message, True), 10)
     else:
         s = SDB.change_session(by_message=message)
         answer = ['Обращаем внимание на отметки:',
