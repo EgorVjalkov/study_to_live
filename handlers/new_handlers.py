@@ -79,7 +79,7 @@ async def finish_filling(message: Message):
     s = SDB.change_session(by_message=message)
     answer = 'Вы ничего не заполнили'
     if s.filler.already_filled_dict:
-        filled_for_answer = [f'За {s.filler.date_to_str} Вы заполнили:']
+        filled_for_answer = [f'За {s.filler.date_to_str} заполнено:']
         filled_for_answer.extend(s.filler.filled_cells_list_for_print)
         answer = "\n".join(filled_for_answer)
         s.filler.collect_data_to_day_row()
@@ -87,6 +87,8 @@ async def finish_filling(message: Message):
         print(s.filler.already_filled_dict)
     SDB.remove_recipient(message)
     await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
+    if s.admin_id != SDB.superuser_id:
+        await bot.send_message(SDB.superuser_id, f'{s.admin} завершил заполнение. {answer}')
 
 
 async def get_categories_keyboard(message: Message):
@@ -124,6 +126,7 @@ async def change_a_date(message: Message, await_mode=False):
             s.get_inlines()
             await message.reply('\n'.join(answer))
             await get_categories_keyboard(message)
+            print(SDB)
 
 
 @router2.message(F.func(
@@ -140,7 +143,6 @@ async def change_a_category(message: Message):
     await message.answer(cell_data.print_description(), reply_markup=callback.as_markup())
     s.set_last_message(message)
     SDB.refresh_session(s)
-    print(SDB)
 
 
 router3 = Router()

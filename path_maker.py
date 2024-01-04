@@ -39,7 +39,6 @@ class PathMaker:
 
 path_to = PathMaker()
 path_to_project = path_to.path_to_project
-print(path_to_project)
 
 
 #if __name__ == '__main__':

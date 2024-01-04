@@ -12,6 +12,7 @@ class Session:
     def __init__(self, message: Message, behavior: str):
         self.admin = username_dict[message.from_user.first_name]
         self.admin_id = message.from_user.id
+        print(type(self.admin_id))
         self.filler = VedomostFiller(self.admin, behavior).__call__()
         self.last_message = None
         self.inlines = []
@@ -52,10 +53,13 @@ class SessionDB:
     def __init__(self):
         self.db: dict = {}
         self.recipient = None
-        self.busy_dates = []
+        self.superuser_id = 831647128
 
     def __repr__(self):
-        return f'SessionDB({self.db.keys()})'
+        repr_dict = {r: self.db[r].changed_date for r in self.db}
+        repr_dict = {r: Converter(date_object=repr_dict[r]).to('str')
+                     for r in repr_dict}
+        return f'SessionDB({repr_dict})'
 
     @property
     def r(self) -> str:

@@ -26,7 +26,6 @@ class VedomostFiller:
         if mirror.need_update:
             mirror.update_by_date()
         self.mark_ser: pd.Series = mirror.get_dates_for(self.recipient, by_behavior=self.behavior)
-        print(self.mark_ser)
         return self
 
     @property
@@ -146,7 +145,6 @@ class VedomostFiller:
             else:
                 cell.new_cat_value = value_from_tg
         self.cells_ser[cell.name] = cell
-        print(self.cells_ser[cell.name])
         return self
 
     def collect_data_to_day_row(self):
