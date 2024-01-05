@@ -6,14 +6,6 @@ path_to = PathMaker()
 mirror = Mirror(path_to)
 
 if mirror.no_dbs:
-    mirror.init_temp_dbs()
+    mirror.init_(from_='mf')
 else:
-    mirror.update_by_dbs()
-
-#if __name__ == '__main__':
-#    if mirror.need_scan:
-#        mirror.update_after_()
-#        mirror.update_by_date()
-#    else:
-#        mirror.update_by_date()
-#    print(mirror.series)
+    mirror.init_(from_='mf, but replace rows from temp_db')

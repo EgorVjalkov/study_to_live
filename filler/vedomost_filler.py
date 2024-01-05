@@ -184,10 +184,10 @@ if __name__ == '__main__':
     filler = VedomostFiller(recipient='Lera',
                             behavior='for filling')
     filler()
-    filler.change_a_day('28.12.23')
-    filler.get_cells_ser()
-    for i in filler.unfilled_cells:
-        filler.change_a_cell(i)
-        filler.fill_the_cell('+')
-    filler.collect_data_to_day_row()
-    mirror.save_day_data(filler.day)
+    #filler.change_a_day('3.1.24')
+    #filler.get_cells_ser()
+    #for i in filler.unfilled_cells:
+    #    filler.change_a_cell(i)
+    #    filler.fill_the_cell('+')
+    #filler.collect_data_to_day_row()
+    #mirror.save_day_data(filler.day)
