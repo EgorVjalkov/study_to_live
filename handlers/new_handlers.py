@@ -57,7 +57,6 @@ async def cmd_sleep(message: Message,
                     now: datetime.datetime = None):
     if not now:
         now = datetime.datetime.now()
-    print(now, datetime.datetime.now())
     if SDB.is_date_busy(now.date()):
         if not await_mode:
             await message.reply("Запомнил! Запишу, когда это станет возможным",

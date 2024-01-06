@@ -87,13 +87,14 @@ class Mirror:
             days_ser: pd.Series = self.series[self.series != r_done_mark]
         elif by_behavior == 'for correction':
             yesterday_ = yesterday()
-            days_ser: pd.Series = self.series[self.series != 'empty']
-            days_ser: pd.Series = days_ser[days_ser.index >= yesterday_]
+            days_ser: pd.Series = self.series[self.series.index >= yesterday_]
             if yesterday_ not in days_ser.index:
                 yesterday_ser = pd.Series({yesterday_: 'Y'})
-                days_ser = pd.concat([yesterday_ser, days_ser])
+                days_ser = pd.concat([yesterday_ser, days_ser]).sort_index()
+            days_ser: pd.Series = days_ser[days_ser != 'empty']
         else:
-            days_ser: pd.Series = self.series[self.series.index == today]
+            days_ser: pd.Series = self.series[self.series.index == today()]
+        print(f'mark_series by behavior {by_behavior}')
         print(days_ser)
         return days_ser
 

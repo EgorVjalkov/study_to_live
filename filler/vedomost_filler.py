@@ -1,3 +1,5 @@
+import datetime
+
 import pandas as pd
 import classes as cl
 from filler.vedomost_cell import VedomostCell
@@ -43,8 +45,9 @@ class VedomostFiller:
                       in days]
         return days
 
-    def change_a_day(self, date_form_tg):
-        date = Converter(date_in_str=date_form_tg).to('date_object')
+    def change_a_day(self, date: datetime.date | str) -> DayRow:
+        if isinstance(date, str):
+            date = Converter(date_in_str=date).to('date_object')
         day_mark = self.mark_ser[date]
         paths_by_date = mirror.get_paths_by(date)
         temp_db = UnfilledRowsDB(*paths_by_date)
@@ -181,13 +184,16 @@ class VedomostFiller:
 
 
 if __name__ == '__main__':
-    filler = VedomostFiller(recipient='Lera',
-                            behavior='for filling')
-    filler()
-    #filler.change_a_day('3.1.24')
-    #filler.get_cells_ser()
-    #for i in filler.unfilled_cells:
-    #    filler.change_a_cell(i)
-    #    filler.fill_the_cell('+')
-    #filler.collect_data_to_day_row()
-    #mirror.save_day_data(filler.day)
+    for name in ['Lera', 'Egr']:
+        filler = VedomostFiller(recipient=name,
+                                behavior='for filling')
+        while True:
+            filler()
+        #filler.change_a_day('5.1.24')
+        #filler.get_cells_ser()
+        #for i in filler.unfilled_cells:
+        #    filler.change_a_cell(i)
+        #    filler.fill_the_cell('+')
+        #print(filler.cells_ser)
+        #filler.collect_data_to_day_row()
+        #mirror.save_day_data(filler.day)

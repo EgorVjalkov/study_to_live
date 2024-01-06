@@ -12,7 +12,6 @@ class Session:
     def __init__(self, message: Message, behavior: str):
         self.admin = username_dict[message.from_user.first_name]
         self.admin_id = message.from_user.id
-        print(type(self.admin_id))
         self.filler = VedomostFiller(self.admin, behavior).__call__()
         self.last_message = None
         self.inlines = []
