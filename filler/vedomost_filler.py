@@ -48,7 +48,7 @@ class VedomostFiller:
     def change_a_day(self, date: datetime.date | str) -> DayRow:
         if isinstance(date, str):
             date = Converter(date_in_str=date).to('date_object')
-        day_mark = self.mark_ser[date]
+        day_mark = self.mark_ser.at[date]
         paths_by_date = mirror.get_paths_by(date)
         temp_db = UnfilledRowsDB(*paths_by_date)
         if day_mark in ['empty', 'Y']:
@@ -187,10 +187,10 @@ if __name__ == '__main__':
     for name in ['Lera', 'Egr']:
         filler = VedomostFiller(recipient=name,
                                 behavior='for filling')
-        while True:
-            filler()
-        #filler.change_a_day('5.1.24')
-        #filler.get_cells_ser()
+        filler()
+        filler.change_a_day('6.1.24')
+        filler.get_cells_ser()
+        print(filler.cells_ser)
         #for i in filler.unfilled_cells:
         #    filler.change_a_cell(i)
         #    filler.fill_the_cell('+')
