@@ -1,6 +1,7 @@
 from aiogram.types import KeyboardButton, InlineKeyboardButton
 from filler.vedomost_cell import VedomostCell
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from handlers.session_db import Session
 
 
 def get_keyboard(keyboard, keys_list, rows=None):
@@ -13,17 +14,20 @@ def get_keyboard(keyboard, keys_list, rows=None):
     return keyboard.as_markup(resize_keyboard=True)
 
 
-def get_filling_inline(inline: InlineKeyboardBuilder, r_from_tg: str, cell: VedomostCell, inlines: list):
+def get_filling_inline(inline: InlineKeyboardBuilder,
+                       session: Session,
+                       r_from_tg: str,
+                       cell: VedomostCell):
     r = r_from_tg
     name = cell.name
-    end_key = 'следующая' if inlines else 'завершить'
-    if cell.keys:
-        keys = [InlineKeyboardButton(text=str(i),
-                                     callback_data=f'fill_{r}_{name}_{i}')
-                for i in cell.keys]
-        inline.row(*keys)
+    keys = cell.keys
+    end_key = 'следующая' if session.inlines else 'завершить'
+    if session.filler.behavior != 'coefs':
+        keys.extend(['не мог', 'забыл', end_key])
+    else:
+        keys.append(end_key)
 
-    inline.row(InlineKeyboardButton(text='не мог', callback_data=f'fill_{r}_{name}_не мог'),
-               InlineKeyboardButton(text='забыл', callback_data=f'fill_{r}_{name}_забыл'),
-               InlineKeyboardButton(text=end_key, callback_data=f'fill_{r}_{name}_{end_key}'))
+    keys = [InlineKeyboardButton(text=str(i), callback_data=f'fill_{r}_{name}_{i}')
+            for i in cell.keys]
+    inline.row(*keys)
     return inline

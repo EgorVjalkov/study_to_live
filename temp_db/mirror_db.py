@@ -82,19 +82,22 @@ class Mirror:
         return self
 
     def get_dates_for(self, recipient: str, by_behavior: str) -> pd.Series:
-        if by_behavior == 'for filling':
+        if by_behavior == 'filling':
             r_done_mark = recipient[0]
             days_ser: pd.Series = self.series[self.series != r_done_mark]
-        elif by_behavior == 'for correction':
+        elif by_behavior == 'correction':
             yesterday_ = yesterday()
-            days_ser: pd.Series = self.series[self.series != 'empty']
-            days_ser: pd.Series = days_ser[days_ser.index >= yesterday_]
+            days_ser: pd.Series = self.series[self.series.index >= yesterday_]
             if yesterday_ not in days_ser.index:
                 yesterday_ser = pd.Series({yesterday_: 'Y'})
-                days_ser = pd.concat([yesterday_ser, days_ser])
+                days_ser = pd.concat([yesterday_ser, days_ser]).sort_index()
+            days_ser: pd.Series = days_ser[days_ser != 'empty']
         else:
-            days_ser: pd.Series = self.series[self.series.index == today]
+            days_ser: pd.Series = self.series[self.series.index == today()]
+
+        print(f'get_dates_for_{recipient}_by_{by_behavior}')
         print(days_ser)
+
         return days_ser
 
     def get_paths_by(self, date: datetime.date = today) -> tuple:
@@ -118,6 +121,7 @@ class Mirror:
         temp_db.save_(frame, as_=data_type, mode='a')
         return self
 
-    def load_prices_by(self, date: datetime.date):
+    def load_prices_by(self, date: datetime.date, for_: str):
         path = self.path_to.mother_frame_by(date)
-        return pd.read_excel(path, sheet_name='price', index_col=0)
+        sheet_name = for_ if for_ == 'coefs' else 'price'
+        return pd.read_excel(path, sheet_name=sheet_name, index_col=0)

@@ -12,7 +12,6 @@ class Session:
     def __init__(self, message: Message, behavior: str):
         self.admin = username_dict[message.from_user.first_name]
         self.admin_id = message.from_user.id
-        print(type(self.admin_id))
         self.filler = VedomostFiller(self.admin, behavior).__call__()
         self.last_message = None
         self.inlines = []
@@ -42,8 +41,7 @@ class Session:
             category = self.filler.r_sleeptime
             new_value = datetime.time.strftime(message_time, '%H:%M')
 
-        message_day = datetime.date.strftime(message_day, '%d.%m.%y')
-        self.filler.change_a_day(message_day)
+        self.filler.change_a_day(message_day.date())
         self.filler.get_cells_ser(by_=category)
         self.filler.fill_the_cell(new_value)
         return self.filler
@@ -81,6 +79,9 @@ class SessionDB:
     def dates_in_process(self):
         return [self.db[r].changed_date for r in self.db]
 
+    def is_superuser(self, message: Message) -> bool:
+        return message.from_user.id == self.superuser_id
+
     def is_date_busy(self, date_from_tg):
         if isinstance(date_from_tg, str):
             date_from_tg = Converter(date_in_str=date_from_tg).to('date_object')
@@ -88,7 +89,7 @@ class SessionDB:
 
     def add_new_session_and_change_it(self, message: Message, behavior) -> Session:
         self.r = message.from_user.first_name
-        self.db[self.r] = Session(message, behavior)
+        self.session = Session(message, behavior)
         return self.session
 
     def change_session(self, by_message: Message = None, by_name: str = None) -> Session:
@@ -101,11 +102,6 @@ class SessionDB:
     def refresh_session(self, session: Session):
         self.session = session
         return self
-
-    @property
-    def dates_in_process(self) -> list:
-        dates = [self.db[r_name].changed_date for r_name in self.db]
-        return dates
 
     def remove_recipient(self, message: Message):
         del self.db[message.from_user.first_name]

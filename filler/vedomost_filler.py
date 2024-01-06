@@ -1,3 +1,4 @@
+import datetime
 import pandas as pd
 import classes as cl
 from filler.vedomost_cell import VedomostCell
@@ -32,7 +33,7 @@ class VedomostFiller:
     def r_sleeptime(self):
         return f'{self.recipient[0].lower()}:sleeptime'
 
-    @ property
+    @property
     def r_siesta(self):
         return f'{self.recipient[0].lower()}:siesta'
 
@@ -43,8 +44,9 @@ class VedomostFiller:
                       in days]
         return days
 
-    def change_a_day(self, date_form_tg):
-        date = Converter(date_in_str=date_form_tg).to('date_object')
+    def change_a_day(self, date: str|datetime.date) -> DayRow:
+        if isinstance(date, str):
+            date = Converter(date_in_str=date).to('date_object')
         day_mark = self.mark_ser[date]
         paths_by_date = mirror.get_paths_by(date)
         temp_db = UnfilledRowsDB(*paths_by_date)
@@ -65,35 +67,40 @@ class VedomostFiller:
         return r.mod_data.at[self.day.date, 'positions']
 
     def filtering_(self, by_='positions'):
-        filtered = list(self.day.categories.index)
-        if by_ == 'private':
-            filtered = [i for i in filtered
-                        if i[0] == self.recipient[0].lower()]
-
-        elif by_ == 'positions':
-            filtered = [i for i in filtered
-                        if i[0] in self.r_positions]
+        if self.behavior == 'coefs':
+            return self.day.accessories
 
         else:
-            filtered = [i for i in filtered
-                        if i == by_]
+            filtered = list(self.day.categories.index)
+            if by_ == 'private':
+                filtered = [i for i in filtered
+                            if i[0] == self.recipient[0].lower()]
 
-        return self.day.categories[filtered]
+            elif by_ == 'positions':
+                filtered = [i for i in filtered
+                            if i[0] in self.r_positions]
+
+            else:
+                filtered = [i for i in filtered
+                            if i == by_]
+
+            return self.day.categories[filtered]
 
     def get_cells_ser(self, by_: str = 'positions'):
         # нужно попробовать загружать категории по одиночке и сравнить производительность в моменте
         self.cells_ser = self.filtering_(by_)
-        prices = mirror.load_prices_by(self.day.date)
+        prices = mirror.load_prices_by(self.day.date, for_=self.behavior)
         for cat in self.cells_ser.index:
             cell = VedomostCell(prices,
                                 self.recipient,
                                 name=cat,
                                 value=self.cells_ser[cat])
-            if self.behavior == 'for filling':
+            print(cell)
+            if self.behavior == 'filling':
                 if cell.can_be_filled:
                     self.cells_ser[cat] = cell
 
-            elif self.behavior == 'for correction':
+            elif self.behavior == 'correction':
                 if cell.can_be_corrected:
                     self.cells_ser[cat] = cell
 
@@ -101,6 +108,9 @@ class VedomostFiller:
                 cell.revert_value()
                 self.cells_ser[cat] = cell
                 self.active_cell = cell.name
+
+            else:
+                self.cells_ser[cat] = cell
 
         filtered = self.cells_ser.map(lambda i: isinstance(i, VedomostCell))
         self.cells_ser = self.cells_ser[filtered == True]
@@ -114,6 +124,10 @@ class VedomostFiller:
         return unfilled
 
     @property
+    def acc_in_str(self):
+        return ' | '.join(self.day.accessories.to_list())
+
+    @property
     def already_filled_dict(self):
         filled = {}
         if not self.cells_ser.empty:
@@ -123,7 +137,7 @@ class VedomostFiller:
 
     def change_a_cell(self, name_from_tg):
         self.active_cell = name_from_tg
-        if self.behavior == 'for correction':
+        if self.behavior in ['correction', 'coefs']:
             cell_for_correction = self.cells_ser[self.active_cell]
             cell_for_correction.revert_value()
             self.cells_ser[self.active_cell] = cell_for_correction
@@ -181,13 +195,17 @@ class VedomostFiller:
 
 
 if __name__ == '__main__':
-    filler = VedomostFiller(recipient='Lera',
-                            behavior='for filling')
+    filler = VedomostFiller(recipient='Egr',
+                            behavior='coefs')
     filler()
-    #filler.change_a_day('3.1.24')
-    #filler.get_cells_ser()
-    #for i in filler.unfilled_cells:
-    #    filler.change_a_cell(i)
-    #    filler.fill_the_cell('+')
+    filler.change_a_day('6.1.24')
+    filler.get_cells_ser()
+    print(filler.cells_ser)
+    print(filler.acc_in_str)
+    filler.change_a_cell('DUTY')
+    filler.fill_the_cell('Ed24(1)')
+    print(filler.cells_ser)
+    filler.fill_the_cell('Ed24(2)')
+    print(filler.cells_ser)
     #filler.collect_data_to_day_row()
     #mirror.save_day_data(filler.day)

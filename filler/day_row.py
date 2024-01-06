@@ -24,7 +24,7 @@ class DayRow:
 
     @property
     def accessories(self) -> pd.Series:
-        acc = self.row.index.map(lambda i: not i.find(':') == 1)
+        acc = self.row.index.map(lambda i: not i.find(':') == 1 and i not in ['DAY', 'STATUS'])
         acc = self.row[acc == True]
         return acc
 

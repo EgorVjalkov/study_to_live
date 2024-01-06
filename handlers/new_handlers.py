@@ -29,9 +29,9 @@ async def greet_and_get_days(message: Message, session: Session):
         days_kb = get_keyboard(days_kb, session.filler.days)
         await message.answer("Дата?", reply_markup=days_kb)
     else:
-        if session.filler.behavior == 'for filling':
+        if session.filler.behavior == 'filling':
             await message.answer("Все заполнено!")
-        elif session.filler.behavior == 'for correction':
+        elif session.filler.behavior == 'correction':
             await message.answer("Нечего исправлять!")
         SDB.remove_recipient(message)
     print(session.filler.days)
@@ -41,14 +41,23 @@ async def greet_and_get_days(message: Message, session: Session):
 
 @filler_router.message(Command("fill"))
 async def cmd_fill(message: Message):
-    session = SDB.add_new_session_and_change_it(message, 'for filling')
+    session = SDB.add_new_session_and_change_it(message, 'filling')
     await greet_and_get_days(message, session)
 
 
 @filler_router.message(Command("correct"))
 async def cmd_correct(message: Message):
-    session = SDB.add_new_session_and_change_it(message, 'for correction')
+    session = SDB.add_new_session_and_change_it(message, 'correction')
     await greet_and_get_days(message, session)
+
+
+@filler_router.message(Command("coefs"))
+async def cmd_coefs(message: Message):
+    if SDB.is_superuser(message):
+        session = SDB.add_new_session_and_change_it(message, 'coefs')
+        await greet_and_get_days(message, session)
+    else:
+        await message.reply('Только Егорок шарит в коеффициентах, тебе оно надо???')
 
 
 @filler_router.message(Command("sleep"))
@@ -57,7 +66,6 @@ async def cmd_sleep(message: Message,
                     now: datetime.datetime = None):
     if not now:
         now = datetime.datetime.now()
-    print(now, datetime.datetime.now())
     if SDB.is_date_busy(now.date()):
         if not await_mode:
             await message.reply("Запомнил! Запишу, когда это станет возможным",
@@ -87,7 +95,7 @@ async def finish_filling(message: Message):
         print(s.filler.already_filled_dict)
     SDB.remove_recipient(message)
     await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
-    if s.admin_id != SDB.superuser_id:
+    if not SDB.is_superuser(message):
         await bot.send_message(SDB.superuser_id, f'{s.admin} завершил заполнение. {answer}')
 
 
@@ -110,23 +118,28 @@ async def change_a_date(message: Message, await_mode=False):
         await time_awaiting(change_a_date, (message, True), 10)
     else:
         s = SDB.change_session(by_message=message)
+        s.filler.change_a_day(message.text)
+        SDB.refresh_session(s)
+        await get_inline_list(message, s)
+
+
+async def get_inline_list(message: Message, s: Session):
+    s.filler.get_cells_ser()
+    SDB.refresh_session(s)
+    # делаем сначала на одного, потом задумаемся о многочеловековом заполнении
+    if not s.filler.unfilled_cells:
+        await message.reply("Все заполнено!",
+                            reply_markup=ReplyKeyboardRemove())
+        s.filler.change_done_mark()
+        mirror.save_day_data(s.filler.day)
+    else:
+        s.get_inlines()
         answer = ['Обращаем внимание на отметки:',
                   '"не мог" - не выполнил по объективой причине (напр.: погода, вонь, лихорадка)',
                   '"забыл" - забыл какой была отметка']
-        s.filler.change_a_day(message.text)
-        s.filler.get_cells_ser()
-        SDB.refresh_session(s) # как это тестить???
-        # делаем сначала на одного, потом задумаемся о многочеловековом заполнении
-        if not s.filler.unfilled_cells:
-            await message.reply("Все заполнено!",
-                                reply_markup=ReplyKeyboardRemove())
-            s.filler.change_done_mark()
-            mirror.save_day_data(s.filler.day)
-        else:
-            s.get_inlines()
-            await message.reply('\n'.join(answer))
-            await get_categories_keyboard(message)
-            print(SDB)
+        await message.reply('\n'.join(answer))
+        await get_categories_keyboard(message)
+        print(SDB)
 
 
 @router2.message(F.func(
@@ -137,8 +150,9 @@ async def change_a_category(message: Message):
     s.inlines.remove(cell_name)
     cell_data: VedomostCell = s.filler.cells_ser[cell_name]
 
-    callback = get_filling_inline(InlineKeyboardBuilder(), SDB.r, cell_data, s.inlines)
-    await message.answer(cell_data.print_old_value_by(s.filler.behavior),
+    callback = get_filling_inline(InlineKeyboardBuilder(), s, SDB.r, cell_data)
+    await message.answer(cell_data.print_old_value_by(s.filler.behavior,
+                                                      old_coefs=s.filler.acc_in_str),
                          reply_markup=ReplyKeyboardRemove())
     await message.answer(cell_data.print_description(), reply_markup=callback.as_markup())
     s.set_last_message(message)

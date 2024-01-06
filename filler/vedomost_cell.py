@@ -15,7 +15,7 @@ class VedomostCell:
         if self.already_filled:
             return f'Cell({self.name}, new: {self.new_value})'
         else:
-            return f'Cell({self.name}, old: {self.old_value}'
+            return f'Cell({self.name}, old: {self.old_value})'
 
     @property
     def r_litera(self):
@@ -119,9 +119,11 @@ class VedomostCell:
             answer = '\n'.join(answer)
         return answer
 
-    def print_old_value_by(self, behavior: str):
-        if behavior == 'for correction':
+    def print_old_value_by(self, behavior: str, old_coefs: str = ''):
+        if behavior == 'correction':
             answer = f'Принято. Предыдущие значение - {self.old_value}'
+        elif behavior == 'coefs':
+            answer = f'Принято. Коеффициенты:\n{old_coefs}'
         else:
             answer = 'Принято'
         return answer
