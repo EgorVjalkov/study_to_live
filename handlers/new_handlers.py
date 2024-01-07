@@ -22,7 +22,7 @@ filler_router.message.filter(F.chat.type == 'private')
 
 
 async def greet_and_get_days(message: Message, session: Session):
-    await message.answer(f"Привет, {session.admin}!")
+    await message.answer(f"Привет, {session.user}!")
     if session.filler.days:
         await message.answer("Формирую ведомость")
         days_kb = ReplyKeyboardBuilder()
@@ -96,22 +96,20 @@ async def finish_filling(message: Message):
     SDB.remove_recipient(message)
     await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
     if not SDB.is_superuser(message):
-        await bot.send_message(SDB.superuser_id, f'{s.admin} завершил заполнение. {answer}')
+        await bot.send_message(SDB.superuser_id, f'{s.user} завершил заполнение. {answer}')
 
 
-async def get_categories_keyboard(message: Message):
-    SDB.r = message.from_user.first_name
+async def get_categories_keyboard(message: Message, s: Session):
     answer = "Выберите категорию для заполнения"
     kb = ReplyKeyboardBuilder()
-    keyboard = get_keyboard(kb, SDB.session.inlines)
+    keyboard = get_keyboard(kb, s.inlines)
     await message.answer(answer, reply_markup=keyboard)
 
 
 @router2.message(F.func(
     lambda message: message.text in SDB.change_session(message).filler.days))
 async def change_a_date(message: Message, await_mode=False):
-    is_busy = SDB.is_date_busy(message.text)
-    if is_busy:
+    if SDB.is_date_busy(message.text):
         if not await_mode:
             await message.reply("Заполнение ведомости на эту дату в процессе. Я сообщу, когда это станет возможным",
                                 reply_markup=ReplyKeyboardRemove())
@@ -119,27 +117,22 @@ async def change_a_date(message: Message, await_mode=False):
     else:
         s = SDB.change_session(by_message=message)
         s.filler.change_a_day(message.text)
-        SDB.refresh_session(s)
-        await get_inline_list(message, s)
-
-
-async def get_inline_list(message: Message, s: Session):
-    s.filler.get_cells_ser()
-    SDB.refresh_session(s)
-    # делаем сначала на одного, потом задумаемся о многочеловековом заполнении
-    if not s.filler.unfilled_cells:
-        await message.reply("Все заполнено!",
-                            reply_markup=ReplyKeyboardRemove())
-        s.filler.change_done_mark()
-        mirror.save_day_data(s.filler.day)
-    else:
-        s.get_inlines()
-        answer = ['Обращаем внимание на отметки:',
-                  '"не мог" - не выполнил по объективой причине (напр.: погода, вонь, лихорадка)',
-                  '"забыл" - забыл какой была отметка']
-        await message.reply('\n'.join(answer))
-        await get_categories_keyboard(message)
-        print(SDB)
+        s.filler.get_cells_ser()
+        # делаем сначала на одного, потом задумаемся о многочеловековом заполнении
+        if not s.filler.unfilled_cells:
+            await message.reply("Все заполнено!",
+                                reply_markup=ReplyKeyboardRemove())
+            s.filler.change_done_mark()
+            mirror.save_day_data(s.filler.day)
+        else:
+            s.get_inlines()
+            answer = ['Обращаем внимание на отметки:',
+                      '"не мог" - не выполнил по объективой причине (напр.: погода, вонь, лихорадка)',
+                      '"забыл" - забыл какой была отметка']
+            await message.reply('\n'.join(answer))
+            await get_categories_keyboard(message, s)
+            SDB.refresh_session(s)
+            print(SDB)
 
 
 @router2.message(F.func(
@@ -150,7 +143,7 @@ async def change_a_category(message: Message):
     s.inlines.remove(cell_name)
     cell_data: VedomostCell = s.filler.cells_ser[cell_name]
 
-    callback = get_filling_inline(InlineKeyboardBuilder(), s, SDB.r, cell_data)
+    callback = get_filling_inline(InlineKeyboardBuilder(), s, cell_data)
     await message.answer(cell_data.print_old_value_by(s.filler.behavior,
                                                       old_coefs=s.filler.acc_in_str),
                          reply_markup=ReplyKeyboardRemove())
@@ -177,7 +170,7 @@ async def fill_by_callback(callback: CallbackQuery):
     cat_name, cat_value = call_data[1], call_data[2]
 
     if 'следующая' in cat_value:
-        await get_categories_keyboard(s.last_message)
+        await get_categories_keyboard(s.last_message, s)
     elif 'завершить' in cat_value:
         await finish_filling(s.last_message)
     else:

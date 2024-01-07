@@ -16,9 +16,8 @@ def get_keyboard(keyboard, keys_list, rows=None):
 
 def get_filling_inline(inline: InlineKeyboardBuilder,
                        session: Session,
-                       r_from_tg: str,
                        cell: VedomostCell):
-    r = r_from_tg
+    r = session.user
     name = cell.name
     keys = cell.keys
     end_key = 'следующая' if session.inlines else 'завершить'
@@ -26,8 +25,35 @@ def get_filling_inline(inline: InlineKeyboardBuilder,
         keys.extend(['не мог', 'забыл', end_key])
     else:
         keys.append(end_key)
+    print(keys)
 
     keys = [InlineKeyboardButton(text=str(i), callback_data=f'fill_{r}_{name}_{i}')
-            for i in cell.keys]
-    inline.row(*keys)
+            for i in keys]
+
+    max_in_row = 5
+    if len(keys) % max_in_row > 0:
+        groups = len(keys) // max_in_row + 1
+    else:
+        groups = len(keys) // max_in_row
+    group_keys_list = []
+    for i in range(1, groups+1):
+        group_keys_list.append(keys[:max_in_row])
+        keys = [i for i in keys if keys.index(i) >= max_in_row]
+
+    for g in group_keys_list:
+        inline.row(*g)
     return inline
+
+
+#max_in_row = 5
+#keys = list(range(0, 18, 1))
+#if len(keys) % max_in_row > 0:
+#    groups = len(keys) // max_in_row + 1
+#else:
+#    groups = len(keys) // max_in_row
+#group_keys_list = []
+#for i in range(1, groups+1):
+#    group_keys_list.append(keys[:max_in_row])
+#    keys = [i for i in keys if keys.index(i) >= max_in_row]
+#
+#print(group_keys_list)

@@ -6,6 +6,7 @@ from filler.day_row import DayRow
 from DB_main import mirror
 from temp_db.unfilled_rows_db import UnfilledRowsDB
 from utils.converter import Converter
+from colorama import Fore
 
 
 class VedomostFiller:
@@ -125,7 +126,11 @@ class VedomostFiller:
 
     @property
     def acc_in_str(self):
-        return ' | '.join(self.day.accessories.to_list())
+        acc = self.day.accessories.to_dict()
+        for i in self.already_filled_dict:
+            acc[i] = self.already_filled_dict[i]
+            acc[i] = Fore.RED + acc[i] + Fore.RESET # <- окрашено
+        return ' | '.join(list(acc.values()))
 
     @property
     def already_filled_dict(self):
@@ -198,14 +203,14 @@ if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
                             behavior='coefs')
     filler()
-    filler.change_a_day('6.1.24')
+    filler.change_a_day('7.1.24')
     filler.get_cells_ser()
-    print(filler.cells_ser)
+    print(filler.cells_ser['DUTY'].keys)
     print(filler.acc_in_str)
     filler.change_a_cell('DUTY')
     filler.fill_the_cell('Ed24(1)')
-    print(filler.cells_ser)
-    filler.fill_the_cell('Ed24(2)')
-    print(filler.cells_ser)
+    print(filler.unfilled_cells)
+    print(filler.already_filled_dict)
+    print(filler.acc_in_str)
     #filler.collect_data_to_day_row()
     #mirror.save_day_data(filler.day)

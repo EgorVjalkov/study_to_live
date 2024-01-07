@@ -10,9 +10,10 @@ username_dict = {'Jegor': 'Egr', 'Валерия': 'Lera'}
 
 class Session:
     def __init__(self, message: Message, behavior: str):
-        self.admin = username_dict[message.from_user.first_name]
-        self.admin_id = message.from_user.id
-        self.filler = VedomostFiller(self.admin, behavior).__call__()
+        self.user = message.from_user.first_name
+        self.user_id = message.from_user.id
+        self.recipient = username_dict[self.user]
+        self.filler = VedomostFiller(self.recipient, behavior).__call__()
         self.last_message = None
         self.inlines = []
 
