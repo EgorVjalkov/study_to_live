@@ -15,7 +15,7 @@ class Mirror:
         self.series = ser
         self.path_to = path_maker
         self.path_to_db = self.path_to.temp_db
-        self.last_date = None
+        self.date_of_last_update = None
 
     def __repr__(self):
         if self.series.empty:
@@ -61,24 +61,24 @@ class Mirror:
         else:
             self.series = series_list[0]
         self.series = self.series.sort_index()
-        self.last_date = self.series.index.to_list()[-1]
-        print(self.series)
+        self.date_of_last_update = self.series.index.to_list()[-1]
         return self
 
     @property
     def need_update(self):
-        flag = self.last_date < today()
+        flag = self.date_of_last_update < today()
         return flag
 
     def update_by_date(self) -> object:
-        delta = today() - self.last_date
+        t = today()
+        delta = t - self.date_of_last_update
         for day in range(1, delta.days+1):
-            date = self.last_date + datetime.timedelta(days=day)
+            date = self.date_of_last_update + datetime.timedelta(days=day)
             done = 'empty'
             self.series = pd.concat(
                 [self.series,
                  pd.Series({date: done})]).sort_index()
-        print(self.series)
+        self.date_of_last_update = t
         return self
 
     def get_dates_for(self, recipient: str, by_behavior: str) -> pd.Series:

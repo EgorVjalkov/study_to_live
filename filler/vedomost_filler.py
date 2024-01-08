@@ -1,5 +1,4 @@
 import datetime
-
 import pandas as pd
 import classes as cl
 from filler.vedomost_cell import VedomostCell
@@ -26,8 +25,12 @@ class VedomostFiller:
 
     def __call__(self, *args, **kwargs):
         if mirror.need_update:
+            print('need_update')
+            print(f'{mirror.need_update}')
             mirror.update_by_date()
+            print(mirror.series)
         self.mark_ser: pd.Series = mirror.get_dates_for(self.recipient, by_behavior=self.behavior)
+        print(self.mark_ser)
         return self
 
     @property
