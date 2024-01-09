@@ -12,6 +12,7 @@ from handlers.session_db import SessionDB, Session
 from My_token import TOKEN
 from DB_main import mirror
 from filler.vedomost_cell import VedomostCell
+from filler.manual_filling_cells import manual_filling_cells
 
 bot = Bot(TOKEN)
 SDB = SessionDB()
@@ -144,10 +145,10 @@ async def change_a_category(message: Message):
     cell_data: VedomostCell = s.filler.cells_ser[cell_name]
 
     callback = get_filling_inline(InlineKeyboardBuilder(), s, cell_data)
-    await message.answer(cell_data.print_old_value_by(s.filler.behavior,
-                                                      old_coefs=s.filler.acc_in_str),
+    await message.answer(cell_data.print_old_value_by(s.filler.behavior),
                          reply_markup=ReplyKeyboardRemove())
-    await message.answer(cell_data.print_description(), reply_markup=callback.as_markup())
+    await message.answer(cell_data.print_description(s.filler.acc_in_str),
+                         reply_markup=callback.as_markup())
     s.set_last_message(message)
     SDB.refresh_session(s)
 
@@ -158,8 +159,13 @@ router3.callback_query.filter(
 router2.include_router(router3)
 
 
-async def remove_keyboard_if_sleeptime(message: Message):
-    await message.answer(f"Жду сообщение в формате ЧЧ:ММ",
+async def remove_keyboard_if_manually(message: Message, session: Session):
+    if session.filler.behavior == 'coefs':
+        answer = [f"У меня {session.filler.acc_in_str}", f"Жду данные о {session.filler.active_cell}"]
+        answer = '/n'.join(answer)
+    else:
+        answer = f"Жду сообщение в формате ЧЧ:ММ"
+    await message.answer(answer,
                          reply_markup=ReplyKeyboardRemove())
 
 
@@ -175,8 +181,8 @@ async def fill_by_callback(callback: CallbackQuery):
         await finish_filling(s.last_message)
     else:
         s.filler.change_a_cell(cat_name)
-        if 'вручную' in cat_value and 'sleeptime' in cat_name:
-            await remove_keyboard_if_sleeptime(s.last_message)
+        if 'вручную' in cat_value:
+            await remove_keyboard_if_manually(s.last_message, s)
         else:
             s.filler.fill_the_cell(cat_value)
             SDB.refresh_session(s)
@@ -187,14 +193,15 @@ async def fill_by_callback(callback: CallbackQuery):
         print(s.filler.already_filled_dict)
 
 
-date_fill_router = Router()
-date_fill_router.message.filter(F.func(
-    lambda message: 'time' in SDB.change_session(by_message=message).filler.active_cell))
-router3.include_router(date_fill_router)
+manually_fill_router = Router()
+manually_fill_router.message.filter(F.func(
+    lambda message: SDB.change_session(by_message=message).filler.active_cell in manual_filling_cells))
+router3.include_router(manually_fill_router)
 
 
-@date_fill_router.message(
-    F.text.func(lambda text: len(text) == 5 and text.find(':') == 2))
+#@manually_fill_router.message(
+#    F.text.func(lambda text: len(text) == 5 and text.find(':') == 2))
+@manually_fill_router.message()
 async def fill_a_cell_with_time(message: Message):
     s = SDB.change_session(by_message=message)
     cat_value = message.text

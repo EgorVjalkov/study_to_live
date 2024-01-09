@@ -50,8 +50,9 @@ class Mirror:
                                      self.path_to.mother_frame_by(day))
             db_frame = temp_db.get_actual_dayrows_df_(from_, by_date=day)
             if not db_frame.empty:
+                # здесь нужео создать пустую базу
                 series_list.append(db_frame['STATUS'])
-                #temp_db.save_(db_frame, as_='temp_db', mode='w') # не сохраняем
+                temp_db.save_(db_frame, as_='temp_db', mode='w') # не сохраняем
         self.init_series_and_last_date(series_list)
         return self
 

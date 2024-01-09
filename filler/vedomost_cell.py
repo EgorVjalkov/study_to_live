@@ -111,19 +111,19 @@ class VedomostCell:
         }
         return pd.Series(cell_data)
 
-    def print_description(self):
+    def print_description(self, acc_data=None):
         answer = self.description
         if not answer:
             answer = 'Нажмите кнопку на экране'
         else:
+            if acc_data:
+                answer.append(acc_data)
             answer = '\n'.join(answer)
         return answer
 
-    def print_old_value_by(self, behavior: str, old_coefs: str = ''):
-        if behavior == 'correction':
+    def print_old_value_by(self, behavior: str):
+        if behavior in ['correction', 'coefs']:
             answer = f'Принято. Предыдущие значение - {self.old_value}'
-        elif behavior == 'coefs':
-            answer = f'Принято. Коеффициенты:\n{old_coefs}'
         else:
             answer = 'Принято'
         return answer
