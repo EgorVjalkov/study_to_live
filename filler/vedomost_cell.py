@@ -48,6 +48,8 @@ class VedomostCell:
     def keys(self):
         if 'range' in self.type:
             keys = list(eval(self.type))
+        elif '[' in self.type:
+            keys = eval(self.type)
         elif self.type == 'dict':
             keys = list(eval(self.category_data['PRICE']).keys())
         else:
@@ -123,7 +125,7 @@ class VedomostCell:
 
     def print_old_value_by(self, behavior: str):
         if behavior in ['correction', 'coefs']:
-            answer = f'Принято. Предыдущие значение - {self.old_value}'
+            answer = f'Принято. Предыдущие значение - "{self.old_value}"'
         else:
             answer = 'Принято'
         return answer

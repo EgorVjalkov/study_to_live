@@ -129,7 +129,6 @@ class VedomostFiller:
         acc = self.day.accessories.to_dict()
         for i in self.already_filled_dict:
             acc[i] = self.already_filled_dict[i]
-            acc[i] = Fore.RED + acc[i] + Fore.RESET # <- окрашено
         return ' | '.join(list(acc.values()))
 
     @property

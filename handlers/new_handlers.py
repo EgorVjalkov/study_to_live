@@ -26,8 +26,7 @@ async def greet_and_get_days(message: Message, session: Session):
     await message.answer(f"Привет, {session.user}!")
     if session.filler.days:
         await message.answer("Формирую ведомость")
-        days_kb = ReplyKeyboardBuilder()
-        days_kb = get_keyboard(days_kb, session.filler.days)
+        days_kb = get_keyboard(session.filler.days)
         await message.answer("Дата?", reply_markup=days_kb)
     else:
         if session.filler.behavior == 'filling':
@@ -101,9 +100,10 @@ async def finish_filling(message: Message):
 
 
 async def get_categories_keyboard(message: Message, s: Session):
-    answer = "Выберите категорию для заполнения"
-    kb = ReplyKeyboardBuilder()
-    keyboard = get_keyboard(kb, s.inlines)
+    if s.filler.behavior == 'coefs':
+        await message.reply(s.filler.acc_in_str)
+    answer = "Выберите категорию"
+    keyboard = get_keyboard(s.inlines)
     await message.answer(answer, reply_markup=keyboard)
 
 
@@ -127,10 +127,6 @@ async def change_a_date(message: Message, await_mode=False):
             mirror.save_day_data(s.filler.day)
         else:
             s.get_inlines()
-            answer = ['Обращаем внимание на отметки:',
-                      '"не мог" - не выполнил по объективой причине (напр.: погода, вонь, лихорадка)',
-                      '"забыл" - забыл какой была отметка']
-            await message.reply('\n'.join(answer))
             await get_categories_keyboard(message, s)
             SDB.refresh_session(s)
             print(SDB)
@@ -144,10 +140,10 @@ async def change_a_category(message: Message):
     s.inlines.remove(cell_name)
     cell_data: VedomostCell = s.filler.cells_ser[cell_name]
 
-    callback = get_filling_inline(InlineKeyboardBuilder(), s, cell_data)
+    callback = get_filling_inline(s, cell_data)
     await message.answer(cell_data.print_old_value_by(s.filler.behavior),
                          reply_markup=ReplyKeyboardRemove())
-    await message.answer(cell_data.print_description(s.filler.acc_in_str),
+    await message.answer(cell_data.print_description(),
                          reply_markup=callback.as_markup())
     s.set_last_message(message)
     SDB.refresh_session(s)
@@ -161,8 +157,7 @@ router2.include_router(router3)
 
 async def remove_keyboard_if_manually(message: Message, session: Session):
     if session.filler.behavior == 'coefs':
-        answer = [f"У меня {session.filler.acc_in_str}", f"Жду данные о {session.filler.active_cell}"]
-        answer = '/n'.join(answer)
+        answer = f"Жду данные о {session.filler.active_cell}"
     else:
         answer = f"Жду сообщение в формате ЧЧ:ММ"
     await message.answer(answer,
