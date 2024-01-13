@@ -182,7 +182,6 @@ async def fill_by_callback(callback: CallbackQuery):
             s.filler.fill_the_cell(cat_value)
             SDB.refresh_session(s)
             await callback.answer(f"Вы заполнили '{cat_value}' в {s.filler.active_cell}")
-
         print(SDB.r)
         print(s.filler.active_cell)
         print(s.filler.already_filled_dict)

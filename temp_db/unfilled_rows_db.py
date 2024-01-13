@@ -4,14 +4,13 @@ import os
 from pathlib import Path
 
 
-class UnfilledRowsDB:
+class MonthDB:
     def __init__(self,
-                 path_to_temp_db: Path,
+                 path_to_temp_db=None,
                  path_to_mf=None):
 
         self.path_to_temp_db = path_to_temp_db
         self.path_to_mf = path_to_mf
-        self.month_db = None
 
     def load_as_(self,
                  data_type: str,

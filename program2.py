@@ -1,32 +1,24 @@
 import classes as cl
 import pandas as pd
+
+import path_maker
 from testing import does_need_correction
 from BonusColumn import BonusColumn
-
-recipients = ['Egr', 'Lera']
-month = "dec23"
-
-path_to_file = f'months/{month}/{month}.xlsx'
-show_calc = True
+from temp_db.unfilled_rows_db import MonthDB
+from filler.date_funcs import today
 
 
-def main():
-    if not does_need_correction(pd.read_excel(path_to_file, sheet_name='price')):
-
-        md = cl.MonthData(path_to_file)
-        md.load_and_prepare_vedomost()
-        md.get_price_frame()
-        md.limiting(limiting='for count')
-        md.get_frames_for_working()
-        md.fill_na()
-        #print(md.prices)
-
+def main(recipients, data_frame, price_frame, month=False, demo_mode=False, show_calc=True):
+    md = cl.MonthData(mother_frame=data_frame, prices=price_frame)
+    md.get_frames_for_working()
+    md.fill_na()
+    if not does_need_correction(price_frame):
         for r_name in recipients:
-            # рефакторнуть???
             r = cl.Recipient(r_name, md.date)
-            r.create_output_dir(f'output_files', month)
             r.get_mod_frame(md.accessory, md.categories)
-            r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
+            if not demo_mode:
+                r.create_output_dir(f'output_files', month)
+                r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
             r.get_r_vedomost(['Egr', 'Lera'], md.categories)
             # fltr = FrameForAnalyse(df=r.cat_data)
             # cat_filter = ('positions', ['a', 'z', 'h'], 'pos')
@@ -34,7 +26,6 @@ def main():
             # for column in fltr.items:
             for column in r.cat_data:
                 cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices, r.r_name)
-                print(cd.name)
                 cd.add_price_column(show_calculation=show_calc)
                 cd.add_mark_column(show_calculation=show_calc)
                 cd.add_coef_and_result_column(show_calculation=show_calc)
@@ -47,10 +38,25 @@ def main():
                 else:
                     bc_with_statistic = pd.Series()
 
-                cd.get_ready_and_save_to_excel(md.date, f'output_files/{month}/{r_name}/{cd.name}.xlsx')
-                r.collect_to_result_frame(cd.get_result_col_with_statistic(), bc_with_statistic)
-            r.get_day_sum_if_sleep_in_time_and_save(f'output_files/{month}/{r_name}/{r_name}_total.xlsx')
+                cd.get_ready_and_save_to_excel(md.date,
+                                               f'output_files/{month}/{r_name}/{cd.name}.xlsx',
+                                               demo_mode=demo_mode)
+
+                r.collect_to_result_frame(cd.get_result_col_with_statistic(),
+                                          bc_with_statistic)
+
+            if not demo_mode:
+                r.get_day_sum_if_sleep_in_time_and_save(f'output_files/{month}/{r_name}/{r_name}_total.xlsx',
+                                                    demo_mode=demo_mode)
+            else:
+                return r.result_frame
 
 
 if __name__ == '__main__':
-    main()
+    t = today()
+    path_to_mf = path_maker.path_to.mother_frame_by(t)
+
+    main(['Egr', 'Lera'],
+         MonthDB(path_to_mf=path_to_mf).mf_from_file,
+         pd.read_excel(path_to_mf, sheet_name='price', index_col=0),
+         path_maker.path_to.get_month(t))

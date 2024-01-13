@@ -3,10 +3,9 @@ import pandas as pd
 import os
 from pathlib import Path
 from path_maker import PathMaker
-from temp_db.unfilled_rows_db import UnfilledRowsDB
+from temp_db.unfilled_rows_db import MonthDB
 from filler.date_funcs import yesterday, today, week_before_
 from filler.day_row import DayRow
-from utils.converter import Converter
 
 
 class Mirror:
@@ -46,8 +45,8 @@ class Mirror:
             day_list = [wbd, t]
 
         for day in day_list:
-            temp_db = UnfilledRowsDB(self.path_to.months_temp_db_by(day),
-                                     self.path_to.mother_frame_by(day))
+            temp_db = MonthDB(self.path_to.months_temp_db_by(day),
+                              self.path_to.mother_frame_by(day))
             db_frame = temp_db.get_actual_dayrows_df_(from_, by_date=day)
             if not db_frame.empty:
                 # здесь нужео создать пустую базу
@@ -107,7 +106,7 @@ class Mirror:
 
     def save_day_data(self, day: DayRow) -> object:
         paths = self.get_paths_by(day.date)
-        temp_db = UnfilledRowsDB(*paths)
+        temp_db = MonthDB(*paths)
         if day.is_filled:
             data_type = 'mf'
             temp_db.del_filled_row(day.date)

@@ -12,7 +12,6 @@ def get_keyboard(keys_list, rows=None) -> ReplyKeyboardMarkup:
         keyboard.adjust(rows)
     else:
         keyboard.adjust(5)
-    print(type(keyboard.as_markup()))
     return keyboard.as_markup(resize_keyboard=True)
 
 
@@ -22,13 +21,11 @@ def get_filling_inline(session: Session,
     r = session.user
     name = cell.name
     keys = cell.keys
-    print(keys)
     end_key = 'следующая' if session.inlines else 'завершить'
     if session.filler.behavior != 'coefs':
         keys.extend(['не мог', 'забыл', end_key])
     else:
         keys.append(end_key)
-    print(keys)
 
     keys = [InlineKeyboardButton(text=str(i), callback_data=f'fill_{r}_{name}_{i}')
             for i in keys]

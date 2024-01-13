@@ -1,10 +1,11 @@
 import datetime
 import pandas as pd
 import classes as cl
+import program2
 from filler.vedomost_cell import VedomostCell
 from filler.day_row import DayRow
 from DB_main import mirror
-from temp_db.unfilled_rows_db import UnfilledRowsDB
+from temp_db.unfilled_rows_db import MonthDB
 from utils.converter import Converter
 from colorama import Fore
 
@@ -50,7 +51,7 @@ class VedomostFiller:
             date = Converter(date_in_str=date).to('date_object')
         day_mark = self.mark_ser[date]
         paths_by_date = mirror.get_paths_by(date)
-        temp_db = UnfilledRowsDB(*paths_by_date)
+        temp_db = MonthDB(*paths_by_date)
         if day_mark in ['empty', 'Y']:
             day_row = temp_db.load_as_('row', by_date=date, from_='mf')
         else:
@@ -96,7 +97,6 @@ class VedomostFiller:
                                 self.recipient,
                                 name=cat,
                                 value=self.cells_ser[cat])
-            print(cell)
             if self.behavior == 'filling':
                 if cell.can_be_filled:
                     self.cells_ser[cat] = cell
@@ -128,8 +128,11 @@ class VedomostFiller:
     def acc_in_str(self):
         acc = self.day.accessories.to_dict()
         for i in self.already_filled_dict:
-            acc[i] = self.already_filled_dict[i]
-        return ' | '.join(list(acc.values()))
+            del acc[i]
+            new_i = '*'+i
+            acc[new_i] = self.already_filled_dict[i]
+        acc = [f'{i}: "{acc[i]}"' for i in acc]
+        return '\n'.join(acc)
 
     @property
     def already_filled_dict(self):
@@ -166,9 +169,9 @@ class VedomostFiller:
         return self
 
     def collect_data_to_day_row(self):
-        # здесь и есть точка входа для записи категории или вспоможенцв
-        self.day.categories = self.already_filled_dict
-        self.change_done_mark()
+        self.day.categories = self.already_filled_dict # <- очень удачно пишет все!
+        if self.behavior != 'coefs':
+            self.change_done_mark()
 
     @property
     def is_r_categories_filled(self) -> bool:
@@ -186,7 +189,12 @@ class VedomostFiller:
                 self.day.mark = 'at work'
 
     def count_day_sum(self):
-        pass
+        result = program2.main(
+            recipients=[self.recipient],
+            data_frame=self.day,
+            price_frame=mirror.load_prices_by(self.day.date, self.behavior),
+            demo_mode=True)
+        print(result)
 
     @property
     def date_to_str(self):
@@ -202,7 +210,7 @@ if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
                             behavior='coefs')
     filler()
-    filler.change_a_day('7.1.24')
+    filler.change_a_day('12.1.24')
     filler.get_cells_ser()
     print(filler.cells_ser['DUTY'].keys)
     print(filler.acc_in_str)

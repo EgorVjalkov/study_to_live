@@ -99,7 +99,6 @@ class VedomostCell:
                                 if self.r_litera not in i]
             revert_old_value = ''.join(revert_old_value)
         self.old_value = revert_old_value
-        print(self.old_value)
 
     def extract_cell_data(self):
         cell_data = {

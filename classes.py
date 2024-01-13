@@ -49,13 +49,11 @@ class Recipient:
         self.r_name = name
         self.litera = name[0]
         self.private_position = self.litera.lower()
-        self.date_frame = date_frame.astype('str')
-        self.mod_data = self.date_frame.copy()
+        self.mod_data = pd.DataFrame(date_frame, columns=[date_frame.name], index=date_frame.index)
         self.cat_data = pd.DataFrame(index=date_frame.index)
         self.positions = ['a', 'z', 'h', 'f']
-        self.limit = len(date_frame.index)
-        mini_frame = pd.DataFrame({'DATE': ['', ''], 'DAY': ['done_percent', 'sum']}, index=[self.limit, self.limit+1])
-        self.result_frame = pd.concat([self.date_frame.copy(), mini_frame])
+        mini_frame = pd.DataFrame({'DAY': ['done_percent', 'sum']}, index=[0, 1])
+        self.result_frame = pd.concat([self.mod_data, mini_frame])
 
     @property
     def rename_dict(self):
@@ -151,6 +149,7 @@ class Recipient:
             row_of_coefs = {i.replace('_coef', ''): row_of_coefs[i] for i in row_of_coefs if row_of_coefs[i]}
             return row_of_coefs
 
+        print(self.mod_data.columns)
         coef_frame = self.mod_data.get([i for i in self.mod_data if 'coef' in i])
         self.mod_data['coefs'] = list(map(get_coef_dict, coef_frame.to_dict('index').values()))
 
@@ -212,13 +211,13 @@ class Recipient:
         sleeptime_list = list(map(lambda i: 'True' if i > 20 else 'False', sleeptime_list))
         percent = len([i for i in sleeptime_list if i == 'True']) / len(sleeptime_list)
         sleeptime_list.extend([round(percent, 2), ''])
-        return pd.Series(sleeptime_list, name='sleep_in_time')
+        return pd.Series(sleeptime_list, name='sleep_in_time', index=self.result_frame.index)
 
     def get_result_frame_after_filter(self, filtered):
         self.result_frame = filtered
         return self.result_frame
 
-    def get_day_sum_if_sleep_in_time_and_save(self, path):
+    def get_day_sum_if_sleep_in_time_and_save(self, path, demo_mode):
         def get_day_sum(day_row, sleep_in_time_flag=''):
             percent_row_cell = day_row.pop('DAY')
             day_row = [0 if isinstance(day_row[i], str) else day_row[i]
@@ -233,8 +232,7 @@ class Recipient:
 
         ff.items = list(self.result_frame.columns)
         ff.filtration([('part', 'bonus', 'neg'),
-                       ('part', 'fire', 'neg'),
-                       ('columns', ['DATE'], 'neg')])
+                       ('part', 'fire', 'neg')])
         only_categories_frame = ff.present_by_items(self.result_frame)
         default_sum_list = list(map(get_day_sum,
                                     only_categories_frame.to_dict('index').values()))
@@ -251,13 +249,13 @@ class Recipient:
             [self.result_frame, sleep_in_time_ser],
             axis=1)
 
+
         sum_after_0_col = pd.Series(
-            list(
-                map(
-                    get_day_sum,
-                    only_categories_frame.to_dict('index').values(),
-                    sleep_in_time_ser)
-            ))
+            list(map(get_day_sum,
+                     only_categories_frame.to_dict('index').values(),
+                     sleep_in_time_ser)),
+            index=self.result_frame.index)
+
         sum_after_0_col = sum_after_0_col[:-2] # статистику пресчитаем отдельно
         day_sum_after_0 = sum_after_0_col.sum()
         if not day_sum_after_0:
@@ -267,76 +265,38 @@ class Recipient:
 
         sum_after_0_col = pd.concat(
             [sum_after_0_col, pd.Series([done_percent_after_0, day_sum_after_0])],
-            axis=0,
-            ignore_index=True)
+            axis=0)
         self.result_frame['day_sum_in_time'] = sum_after_0_col
-
-        self.result_frame.to_excel(path, index=False)
+        if not demo_mode:
+            self.result_frame.to_excel(path, index=False)
 
 
 class MonthData:
-    def __init__(self, path=''):
-        self.path = path
-        self.mother_frame = pd.DataFrame()
-        self.prices = pd.DataFrame()
+    def __init__(self, mother_frame=pd.DataFrame(), prices=pd.DataFrame):
+        self.mother_frame = mother_frame
+        self.prices = prices
         self.accessory = pd.DataFrame()
         self.categories = pd.DataFrame()
         self.date = pd.DataFrame()
 
-    def load_and_prepare_vedomost(self, path=''):
-        if path:
-            self.mother_frame = pd.read_excel(path, sheet_name='vedomost', dtype='object')
-        else:
-            self.mother_frame = pd.read_excel(self.path, sheet_name='vedomost', dtype='object')
-        self.mother_frame = self.mother_frame.replace('CAN`T', 'can`t')
-        self.mother_frame['DATE'] = [i.date() for i in self.mother_frame['DATE']]
-        return self.mother_frame
+    def get_frames_for_working(self) -> object:
+        self.mother_frame = self.mother_frame[self.mother_frame['STATUS'] == 'Y']
 
-    @property
-    def vedomost(self):
-        return self.mother_frame
+        self.accessory = self.mother_frame.get(
+            [i for i in self.mother_frame.columns if i == i.upper() and i != 'DAY'])
 
-    @vedomost.setter
-    def vedomost(self, df):
-        self.mother_frame = df
+        self.date = self.mother_frame['DAY']
 
-    def get_price_frame(self, path=''):
-        if path:
-            self.prices = pd.read_excel(path, sheet_name='price', index_col=0)
-        else:
-            self.prices = pd.read_excel(self.path, sheet_name='price', index_col=0)
-        return self.prices
+        self.categories = self.mother_frame.get(
+            [i for i in self.mother_frame if i == i.lower()])
 
-    def limiting(self, limiting, recipient_name=''):
-        if limiting in ['for correction', 'manually']:
-            return self.mother_frame
-        else: # for filling
-            ff.items = self.mother_frame['DONE'].to_list()
+        return self
 
-            if limiting == 'for count':
-                ff.filtration([('=', 'Y', 'pos')], behavior='index_values')
-                ff.items = [i for i in ff.items if i < len(ff.items)]
-                del self.mother_frame['DONE']
-
-            elif limiting == 'for filling':
-                marks_of_filled = ['Y', recipient_name[0]]
-                ff.filtration(
-                    [('columns',  marks_of_filled, 'neg')],
-                    behavior='index_values')
-
-            self.mother_frame = ff.present_by_items(self.mother_frame)
-        return self.mother_frame
-
-    def get_frames_for_working(self):
-        date_keys = ['DATE', 'DAY']
-        self.accessory = self.mother_frame.get([i for i in self.mother_frame.columns if i == i.upper() and i not in date_keys])
-        self.date = self.mother_frame.get(date_keys)
-        self.categories = self.mother_frame.get([i for i in self.mother_frame if i == i.lower()])
-
-    def fill_na(self):
+    def fill_na(self) -> object:
         self.accessory = self.accessory.fillna('-')
         self.categories = self.categories.fillna('!')
         self.prices = self.prices.fillna(0)
+        return self
 
 
 class CategoryData:
@@ -349,6 +309,7 @@ class CategoryData:
             columns=[self.name],
             index=cf.index,
             dtype='str')
+        print(self.cat_frame)
         self.position = self.name[0]
         self.price_frame = pf[self.name]
         self.mod_frame = mf
@@ -459,9 +420,10 @@ class CategoryData:
                                   'coef_count',
                                   pd.Series(coefs_list))
 
-    def get_ready_and_save_to_excel(self, date_frame, path):
+    def get_ready_and_save_to_excel(self, date_frame, path, demo_mode):
         self.cat_frame = pd.concat([date_frame, self.cat_frame], axis='columns')
-        self.cat_frame.set_index('DATE').to_excel(path)
+        if not demo_mode:
+            self.cat_frame.to_excel(path)
 
     def get_result_col_with_statistic(self):
         def count_true_percent(mark_column):
@@ -474,7 +436,7 @@ class CategoryData:
         result_ser = self.cat_frame['result'].map(lambda i: 0 if isinstance(i, str) else i)
         result = round(result_ser.sum(), 2)
         statistic_app = pd.Series([true_percent, result])
-        result_column = pd.concat([self.cat_frame['result'], statistic_app], axis=0, ignore_index=True)
+        result_column = pd.concat([self.cat_frame['result'], statistic_app], axis=0)
         result_column.name = self.name
         return result_column
 
