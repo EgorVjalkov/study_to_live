@@ -7,7 +7,6 @@ from filler.day_row import DayRow
 from DB_main import mirror
 from temp_db.unfilled_rows_db import MonthDB
 from utils.converter import Converter
-from colorama import Fore
 
 
 class VedomostFiller:
@@ -28,7 +27,10 @@ class VedomostFiller:
     def __call__(self, *args, **kwargs):
         if mirror.need_update:
             mirror.update_by_date()
-        self.mark_ser: pd.Series = mirror.get_dates_for(self.recipient, by_behavior=self.behavior)
+        if self.behavior == 'coefs':
+            self.mark_ser = mirror.get_days_for_coef_correction()
+        else:
+            self.mark_ser: pd.Series = mirror.get_dates_for(self.recipient, by_behavior=self.behavior)
         return self
 
     @property
@@ -46,7 +48,7 @@ class VedomostFiller:
                       in days]
         return days
 
-    def change_a_day(self, date: str|datetime.date) -> DayRow:
+    def change_a_day(self, date: str | datetime.date) -> DayRow:
         if isinstance(date, str):
             date = Converter(date_in_str=date).to('date_object')
         day_mark = self.mark_ser[date]
@@ -62,36 +64,42 @@ class VedomostFiller:
     @property
     def r_positions(self):
         acc_frame = pd.DataFrame(self.day.accessories).T
-        r = cl.Recipient(self.recipient)
+        date_ser = pd.Series({self.day.date: self.day.row['DAY']}, name='DAY')
+        r = cl.Recipient(self.recipient, date_ser)
         r.extract_data_by_recipient(acc_frame)
         r.get_with_children_col()
         r.get_r_positions_col()
         return r.mod_data.at[self.day.date, 'positions']
 
-    def filtering_(self, by_='positions'):
-        if self.behavior == 'coefs':
+    def filtering_(self, series=pd.Series(), by_='positions'):
+        if by_ == 'coefs':
             return self.day.accessories
-
         else:
             filtered = list(self.day.categories.index)
             if by_ == 'private':
                 filtered = [i for i in filtered
                             if i[0] == self.recipient[0].lower()]
-
             elif by_ == 'positions':
                 filtered = [i for i in filtered
                             if i[0] in self.r_positions]
-
             else:
                 filtered = [i for i in filtered
                             if i == by_]
 
+        if not series.empty:
+            return series[filtered]
+        else:
             return self.day.categories[filtered]
 
     def get_cells_ser(self, by_: str = 'positions'):
         # нужно попробовать загружать категории по одиночке и сравнить производительность в моменте
-        self.cells_ser = self.filtering_(by_)
+        if self.behavior == 'coefs':
+            self.cells_ser = self.filtering_(by_='coefs')
+        else:
+            self.cells_ser = self.filtering_(by_=by_)
+
         prices = mirror.load_prices_by(self.day.date, for_=self.behavior)
+
         for cat in self.cells_ser.index:
             cell = VedomostCell(prices,
                                 self.recipient,
@@ -125,14 +133,13 @@ class VedomostFiller:
         return unfilled
 
     @property
-    def acc_in_str(self):
+    def acc_in_str(self) -> list:
         acc = self.day.accessories.to_dict()
         for i in self.already_filled_dict:
             del acc[i]
             new_i = '*'+i
             acc[new_i] = self.already_filled_dict[i]
-        acc = [f'{i}: "{acc[i]}"' for i in acc]
-        return '\n'.join(acc)
+        return [f'{i}: "{acc[i]}"' for i in acc]
 
     @property
     def already_filled_dict(self):
@@ -191,33 +198,39 @@ class VedomostFiller:
     def count_day_sum(self):
         result = program2.main(
             recipients=[self.recipient],
-            data_frame=self.day,
-            price_frame=mirror.load_prices_by(self.day.date, self.behavior),
+            data_frame=pd.DataFrame(self.day.row.to_dict(), index=[self.day.date]),
+            price_frame=mirror.load_prices_by(self.day.date, 'filling'),
             demo_mode=True)
-        print(result)
+
+        result_row = result.loc[self.day.date]
+        categories = self.filtering_(by_='positions').map(lambda i: f'"{i}"')
+        result_row = self.filtering_(series=result_row, by_='positions').replace('can`t', 0)
+        result_row.name = 'result'
+        result_frame = pd.concat([categories, result_row], axis=1)
+        return result_frame
 
     @property
     def date_to_str(self):
         return Converter(date_object=self.day.date).to('str')
 
-    @property
-    def filled_cells_list_for_print(self):
-        return [f'{c} - "{self.already_filled_dict[c]}"'
-                for c in self.already_filled_dict]
+    def filled_cells_list_for_print(self, dict_=()) -> list:
+        if not dict_:
+            dict_ = self.already_filled_dict
+        return [f'{c} -> {dict_[c]}' for c in dict_]
 
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
-                            behavior='coefs')
+                            behavior='filling')
     filler()
-    filler.change_a_day('12.1.24')
+    filler.change_a_day('13.1.24')
     filler.get_cells_ser()
-    print(filler.cells_ser['DUTY'].keys)
-    print(filler.acc_in_str)
-    filler.change_a_cell('DUTY')
-    filler.fill_the_cell('Ed24(1)')
-    print(filler.unfilled_cells)
-    print(filler.already_filled_dict)
-    print(filler.acc_in_str)
-    #filler.collect_data_to_day_row()
+    for i in filler.cells_ser:
+        filler.change_a_cell(i.name)
+        filler.fill_the_cell('+')
+    filler.collect_data_to_day_row()
+    print(filler.day.row)
+    print(filler.count_day_sum())
+
+
     #mirror.save_day_data(filler.day)

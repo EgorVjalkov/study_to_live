@@ -20,7 +20,7 @@ class MonthDB:
             path = self.path_to_mf
         else:
             path = self.path_to_temp_db
-        frame_: pd.DataFrame = pd.read_excel(path, sheet_name='vedomost')
+        frame_: pd.DataFrame = pd.read_excel(path, sheet_name='vedomost', dtype='object')
         frame_['DATE'] = frame_['DATE'].map(lambda _date: _date.date())
         frame_ = frame_.set_index('DATE')
         if data_type == 'row':

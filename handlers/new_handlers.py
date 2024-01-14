@@ -87,12 +87,10 @@ async def finish_filling(message: Message):
     s = SDB.change_session(by_message=message)
     answer = 'Вы ничего не заполнили'
     if s.filler.already_filled_dict:
-        filled_for_answer = [f'За {s.filler.date_to_str} заполнено:']
-        filled_for_answer.extend(s.filler.filled_cells_list_for_print)
-        answer = "\n".join(filled_for_answer)
         s.filler.collect_data_to_day_row()
         mirror.save_day_data(s.filler.day)
         print(s.filler.already_filled_dict)
+        answer = s.get_answer_if_finish()
     SDB.remove_recipient(message)
     await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
     if not SDB.is_superuser(message):
@@ -101,7 +99,8 @@ async def finish_filling(message: Message):
 
 async def get_categories_keyboard(message: Message, s: Session):
     if s.filler.behavior == 'coefs':
-        await message.reply(s.filler.acc_in_str)
+        acc_answer = '\n'.join(s.filler.acc_in_str)
+        await message.reply(acc_answer)
     answer = "Выберите категорию"
     keyboard = get_keyboard(s.inlines)
     await message.answer(answer, reply_markup=keyboard)

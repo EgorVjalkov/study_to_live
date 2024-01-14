@@ -45,12 +45,12 @@ class CompCoef:
 
 
 class Recipient:
-    def __init__(self, name, date_frame=pd.DataFrame()):
+    def __init__(self, name, date_ser=pd.Series()):
         self.r_name = name
         self.litera = name[0]
         self.private_position = self.litera.lower()
-        self.mod_data = pd.DataFrame(date_frame, columns=[date_frame.name], index=date_frame.index)
-        self.cat_data = pd.DataFrame(index=date_frame.index)
+        self.mod_data = pd.DataFrame(date_ser, columns=[date_ser.name], index=date_ser.index)
+        self.cat_data = pd.DataFrame(index=date_ser.index)
         self.positions = ['a', 'z', 'h', 'f']
         mini_frame = pd.DataFrame({'DAY': ['done_percent', 'sum']}, index=[0, 1])
         self.result_frame = pd.concat([self.mod_data, mini_frame])
@@ -87,7 +87,7 @@ class Recipient:
         self.mod_data['w_children'] = self.mod_data['children'].map(with_children)
 
     def get_full_family_col(self, commands_col: pd.Series):
-        print(commands_col)
+        #print(commands_col)
         self.mod_data['full_family'] = commands_col.map(lambda i: len(i.split()) < 2)
 
     def get_children_coef_cols(self, KG_col, weak_col):
@@ -149,7 +149,7 @@ class Recipient:
             row_of_coefs = {i.replace('_coef', ''): row_of_coefs[i] for i in row_of_coefs if row_of_coefs[i]}
             return row_of_coefs
 
-        print(self.mod_data.columns)
+        #print(self.mod_data.columns)
         coef_frame = self.mod_data.get([i for i in self.mod_data if 'coef' in i])
         self.mod_data['coefs'] = list(map(get_coef_dict, coef_frame.to_dict('index').values()))
 
@@ -181,7 +181,7 @@ class Recipient:
             # здесь можно упростить, т.. к. мы уже сделали пометки где есть личные отметки а где нет
             double_category_flag = [i for i in categories[column] if str(i)[0] in all_private_positions]
             if double_category_flag:
-                print(categories[column])
+                #print(categories[column])
 
                 column_list = [PriceMarkCalc(result=i).prepare_named_result(self.r_name)
                                for i in categories[column]]
@@ -309,7 +309,6 @@ class CategoryData:
             columns=[self.name],
             index=cf.index,
             dtype='str')
-        print(self.cat_frame)
         self.position = self.name[0]
         self.price_frame = pf[self.name]
         self.mod_frame = mf

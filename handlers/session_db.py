@@ -28,7 +28,7 @@ class Session:
     def set_last_message(self, message: Message):
         self.last_message = message
 
-    def manually_fill_sleep_time(self, now: datetime.datetime):
+    def manually_fill_sleep_time(self, now: datetime.datetime) -> VedomostFiller:
         message_day = now
         message_time = message_day.time()
         if message_time.hour in range(6, 21):
@@ -46,6 +46,29 @@ class Session:
         self.filler.get_cells_ser(by_=category)
         self.filler.fill_the_cell(new_value)
         return self.filler
+
+    def get_answer_if_r_data_is_filled(self) -> list:
+        result_frame = self.filler.count_day_sum()
+        print(result_frame["result"])
+        day_sum = f'{str(int(result_frame["result"].sum()))} p.'
+        result_frame['result'] = result_frame['result'].map(lambda i: f'{str(int(i))} р.')
+        result_dict = result_frame.T.to_dict('list')
+        result_dict = {c: ' -> '.join(result_dict[c]) for c in result_dict}
+        result_dict['сумма дня'] = day_sum
+        return self.filler.filled_cells_list_for_print(result_dict)
+
+    def get_answer_if_finish(self) -> str:
+        if self.filler.behavior == 'coefs':
+            answer_list = self.filler.acc_in_str
+        else:
+            answer_list = [f'За {self.filler.date_to_str} заполнено:']
+            answer_list.extend(self.filler.filled_cells_list_for_print())
+        print(self.filler.is_r_categories_filled)
+        if self.filler.is_r_categories_filled:
+            answer_list.append('')
+            answer_list.append(f'За {self.filler.date_to_str} насчитано:')
+            answer_list.extend(self.get_answer_if_r_data_is_filled())
+        return '\n'.join(answer_list)
 
 
 class SessionDB:
