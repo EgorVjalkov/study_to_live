@@ -134,20 +134,18 @@ class PriceMarkCalc:
 
     def prepare_named_result(self, recipient): # результат по литере
         r_litera = recipient[0]
-        #print(self.result)
-        if isinstance(self.result, str):
-            print(self.result)
-            comp_result_dict = {i[0]: i[1:] for i in self.result.split(',')}
-            numeric_values = [int(comp_result_dict[i]) for i in comp_result_dict if comp_result_dict[i].isnumeric()]
-            #print(numeric_values)
-            if r_litera not in comp_result_dict:
-                if sum(numeric_values) > 0:
-                    self.result = 'wishn`t'
+        comp_result_dict = {i[0]: i[1:] for i in self.result.split(',')}
+        numeric_values = [int(comp_result_dict[i]) for i in comp_result_dict if comp_result_dict[i].isnumeric()]
+        #print(comp_result_dict)
+        #print(numeric_values)
+        if r_litera in comp_result_dict:
+            if comp_result_dict[r_litera] == '0' and sum(numeric_values) > 0:
+                self.result = 'wishn`t'
             else:
-                if comp_result_dict[r_litera] == '0' and sum(numeric_values) > 0:
-                    self.result = 'wishn`t'
-                else:
-                    self.result = comp_result_dict[r_litera]
+                self.result = comp_result_dict[r_litera]
+        else:
+            self.result = 'can`t'
+        #print(f'{r_litera} -> {self.result}')
 
         return self.result
 

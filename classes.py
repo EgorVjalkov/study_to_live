@@ -174,21 +174,14 @@ class Recipient:
         self.get_all_coefs_col()
         return self.mod_data
 
-    def get_r_vedomost(self, recipients, categories):
-        all_private_positions = [i[0].upper() for i in recipients]
-        for column in categories:
-            position = column[0].upper()
-            # здесь можно упростить, т.. к. мы уже сделали пометки где есть личные отметки а где нет
-            double_category_flag = [i for i in categories[column] if str(i)[0] in all_private_positions]
-            if double_category_flag:
-                #print(categories[column])
-
-                column_list = [PriceMarkCalc(result=i).prepare_named_result(self.r_name)
-                               for i in categories[column]]
-                self.cat_data[column] = column_list
-            else:
-                if self.litera == position or position not in all_private_positions:
-                    self.cat_data[column] = categories[column]
+    def get_r_vedomost(self, categories, only_private):
+        r_positions = self.positions + [self.private_position]
+        r_columns = [i for i in categories.columns if i[0] in r_positions]
+        self.cat_data = categories[r_columns]
+        for column in only_private:
+            column_list = [PriceMarkCalc(i).prepare_named_result(self.r_name)
+                           for i in categories[column]]
+            self.cat_data[column] = column_list
         return self.cat_data
 
     def collect_to_result_frame(self, result_column, bonus_column: pd.Series):
@@ -336,17 +329,23 @@ class CategoryData:
 
         return {'price': price, 'price_calc': price_calc['price']}
 
-    def add_price_column(self, show_calculation=False):
+    def add_price_column(self,
+                         show_calculation=False) -> object:
         #print(self.name)
         price_list = list(map(self.find_a_price,
                               self.cat_frame[self.name],
                               self.mod_frame['positions']))
         self.cat_frame['price'] = [i.pop('price') for i in price_list]
-        price_list = [i.pop('price_calc') for i in price_list]
+
         if show_calculation:
+            price_series = pd.Series(
+                [i.pop('price_calc') for i in price_list],
+                index=self.cat_frame.index)
+
             self.cat_frame.insert(self.cat_frame.columns.get_loc('price'),
                                   'price_calc',
-                                  pd.Series(price_list))
+                                  price_series)
+        return self
 
     def get_a_mark(self, price):
         if not isinstance(price, str):
@@ -361,15 +360,21 @@ class CategoryData:
                 mark = price
         return {'mark': mark, 'mark_calc': mark_calc}
 
-    def add_mark_column(self, show_calculation=False):
+    def add_mark_column(self,
+                        show_calculation=False) -> object:
+
         mark_list = list(map(self.get_a_mark,
                              self.cat_frame['price']))
         self.cat_frame['mark'] = [i.pop('mark') for i in mark_list]
-        mark_list = [i.pop('mark_calc') for i in mark_list]
+
         if show_calculation:
+            mark_series = pd.Series(
+                [i.pop('mark_calc') for i in mark_list],
+                index=self.cat_frame.index)
             self.cat_frame.insert(self.cat_frame.columns.get_loc('mark'),
                                   'mark_calc',
-                                  pd.Series(mark_list))
+                                  mark_series)
+        return self
 
     def count_a_modification(self, coefs, mark):
         coef_dict = {'coef': 0}
@@ -389,12 +394,16 @@ class CategoryData:
     def total_count(self, price, coef, full_family_flag):
         if price in ['can`t', 'wishn`t']:
             return coef, price
+
         else:
+            if coef > 1.0:
+                coef = 1.0
             coef = abs(price) * coef
+
             if full_family_flag and price > 0 and self.is_not_private_category:
                 reduced_price = 0.5 * price
                 coefed_price = reduced_price + coef
-                print(f'{price} --> {reduced_price}')
+                #print(f'{price} -> {reduced_price}')
             else:
                 coefed_price = price + coef
             return round(coef, 2), round(coefed_price, 2)
@@ -415,9 +424,11 @@ class CategoryData:
         # self.cat_frame['full'] = self.mod_frame['full_family'] #
 
         if show_calculation:
+            coef_calc_series = pd.Series(coefs_list,
+                                         index=self.cat_frame.index)
             self.cat_frame.insert(self.cat_frame.columns.get_loc('coef'),
                                   'coef_count',
-                                  pd.Series(coefs_list))
+                                  coef_calc_series)
 
     def get_ready_and_save_to_excel(self, date_frame, path, demo_mode):
         self.cat_frame = pd.concat([date_frame, self.cat_frame], axis='columns')

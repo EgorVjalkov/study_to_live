@@ -49,6 +49,7 @@ class Session:
 
     def get_answer_if_r_data_is_filled(self) -> list:
         result_frame = self.filler.count_day_sum()
+        result_frame['result'] = result_frame['result'].map(lambda i: 0 if isinstance(i, str) else i)
         print(result_frame["result"])
         day_sum = f'{str(int(result_frame["result"].sum()))} p.'
         result_frame['result'] = result_frame['result'].map(lambda i: f'{str(int(i))} р.')

@@ -200,7 +200,8 @@ class VedomostFiller:
             recipients=[self.recipient],
             data_frame=pd.DataFrame(self.day.row.to_dict(), index=[self.day.date]),
             price_frame=mirror.load_prices_by(self.day.date, 'filling'),
-            demo_mode=True)
+            demo_mode=True,
+            show_calc=False)
 
         result_row = result.loc[self.day.date]
         categories = self.filtering_(by_='positions').map(lambda i: f'"{i}"')

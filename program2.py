@@ -12,13 +12,15 @@ def main(recipients, data_frame, price_frame, month=False, demo_mode=False, show
     md = cl.MonthData(mother_frame=data_frame, prices=price_frame)
     md.get_frames_for_working()
     md.fill_na()
+    only_private = md.prices.loc['private_value']
+    only_private = only_private[only_private == '+'].index
     for r_name in recipients:
         r = cl.Recipient(r_name, md.date)
         r.get_mod_frame(md.accessory, md.categories)
         if not demo_mode:
             r.create_output_dir(f'output_files', month)
             r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
-        r.get_r_vedomost(['Egr', 'Lera'], md.categories)
+        r.get_r_vedomost(md.categories, only_private)
         # fltr = FrameForAnalyse(df=r.cat_data)
         # cat_filter = ('positions', ['a', 'z', 'h'], 'pos')
         # fltr.filtration([cat_filter])
@@ -61,9 +63,9 @@ def main(recipients, data_frame, price_frame, month=False, demo_mode=False, show
 if __name__ == '__main__':
     t = today()
     path_to_mf = path_maker.path_to.mother_frame_by(t)
-    price_frame = pd.read_excel(path_to_mf, sheet_name='price', index_col=0).fillna(0)
-    if not does_need_correction(price_frame):
+    price_fr = pd.read_excel(path_to_mf, sheet_name='price', index_col=0).fillna(0)
+    if not does_need_correction(price_fr):
         main(['Egr', 'Lera'],
              MonthDB(path_to_mf=path_to_mf).mf_from_file,
-             price_frame,
+             price_fr,
              path_maker.path_to.get_month(t))

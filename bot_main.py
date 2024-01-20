@@ -4,7 +4,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from handlers import new_handlers
 
-logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.INFO)
 
 
 async def main():
