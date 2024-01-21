@@ -265,15 +265,19 @@ class Recipient:
 
 
 class MonthData:
-    def __init__(self, mother_frame=pd.DataFrame(), prices=pd.DataFrame):
+    def __init__(self,
+                 mother_frame=pd.DataFrame(),
+                 prices=pd.DataFrame):
+
         self.mother_frame = mother_frame
         self.prices = prices
         self.accessory = pd.DataFrame()
         self.categories = pd.DataFrame()
-        self.date = pd.DataFrame()
+        self.date = pd.Series()
 
-    def get_frames_for_working(self) -> object:
-        self.mother_frame = self.mother_frame[self.mother_frame['STATUS'] == 'Y']
+    def get_frames_for_working(self, filled_frame=True) -> object:
+        if filled_frame:
+            self.mother_frame = self.mother_frame[self.mother_frame['STATUS'] == 'Y']
 
         self.accessory = self.mother_frame.get(
             [i for i in self.mother_frame.columns if i == i.upper() and i != 'DAY'])

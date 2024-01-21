@@ -8,9 +8,17 @@ from temp_db.unfilled_rows_db import MonthDB
 from filler.date_funcs import today
 
 
-def main(recipients, data_frame, price_frame, month=False, demo_mode=False, show_calc=True):
+def main(recipients: list,
+         data_frame: pd.DataFrame,
+         price_frame: pd.DataFrame,
+         filled_frame=True,
+         month=False,
+         demo_mode=False,
+         show_calc=True) -> None | pd.DataFrame:
+
+    assert not data_frame.empty
     md = cl.MonthData(mother_frame=data_frame, prices=price_frame)
-    md.get_frames_for_working()
+    md.get_frames_for_working(filled_frame)
     md.fill_na()
     only_private = md.prices.loc['private_value']
     only_private = only_private[only_private == '+'].index
@@ -25,13 +33,12 @@ def main(recipients, data_frame, price_frame, month=False, demo_mode=False, show
         # cat_filter = ('positions', ['a', 'z', 'h'], 'pos')
         # fltr.filtration([cat_filter])
         # for column in fltr.items:
-        #print(r.cat_data)
+        print(r.cat_data)
         for column in r.cat_data:
             cd = cl.CategoryData(r.cat_data[column], r.mod_data, md.prices, r.r_name)
             cd.add_price_column(show_calculation=show_calc)
             cd.add_mark_column(show_calculation=show_calc)
             cd.add_coef_and_result_column(show_calculation=show_calc)
-            #print(cd.cat_frame)
 
             bc = BonusColumn(cd.cat_frame['mark'], cd.price_frame)
             if bc.bonus_logic and bc.enough_len:

@@ -196,14 +196,20 @@ class VedomostFiller:
                 self.day.mark = 'at work'
 
     def count_day_sum(self):
+        dict_ = self.day.row.to_dict()
+        frame = pd.DataFrame(dict_, index=[self.day.date])
+        #print(frame.index)
         result = program2.main(
             recipients=[self.recipient],
-            data_frame=pd.DataFrame(self.day.row.to_dict(), index=[self.day.date]),
+            data_frame=frame,
             price_frame=mirror.load_prices_by(self.day.date, 'filling'),
+            filled_frame=False,
             demo_mode=True,
             show_calc=False)
 
+        print(result)
         result_row = result.loc[self.day.date]
+        print(result_row)
         categories = self.filtering_(by_='positions').map(lambda i: f'"{i}"')
         result_row = self.filtering_(series=result_row, by_='positions').replace('can`t', 0)
         result_row.name = 'result'
@@ -224,13 +230,13 @@ if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
                             behavior='filling')
     filler()
-    filler.change_a_day('13.1.24')
+    print(filler.mark_ser)
+    filler.change_a_day('20.1.24')
     filler.get_cells_ser()
     for i in filler.cells_ser:
         filler.change_a_cell(i.name)
         filler.fill_the_cell('+')
     filler.collect_data_to_day_row()
-    print(filler.day.row)
     print(filler.count_day_sum())
 
 
