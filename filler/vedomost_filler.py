@@ -26,6 +26,8 @@ class VedomostFiller:
 
     def __call__(self, *args, **kwargs):
         if mirror.need_update:
+            print('need_update')
+            print(f'{mirror.need_update}')
             mirror.update_by_date()
         if self.behavior == 'coefs':
             self.mark_ser = mirror.get_days_for_coef_correction()
