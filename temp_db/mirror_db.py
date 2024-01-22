@@ -105,7 +105,7 @@ class Mirror:
         days_ser = mf['STATUS']
         return days_ser
 
-    def get_paths_by(self, date: datetime.date = today) -> tuple:
+    def get_paths_by(self, date: datetime.date = today()) -> tuple:
         return (self.path_to.months_temp_db_by(date),
                 self.path_to.mother_frame_by(date))
 

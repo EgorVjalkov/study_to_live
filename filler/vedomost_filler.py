@@ -209,9 +209,7 @@ class VedomostFiller:
             demo_mode=True,
             show_calc=False)
 
-        print(result)
         result_row = result.loc[self.day.date]
-        print(result_row)
         categories = self.filtering_(by_='positions').map(lambda i: f'"{i}"')
         result_row = self.filtering_(series=result_row, by_='positions').replace('can`t', 0)
         result_row.name = 'result'
