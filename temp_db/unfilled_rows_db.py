@@ -60,6 +60,12 @@ class MonthDB:
     def temp_db_from_file(self):
         return self.load_as_('temp_db')
 
+    def create_empty_temp_db(self, columns_list):
+        columns = ['DATE'] + columns_list
+        empty_temp_db = pd.DataFrame(columns=columns).set_index('DATE')
+        self.save_(empty_temp_db, as_='temp_db', mode='w')
+        return self
+
     @staticmethod
     def get_unfilled_rows_from_(df: pd.DataFrame, by_date: datetime.date) -> pd.DataFrame:
         unfilled_rows: pd.DataFrame = df[df.index <= by_date]

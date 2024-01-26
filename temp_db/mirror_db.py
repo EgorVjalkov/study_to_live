@@ -49,9 +49,9 @@ class Mirror:
                               self.path_to.mother_frame_by(day))
             db_frame = temp_db.get_actual_dayrows_df_(from_, by_date=day)
             if not db_frame.empty:
-                # здесь нужео создать пустую базу
                 series_list.append(db_frame['STATUS'])
-                temp_db.save_(db_frame, as_='temp_db', mode='w') # не сохраняем
+                if self.no_temp_db(temp_db.path_to_temp_db): # <- сщздаем пустую базу
+                    temp_db.create_empty_temp_db(db_frame.columns.to_list())
         self.init_series_and_last_date(series_list)
         return self
 
@@ -100,27 +100,34 @@ class Mirror:
 
         return days_ser
 
-    def get_days_for_coef_correction(self):
-        mf = MonthDB(path_to_mf=self.path_to.mother_frame_by(today())).mf_from_file
-        days_ser = mf['STATUS']
-        return days_ser
-
-    def get_paths_by(self, date: datetime.date = today()) -> tuple:
+    def get_paths_by(self, date: datetime.date) -> tuple:
         return (self.path_to.months_temp_db_by(date),
                 self.path_to.mother_frame_by(date))
+
+    def no_temp_db(self, path):
+        return path not in self.months_db_paths
+
+    def get_days_for_coef_correction(self):
+        mdb = MonthDB(*self.get_paths_by(self.date_of_last_update))
+        all_days = mdb.mf_from_file['STATUS']
+        days_from_temp_db = mdb.temp_db_from_file['STATUS']
+        all_days.loc[days_from_temp_db.index] = days_from_temp_db
+        print(all_days)
+        return all_days
 
     def save_day_data(self, day: DayRow) -> object:
         paths = self.get_paths_by(day.date)
         temp_db = MonthDB(*paths)
-        if day.is_filled:
+        if day.is_filled or day.is_empty:
             data_type = 'mf'
-            temp_db.del_filled_row(day.date)
-            self.series = self.series[self.series.index != day.date]  # <- рескан серии
+            if day.is_filled:
+                temp_db.del_filled_row(day.date)
+                self.series = self.series[self.series.index != day.date]  # <- рескан серии после удаления
         else:
             data_type = 'temp_db'
             self.series.at[day.date] = day.mark
 
-        print(f'{day.mark} --> {data_type}')
+        print(f'SAVE: {day.mark} --> {data_type}')
         frame = temp_db.load_as_(data_type)
         frame.loc[day.date] = day.row
         temp_db.save_(frame, as_=data_type, mode='a')

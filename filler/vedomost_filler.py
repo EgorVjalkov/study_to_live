@@ -25,13 +25,13 @@ class VedomostFiller:
         self.active_cell = None
 
     def __call__(self, *args, **kwargs):
-        if mirror.need_update:
-            print('need_update')
-            print(f'{mirror.need_update}')
-            mirror.update_by_date()
         if self.behavior == 'coefs':
             self.mark_ser = mirror.get_days_for_coef_correction()
         else:
+            if mirror.need_update:
+                print('need_update')
+                print(f'{mirror.need_update}')
+                mirror.update_by_date()
             self.mark_ser: pd.Series = mirror.get_dates_for(self.recipient, by_behavior=self.behavior)
         return self
 
@@ -57,9 +57,11 @@ class VedomostFiller:
         paths_by_date = mirror.get_paths_by(date)
         temp_db = MonthDB(*paths_by_date)
         if day_mark in ['empty', 'Y']:
-            day_row = temp_db.load_as_('row', by_date=date, from_='mf')
+            from_ = 'mf'
         else:
-            day_row = temp_db.load_as_('row', by_date=date, from_='temp_db')
+            from_ = 'temp_db'
+        print(f'LOAD: {day_mark} --> {from_}')
+        day_row = temp_db.load_as_('row', by_date=date, from_=from_)
         self.day = DayRow(day_row)
         return self.day
 
@@ -137,6 +139,7 @@ class VedomostFiller:
     @property
     def acc_in_str(self) -> list:
         acc = self.day.accessories.to_dict()
+        # можно замудиться тут и сделать красивое, т.е. отметка на своем месте
         for i in self.already_filled_dict:
             del acc[i]
             new_i = '*'+i

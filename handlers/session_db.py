@@ -59,10 +59,11 @@ class Session:
         return self.filler.filled_cells_list_for_print(result_dict)
 
     def get_answer_if_finish(self) -> str:
+        answer_list = [f'За {self.filler.date_to_str} заполнено:']
+
         if self.filler.behavior == 'coefs':
-            answer_list = self.filler.acc_in_str
+            answer_list.extend(self.filler.acc_in_str)
         else:
-            answer_list = [f'За {self.filler.date_to_str} заполнено:']
             answer_list.extend(self.filler.filled_cells_list_for_print())
         print(self.filler.is_r_categories_filled)
         if self.filler.is_r_categories_filled:
