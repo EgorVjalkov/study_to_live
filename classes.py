@@ -180,6 +180,7 @@ class Recipient:
         r_columns = [i for i in categories.columns if i[0] in r_positions]
         self.cat_data = categories[r_columns]
         for column in only_private:
+            print(column)
             column_list = [PriceMarkCalc(i).prepare_named_result(self.r_name)
                            for i in categories[column]]
             self.cat_data[column] = column_list

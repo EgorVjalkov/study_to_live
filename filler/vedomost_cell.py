@@ -98,6 +98,7 @@ class VedomostCell:
             revert_old_value = [i for i in self.old_value.split(',')
                                 if self.r_litera not in i]
             revert_old_value = ''.join(revert_old_value)
+            print(revert_old_value)
         self.old_value = revert_old_value
 
     def extract_cell_data(self):

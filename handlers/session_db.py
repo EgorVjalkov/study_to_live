@@ -1,4 +1,7 @@
 import datetime
+import logging
+import traceback
+
 from aiogram.types import Message, CallbackQuery
 from filler.vedomost_filler import VedomostFiller
 from utils.converter import Converter
@@ -68,8 +71,12 @@ class Session:
         print(self.filler.is_r_categories_filled)
         if self.filler.is_r_categories_filled:
             answer_list.append('')
-            answer_list.append(f'За {self.filler.date_to_str} насчитано:')
-            answer_list.extend(self.get_answer_if_r_data_is_filled())
+            try:
+                answer_list.append(f'За {self.filler.date_to_str} насчитано:')
+                answer_list.extend(self.get_answer_if_r_data_is_filled())
+            except BaseException as error:
+                print(f'ошибка: {error}')
+                answer_list.append('не могу рассчитать, какая-то ошибка')
         return '\n'.join(answer_list)
 
 
