@@ -3,6 +3,7 @@ from statistics import mean
 import os
 from PriceMarkCalc import PriceMarkCalc
 from utils import analytic_utilities as au
+from math import prod
 
 pd.set_option('display.max.columns', None)
 
@@ -311,8 +312,13 @@ class CategoryData:
         self.mod_frame = mf
 
     @property
-    def is_not_private_category(self):
-        return self.recipient[0].lower() != self.name[0]
+    def private_category(self):
+        if self.price_frame.at['private_value'] == '+':
+            return True
+        elif self.recipient[0].lower() == self.name[0]:
+            return True
+        else:
+            return False
 
     def find_a_price(self, result, positions):
         if self.position not in positions:
@@ -392,7 +398,7 @@ class CategoryData:
                 coef_dict[coef_name] = coef_value
             else:
                 coef_dict[coef_name] = 0
-        coef_dict['coef'] = sum(coef_dict.values())
+        coef_dict['coef'] = round(sum(coef_dict.values()), 2)
         return coef_dict
 
     def total_count(self, price, coef, full_family_flag):
@@ -402,14 +408,17 @@ class CategoryData:
         else:
             if coef > 1.0:
                 coef = 1.0
-            coef = abs(price) * coef
 
-            if full_family_flag and price > 0 and self.is_not_private_category:
+            print(f'is private --> {self.private_category}')
+            #запись ниже фиксит только личные катки.
+            #if full_family_flag and price > 0 and not self.private_category:
+            if full_family_flag and price > 0:
                 reduced_price = 0.5 * price
-                coefed_price = reduced_price + coef
-                #print(f'{price} -> {reduced_price}')
+                coefed_price = reduced_price + (reduced_price*coef)
+                print(f'{self.name}:{reduced_price} -> {coefed_price}')
             else:
-                coefed_price = price + coef
+                coefed_price = price + abs(price*coef)
+                print(f'{self.name}: {coefed_price} no reduced')
             return round(coef, 2), round(coefed_price, 2)
 
     def add_coef_and_result_column(self, show_calculation=False):

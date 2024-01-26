@@ -233,12 +233,15 @@ if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
                             behavior='filling')
     filler()
-    print(filler.mark_ser)
-    filler.change_a_day('20.1.24')
+    #print(filler.mark_ser)
+    filler.change_a_day('13.1.24')
     filler.get_cells_ser()
+    #print(filler.cells_ser)
     for i in filler.cells_ser:
+
         filler.change_a_cell(i.name)
-        filler.fill_the_cell('+')
+        filler.fill_the_cell('1')
+    #print(filler.cells_ser)
     filler.collect_data_to_day_row()
     print(filler.count_day_sum())
 
