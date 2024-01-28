@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 
 from aiogram import Bot
@@ -6,6 +7,7 @@ from aiogram.filters import Command
 from aiogram.types import (Message, ReplyKeyboardRemove, CallbackQuery)
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
+from typing import Callable
 from async_func import time_awaiting
 from handlers.keyboards import get_keyboard, get_filling_inline
 from handlers.session_db import SessionDB, Session
@@ -62,18 +64,19 @@ async def cmd_coefs(message: Message):
 
 @filler_router.message(Command("sleep"))
 async def cmd_sleep(message: Message,
-                    await_mode: bool = False,
-                    now: datetime.datetime = None):
-    if not now:
-        now = datetime.datetime.now()
-    if SDB.is_date_busy(now.date()):
-        if not await_mode:
-            await message.reply("Запомнил! Запишу, когда это станет возможным",
-                                reply_markup=ReplyKeyboardRemove())
-        await time_awaiting(cmd_sleep, (message, True, now), 10)
-    else:
+                    sleep_time: datetime.datetime = None):
+
+    if not sleep_time:
+        sleep_time = datetime.datetime.now()
         s = SDB.add_new_session_and_change_it(message, 'manually')
-        s.manually_fill_sleep_time(now)
+    else:
+        s = SDB.change_session(by_message=message)
+
+    if SDB.is_date_busy(message.text):
+        await message.reply('Запомнил, запишу, когда это станет возможным')
+        await date_dispatcher(cmd_sleep, message, now=sleep_time)
+    else:
+        s.manually_fill_sleep_time(sleep_time)
         await finish_filling(message)
 
 
@@ -83,16 +86,20 @@ filler_router.include_router(router2)
 
 
 @router2.message(Command("finish"))
-async def finish_filling(message: Message):
+async def finish_filling(message: Message, text: str = ''):
     s = SDB.change_session(by_message=message)
-    answer = 'Вы ничего не заполнили'
+
     if s.filler.already_filled_dict:
         s.filler.collect_data_to_day_row()
         mirror.save_day_data(s.filler.day)
         print(s.filler.already_filled_dict)
         answer = s.get_answer_if_finish()
+    else:
+        answer = text if text else 'Вы ничего не заполнили'
+
     SDB.remove_recipient(message)
-    await message.answer(f'Завершeно! {answer}', reply_markup=ReplyKeyboardRemove())
+
+    await message.answer(answer, reply_markup=ReplyKeyboardRemove())
     if not SDB.is_superuser(message):
         await bot.send_message(SDB.superuser_id, f'{s.user} завершил заполнение. {answer}')
 
@@ -106,16 +113,25 @@ async def get_categories_keyboard(message: Message, s: Session):
     await message.answer(answer, reply_markup=keyboard)
 
 
+async def date_dispatcher(func: Callable, message, **kwargs):
+    if not SDB.is_date_busy(message.text):
+        await func(message, **kwargs)
+    else:
+        await asyncio.sleep(10)
+        await date_dispatcher(func, message)
+
+
 @router2.message(F.func(
     lambda message: message.text in SDB.change_session(message).filler.days))
-async def change_a_date(message: Message, await_mode=False):
+async def change_a_date(message: Message, session: Session = None):
+    s = SDB.change_session(by_message=message)
     if SDB.is_date_busy(message.text):
-        if not await_mode:
-            await message.reply("Заполнение ведомости на эту дату в процессе. Я сообщу, когда это станет возможным",
-                                reply_markup=ReplyKeyboardRemove())
-        await time_awaiting(change_a_date, (message, True), 10)
+        #await finish_filling(message,
+        #                     text="Заполнение ведомости на эту дату в процессе. Я сообщу, когда это станет возможным")
+        await message.reply('Занято', reply_markup=ReplyKeyboardRemove())
+        await date_dispatcher(change_a_date, message)
+
     else:
-        s = SDB.change_session(by_message=message)
         s.filler.change_a_day(message.text)
         s.filler.get_cells_ser()
         # делаем сначала на одного, потом задумаемся о многочеловековом заполнении
