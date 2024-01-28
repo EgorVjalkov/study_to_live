@@ -4,7 +4,7 @@ from utils.converter import Converter
 
 
 class DayRow:
-    def __init__(self, day_row: pd.Series = pd.Series()):
+    def __init__(self, day_row: pd.Series = pd.Series(dtype='object')):
         self.row = day_row
 
     def __repr__(self):
@@ -60,3 +60,10 @@ class DayRow:
     @property
     def is_empty(self) -> bool:
         return self.mark == 'empty'
+
+    @property
+    def frame(self) -> pd.DataFrame:
+        row_with_date = pd.concat([pd.Series({'DATE': self.date}),
+                                   self.row], axis=0)
+        frame = pd.DataFrame(data=row_with_date, index=[0]).set_index('DATE')
+        return frame

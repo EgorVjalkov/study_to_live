@@ -1,4 +1,7 @@
 import datetime
+import logging
+import traceback
+
 from aiogram.types import Message, CallbackQuery
 from filler.vedomost_filler import VedomostFiller
 from utils.converter import Converter
@@ -59,16 +62,21 @@ class Session:
         return self.filler.filled_cells_list_for_print(result_dict)
 
     def get_answer_if_finish(self) -> str:
+        answer_list = [f'За {self.filler.date_to_str} заполнено:']
+
         if self.filler.behavior == 'coefs':
-            answer_list = self.filler.acc_in_str
+            answer_list.extend(self.filler.acc_in_str)
         else:
-            answer_list = [f'За {self.filler.date_to_str} заполнено:']
             answer_list.extend(self.filler.filled_cells_list_for_print())
         print(self.filler.is_r_categories_filled)
         if self.filler.is_r_categories_filled:
             answer_list.append('')
-            answer_list.append(f'За {self.filler.date_to_str} насчитано:')
-            answer_list.extend(self.get_answer_if_r_data_is_filled())
+            try:
+                answer_list.append(f'За {self.filler.date_to_str} насчитано:')
+                answer_list.extend(self.get_answer_if_r_data_is_filled())
+            except BaseException as error:
+                print(f'ошибка: {error}')
+                answer_list.append('не могу рассчитать, какая-то ошибка')
         return '\n'.join(answer_list)
 
 

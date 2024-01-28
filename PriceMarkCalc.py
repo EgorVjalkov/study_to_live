@@ -134,7 +134,10 @@ class PriceMarkCalc:
 
     def prepare_named_result(self, recipient): # результат по литере
         r_litera = recipient[0]
+        print(self.result)
         comp_result_dict = {i[0]: i[1:] for i in self.result.split(',')}
+        #comp_result_dict = {i[0]: i[1:] for i in self.result.split(',') if i}
+        print(comp_result_dict)
         numeric_values = [int(comp_result_dict[i]) for i in comp_result_dict if comp_result_dict[i].isnumeric()]
         #print(comp_result_dict)
         #print(numeric_values)
