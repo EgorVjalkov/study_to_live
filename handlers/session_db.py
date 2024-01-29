@@ -1,8 +1,8 @@
+import asyncio
 import datetime
-import logging
-import traceback
+from typing import Callable
 
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message
 from filler.vedomost_filler import VedomostFiller
 from utils.converter import Converter
 
@@ -34,6 +34,7 @@ class Session:
     def manually_fill_sleep_time(self, now: datetime.datetime) -> VedomostFiller:
         message_day = now
         message_time = message_day.time()
+        print(message_time, 'inside func')
         if message_time.hour in range(6, 21):
             category = self.filler.r_siesta
             new_value = '+'
@@ -115,17 +116,17 @@ class SessionDB:
     def is_superuser(self, message: Message) -> bool:
         return message.from_user.id == self.superuser_id
 
-    def is_date_busy(self, date_from_tg):
+    def is_date_busy(self, date_from_tg: str | datetime.date):
         if isinstance(date_from_tg, str):
             date_from_tg = Converter(date_in_str=date_from_tg).to('date_object')
         return date_from_tg in self.dates_in_process
 
-    def add_new_session_and_change_it(self, message: Message, behavior) -> Session:
+    def add_new_session_and_checkout(self, message: Message, behavior) -> Session:
         self.r = message.from_user.first_name
         self.session = Session(message, behavior)
         return self.session
 
-    def change_session(self, by_message: Message = None, by_name: str = None) -> Session:
+    def switch_session(self, by_message: Message = None, by_name: str = None) -> Session:
         if by_message:
             self.r = by_message.from_user.first_name
         elif by_name:
@@ -138,3 +139,15 @@ class SessionDB:
 
     def remove_recipient(self, message: Message):
         del self.db[message.from_user.first_name]
+
+    async def date_dispatcher(self,
+                              date: str | datetime.date,
+                              func: Callable,
+                              *args,
+                              **kwargs):
+
+        if not self.is_date_busy(date):
+            await func(*args, **kwargs)
+        else:
+            await asyncio.sleep(2)
+            await self.date_dispatcher(date, func, *args, **kwargs)

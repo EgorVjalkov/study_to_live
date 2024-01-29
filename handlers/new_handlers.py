@@ -1,20 +1,20 @@
-import asyncio
 import datetime
 
-from aiogram import Bot
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import (Message, ReplyKeyboardRemove, CallbackQuery)
-from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
-from typing import Callable
-from async_func import time_awaiting
+from DB_main import mirror
+
+from aiogram import Bot
+from My_token import TOKEN
+
 from handlers.keyboards import get_keyboard, get_filling_inline
 from handlers.session_db import SessionDB, Session
-from My_token import TOKEN
-from DB_main import mirror
+
 from filler.vedomost_cell import VedomostCell
 from filler.manual_filling_cells import manual_filling_cells
+
 
 bot = Bot(TOKEN)
 SDB = SessionDB()
@@ -43,20 +43,20 @@ async def greet_and_get_days(message: Message, session: Session):
 
 @filler_router.message(Command("fill"))
 async def cmd_fill(message: Message):
-    session = SDB.add_new_session_and_change_it(message, 'filling')
+    session = SDB.add_new_session_and_checkout(message, 'filling')
     await greet_and_get_days(message, session)
 
 
 @filler_router.message(Command("correct"))
 async def cmd_correct(message: Message):
-    session = SDB.add_new_session_and_change_it(message, 'correction')
+    session = SDB.add_new_session_and_checkout(message, 'correction')
     await greet_and_get_days(message, session)
 
 
 @filler_router.message(Command("coefs"))
 async def cmd_coefs(message: Message):
     if SDB.is_superuser(message):
-        session = SDB.add_new_session_and_change_it(message, 'coefs')
+        session = SDB.add_new_session_and_checkout(message, 'coefs')
         await greet_and_get_days(message, session)
     else:
         await message.reply('Только Егорок шарит в коеффициентах, тебе оно надо???')
@@ -68,13 +68,15 @@ async def cmd_sleep(message: Message,
 
     if not sleep_time:
         sleep_time = datetime.datetime.now()
-        s = SDB.add_new_session_and_change_it(message, 'manually')
+        s = SDB.add_new_session_and_checkout(message, 'manually')
     else:
-        s = SDB.change_session(by_message=message)
+        s = SDB.switch_session(by_message=message)
+    print(SDB)
+    print(sleep_time)
 
-    if SDB.is_date_busy(message.text):
+    if SDB.is_date_busy(sleep_time.date()):
         await message.reply('Запомнил, запишу, когда это станет возможным')
-        await date_dispatcher(cmd_sleep, message, now=sleep_time)
+        await SDB.date_dispatcher(sleep_time.date(), cmd_sleep, *(message, sleep_time))
     else:
         s.manually_fill_sleep_time(sleep_time)
         await finish_filling(message)
@@ -87,7 +89,7 @@ filler_router.include_router(router2)
 
 @router2.message(Command("finish"))
 async def finish_filling(message: Message, text: str = ''):
-    s = SDB.change_session(by_message=message)
+    s = SDB.switch_session(by_message=message)
 
     if s.filler.already_filled_dict:
         s.filler.collect_data_to_day_row()
@@ -113,23 +115,14 @@ async def get_categories_keyboard(message: Message, s: Session):
     await message.answer(answer, reply_markup=keyboard)
 
 
-async def date_dispatcher(func: Callable, message, **kwargs):
-    if not SDB.is_date_busy(message.text):
-        await func(message, **kwargs)
-    else:
-        await asyncio.sleep(10)
-        await date_dispatcher(func, message)
-
-
 @router2.message(F.func(
-    lambda message: message.text in SDB.change_session(message).filler.days))
-async def change_a_date(message: Message, session: Session = None):
-    s = SDB.change_session(by_message=message)
+    lambda message: message.text in SDB.switch_session(message).filler.days))
+async def change_a_date(message: Message):
+    s = SDB.switch_session(by_message=message)
     if SDB.is_date_busy(message.text):
-        #await finish_filling(message,
-        #                     text="Заполнение ведомости на эту дату в процессе. Я сообщу, когда это станет возможным")
-        await message.reply('Занято', reply_markup=ReplyKeyboardRemove())
-        await date_dispatcher(change_a_date, message)
+        await message.reply('Заполнение невозможно, Строка занята.',
+                            reply_markup=ReplyKeyboardRemove())
+        await SDB.date_dispatcher(message.text, change_a_date, message)
 
     else:
         s.filler.change_a_day(message.text)
@@ -148,9 +141,9 @@ async def change_a_date(message: Message, session: Session = None):
 
 
 @router2.message(F.func(
-    lambda message: message.text in SDB.change_session(message).inlines))
+    lambda message: message.text in SDB.switch_session(message).inlines))
 async def change_a_category(message: Message):
-    s = SDB.change_session(by_message=message)
+    s = SDB.switch_session(by_message=message)
     cell_name = message.text
     s.inlines.remove(cell_name)
     cell_data: VedomostCell = s.filler.cells_ser[cell_name]
@@ -182,7 +175,7 @@ async def remove_keyboard_if_manually(message: Message, session: Session):
 @router3.callback_query(F.data.contains('fill_'))
 async def fill_by_callback(callback: CallbackQuery):
     call_data = callback.data.split('_')[1:]
-    s = SDB.change_session(by_name=call_data[0])
+    s = SDB.switch_session(by_name=call_data[0])
     cat_name, cat_value = call_data[1], call_data[2]
 
     if 'следующая' in cat_value:
@@ -204,7 +197,7 @@ async def fill_by_callback(callback: CallbackQuery):
 
 manually_fill_router = Router()
 manually_fill_router.message.filter(F.func(
-    lambda message: SDB.change_session(by_message=message).filler.active_cell in manual_filling_cells))
+    lambda message: SDB.switch_session(by_message=message).filler.active_cell in manual_filling_cells))
 router3.include_router(manually_fill_router)
 
 
@@ -212,7 +205,7 @@ router3.include_router(manually_fill_router)
 #    F.text.func(lambda text: len(text) == 5 and text.find(':') == 2))
 @manually_fill_router.message()
 async def fill_a_cell_with_time(message: Message):
-    s = SDB.change_session(by_message=message)
+    s = SDB.switch_session(by_message=message)
     cat_value = message.text
     s.filler.fill_the_cell(cat_value)
     SDB.refresh_session(s)
