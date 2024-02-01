@@ -41,8 +41,8 @@ path_to = PathMaker()
 path_to_project = path_to.path_to_project
 
 
-#if __name__ == '__main__':
-#    p = path_to.vedomost_by(datetime.date.today())
-#    p2 = path_to.months_temp_db_by(datetime.date.today())
-#    print(p, p2)
-#
+if __name__ == '__main__':
+    date = datetime.date(month=2, day=1, year=2024)
+    p = path_to.mother_frame_by(date)
+    p2 = path_to.months_temp_db_by(date)
+    print(p, p2)

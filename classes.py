@@ -61,6 +61,7 @@ class Recipient:
         return {'COM': 'children', 'PLACE': 'place', 'DUTY': 'duty'}
 
     def create_output_dir(self, path_to_output, month):
+        print(self.r_name)
         paths = [f'{path_to_output}/{month}', f'{path_to_output}/{month}/{self.r_name}']
         for p in paths:
             try:
