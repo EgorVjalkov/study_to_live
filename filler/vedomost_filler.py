@@ -232,19 +232,19 @@ class VedomostFiller:
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
-                            behavior='coefs')
+                            behavior='filling')
     filler()
-    #print(filler.mark_ser)
-    filler.change_a_day('31.1.24')
-    filler.get_cells_ser()
-    #print(filler.cells_ser)
-    for i in filler.cells_ser:
+    print(filler.mark_ser)
+    #filler.change_a_day('1.1.24')
+    #filler.get_cells_ser()
+    ##print(filler.cells_ser)
+    #for i in filler.cells_ser:
 
-        filler.change_a_cell('a:pipi')
-        filler.fill_the_cell('0')
-    #print(filler.cells_ser)
-    filler.collect_data_to_day_row()
-    print(filler.count_day_sum())
+    #    filler.change_a_cell('a:pipi')
+    #    filler.fill_the_cell('0')
+    ##print(filler.cells_ser)
+    #filler.collect_data_to_day_row()
+    #print(filler.count_day_sum())
 
 
     #mirror.save_day_data(filler.day)

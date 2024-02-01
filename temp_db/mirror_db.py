@@ -2,6 +2,7 @@ import datetime
 import pandas as pd
 import os
 from pathlib import Path
+
 from path_maker import PathMaker
 from temp_db.unfilled_rows_db import MonthDB
 from filler.date_funcs import yesterday, today, week_before_, last_date_of_past_month, get_dates_dict
@@ -57,17 +58,17 @@ class Mirror:
             db_frame = temp_db.get_actual_dayrows_df_(from_, by_date=day)
             if not db_frame.empty:
                 series_list.append(db_frame['STATUS'])
-        self.init_series_and_last_date(series_list)
-        return self
-
-    def init_series_and_last_date(self, series_list: list) -> object:
-        if len(series_list) > 1:
-            self.series = pd.concat(series_list)
-        else:
-            self.series = series_list[0]
-        self.series = self.series.sort_index()
+        self.series = self.concat_series(series_list)
         self.date_of_last_update = today()
         return self
+
+    @staticmethod
+    def concat_series(series_list: list) -> pd.Series:
+        if len(series_list) > 1:
+            series = pd.concat(series_list)
+        else:
+            series = series_list[0]
+        return series.sort_index()
 
     @property
     def need_update(self):
@@ -131,9 +132,7 @@ class Mirror:
 
             series_list.append(days_status)
 
-        self.init_series_and_last_date(series_list)
-
-        return self.series
+        return self.concat_series(series_list)
 
     def save_day_data(self, day: DayRow) -> object:
         paths = self.get_paths_by(day.date)
