@@ -47,7 +47,7 @@ class MonthDB:
 
     def del_filled_row(self, day_date: datetime.date) -> object:
         temp_frame = self.temp_db_from_file
-        print(day_date)
+        print(f'del {day_date}')
         temp_frame = temp_frame[temp_frame.index != day_date]
         self.save_(temp_frame, as_='temp_db', mode='a')
         return self

@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from path_maker import PathMaker
 from temp_db.unfilled_rows_db import MonthDB
-from filler.date_funcs import yesterday, today, week_before_
+from filler.date_funcs import yesterday, today, week_before_, last_date_of_past_month
 from filler.day_row import DayRow
 
 
@@ -45,7 +45,7 @@ class Mirror:
         if wbd.month == t.month:
             day_list = [t]
         else:
-            day_list = [wbd, t]
+            day_list = [last_date_of_past_month(t), t]
 
         for day in day_list:
             temp_db = MonthDB(self.path_to.months_temp_db_by(day),
@@ -55,8 +55,10 @@ class Mirror:
                 temp_db.create_empty_temp_db(temp_db.mf_from_file.columns.to_list())
 
             db_frame = temp_db.get_actual_dayrows_df_(from_, by_date=day)
+            print(db_frame)
             if not db_frame.empty:
                 series_list.append(db_frame['STATUS'])
+                print(series_list)
         self.init_series_and_last_date(series_list)
         return self
 
