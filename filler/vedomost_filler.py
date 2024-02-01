@@ -232,10 +232,10 @@ class VedomostFiller:
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
-                            behavior='correction')
+                            behavior='coefs')
     filler()
     #print(filler.mark_ser)
-    filler.change_a_day('25.1.24')
+    filler.change_a_day('31.1.24')
     filler.get_cells_ser()
     #print(filler.cells_ser)
     for i in filler.cells_ser:

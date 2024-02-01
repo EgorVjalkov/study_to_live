@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from path_maker import PathMaker
 from temp_db.unfilled_rows_db import MonthDB
-from filler.date_funcs import yesterday, today, week_before_, last_date_of_past_month
+from filler.date_funcs import yesterday, today, week_before_, last_date_of_past_month, get_dates_dict
 from filler.day_row import DayRow
 
 
@@ -55,10 +55,8 @@ class Mirror:
                 temp_db.create_empty_temp_db(temp_db.mf_from_file.columns.to_list())
 
             db_frame = temp_db.get_actual_dayrows_df_(from_, by_date=day)
-            print(db_frame)
             if not db_frame.empty:
                 series_list.append(db_frame['STATUS'])
-                print(series_list)
         self.init_series_and_last_date(series_list)
         return self
 
@@ -68,7 +66,7 @@ class Mirror:
         else:
             self.series = series_list[0]
         self.series = self.series.sort_index()
-        self.date_of_last_update = self.series.index.to_list()[-1]
+        self.date_of_last_update = today()
         return self
 
     @property
@@ -111,16 +109,31 @@ class Mirror:
         return (self.path_to.months_temp_db_by(date),
                 self.path_to.mother_frame_by(date))
 
-    def get_days_for_coef_correction(self):
-        mdb = MonthDB(*self.get_paths_by(today()))
-        all_days = mdb.mf_from_file['STATUS']
+    def get_days_for_coef_correction(self) -> pd.Series:
+        series_list = []
+        t = today()
+        day_dict = get_dates_dict(t, 7, 7)
 
-        if self.temp_db_exists(mdb.path_to_temp_db):
-            days_from_temp_db = mdb.temp_db_from_file['STATUS']
-            all_days.loc[days_from_temp_db.index] = days_from_temp_db
+        for day in day_dict:
+            mdb = MonthDB(self.path_to.months_temp_db_by(day_dict[day]),
+                          self.path_to.mother_frame_by(day_dict[day]))
+            mf = mdb.mf_from_file
+            if day == 's':
+                days_status = mf[mf.index >= day_dict[day]]['STATUS']
+            else:
+                days_status = mf[mf.index <= day_dict[day]]['STATUS']
 
-        print(all_days)
-        return all_days
+            if self.temp_db_exists(mdb.path_to_temp_db):
+                status_from_temp = mdb.temp_db_from_file['STATUS']
+                for date in days_status.index:
+                    if date in status_from_temp.index:
+                        days_status.loc[date] = status_from_temp.loc[date]
+
+            series_list.append(days_status)
+
+        self.init_series_and_last_date(series_list)
+
+        return self.series
 
     def save_day_data(self, day: DayRow) -> object:
         paths = self.get_paths_by(day.date)
