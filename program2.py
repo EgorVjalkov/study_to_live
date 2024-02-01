@@ -75,4 +75,4 @@ if __name__ == '__main__':
         main(['Egr', 'Lera'],
              MonthDB(path_to_mf=path_to_mf).mf_from_file,
              price_fr,
-             path_maker.path_to.get_month(t))
+             month=path_maker.path_to.get_month(t))
