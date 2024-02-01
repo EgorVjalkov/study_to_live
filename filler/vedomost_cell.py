@@ -40,7 +40,7 @@ class VedomostCell:
 
     @property
     def description(self):
-        descr_list = self.category_data.get(['description', 'hint']).to_list()
+        descr_list = self.category_data.get(['description', 'hint', 'info']).to_list()
         descr_list = [e for e in descr_list if pd.notna(e)]
         return descr_list
 

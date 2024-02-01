@@ -35,6 +35,9 @@ class Mirror:
     def no_dbs(self):
         return self.dbs_files_list == []
 
+    def temp_db_exists(self, path):
+        return path in self.months_db_paths
+
     def init_(self, from_: str) -> object:
         series_list = []
         t = today()
@@ -47,11 +50,13 @@ class Mirror:
         for day in day_list:
             temp_db = MonthDB(self.path_to.months_temp_db_by(day),
                               self.path_to.mother_frame_by(day))
+
+            if not self.temp_db_exists(temp_db.path_to_temp_db):  # <- сщздаем пустую базу
+                temp_db.create_empty_temp_db(temp_db.mf_from_file.columns.to_list())
+
             db_frame = temp_db.get_actual_dayrows_df_(from_, by_date=day)
             if not db_frame.empty:
                 series_list.append(db_frame['STATUS'])
-                if self.no_temp_db(temp_db.path_to_temp_db): # <- сщздаем пустую базу
-                    temp_db.create_empty_temp_db(db_frame.columns.to_list())
         self.init_series_and_last_date(series_list)
         return self
 
@@ -104,14 +109,14 @@ class Mirror:
         return (self.path_to.months_temp_db_by(date),
                 self.path_to.mother_frame_by(date))
 
-    def no_temp_db(self, path):
-        return path not in self.months_db_paths
-
     def get_days_for_coef_correction(self):
-        mdb = MonthDB(*self.get_paths_by(self.date_of_last_update))
+        mdb = MonthDB(*self.get_paths_by(today()))
         all_days = mdb.mf_from_file['STATUS']
-        days_from_temp_db = mdb.temp_db_from_file['STATUS']
-        all_days.loc[days_from_temp_db.index] = days_from_temp_db
+
+        if self.temp_db_exists(mdb.path_to_temp_db):
+            days_from_temp_db = mdb.temp_db_from_file['STATUS']
+            all_days.loc[days_from_temp_db.index] = days_from_temp_db
+
         print(all_days)
         return all_days
 
