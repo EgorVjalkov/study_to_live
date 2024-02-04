@@ -1,3 +1,4 @@
+import datetime
 import classes as cl
 import pandas as pd
 
@@ -68,7 +69,7 @@ def main(recipients: list,
 
 
 if __name__ == '__main__':
-    t = today()
+    t = datetime.date(day=31, month=1, year=2024)
     path_to_mf = path_maker.path_to.mother_frame_by(t)
     price_fr = pd.read_excel(path_to_mf, sheet_name='price', index_col=0).fillna(0)
     if not does_need_correction(price_fr):

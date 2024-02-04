@@ -209,10 +209,6 @@ class Recipient:
         sleeptime_list.extend([round(percent, 2), ''])
         return pd.Series(sleeptime_list, name='sleep_in_time', index=self.result_frame.index)
 
-    def get_result_frame_after_filter(self, filtered):
-        self.result_frame = filtered
-        return self.result_frame
-
     def get_day_sum_if_sleep_in_time_and_save(self, path, demo_mode):
         def get_day_sum(day_row, sleep_in_time_flag=''):
             percent_row_cell = day_row.pop('DAY')
@@ -244,7 +240,6 @@ class Recipient:
         self.result_frame = pd.concat(
             [self.result_frame, sleep_in_time_ser],
             axis=1)
-
 
         sum_after_0_col = pd.Series(
             list(map(get_day_sum,
@@ -314,7 +309,7 @@ class CategoryData:
         self.mod_frame = mf
 
     @property
-    def private_category(self):
+    def private(self):
         if self.price_frame.at['private_value'] == '+':
             return True
         elif self.recipient[0].lower() == self.name[0]:
@@ -411,10 +406,10 @@ class CategoryData:
             if coef > 1.0:
                 coef = 1.0
 
-            print(f'is private --> {self.private_category}')
+            print(f'is private --> {self.private}')
             #запись ниже фиксит только личные катки.
-            #if full_family_flag and price > 0 and not self.private_category:
-            if full_family_flag and price > 0:
+            if full_family_flag and price > 0 and not self.private:
+            #if full_family_flag and price > 0:
                 reduced_price = 0.5 * price
                 coefed_price = reduced_price + (reduced_price*coef)
                 print(f'{self.name}:{reduced_price} -> {coefed_price}')
