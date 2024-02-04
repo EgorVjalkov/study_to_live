@@ -55,7 +55,7 @@ class BonusColumn:
         self.mark_bonus_frame = pd.concat(
             [self.mark_ser,
              self.max_bonus_ser,
-             pd.Series(index=self.mark_ser.index, name=self.name)],
+             pd.Series(index=self.mark_ser.index, name=self.name, dtype=int)],
             axis=1)
         self.mark_bonus_frame = self.mark_bonus_frame.filter(items=self.not_cant_index, axis=0)
 
@@ -80,7 +80,7 @@ class BonusColumn:
 
     def every_n_give_a_bonus(self, mark_col, bonus_col):
         if bonus_col not in self.mark_bonus_frame.columns:
-            self.mark_bonus_frame[bonus_col] = pd.Series()
+            self.mark_bonus_frame[bonus_col] = pd.Series(dtype=float)
 
         remains_list = self.get_remains_list(mark_col)
 

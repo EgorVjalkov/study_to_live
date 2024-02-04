@@ -47,7 +47,7 @@ def main(recipients: list,
                 cd.cat_frame[bc.name] = bc.get_bonus_ser_without_statistic()
                 bc_with_statistic = bc.get_bonus_ser_with_statistic()
             else:
-                bc_with_statistic = pd.Series()
+                bc_with_statistic = pd.Series(dtype='object')
 
             cd.get_ready_and_save_to_excel(md.date,
                                            f'output_files/{month}/{r_name}/{cd.name}.xlsx',

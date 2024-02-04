@@ -46,7 +46,7 @@ class CompCoef:
 
 
 class Recipient:
-    def __init__(self, name, date_ser=pd.Series()):
+    def __init__(self, name, date_ser=pd.Series(dtype=int)):
         self.r_name = name
         self.litera = name[0]
         self.private_position = self.litera.lower()
