@@ -5,13 +5,13 @@ from pathlib import Path
 
 from path_maker import PathMaker
 from temp_db.unfilled_rows_db import MonthDB
-from filler.date_funcs import yesterday, today, week_before_, last_date_of_past_month, get_dates_dict
+from filler.date_funcs import yesterday, today, week_before_, last_date_of_past_month, get_dates_dict, is_same_months
 from filler.day_row import DayRow
 
 
 class Mirror:
     def __init__(self, path_maker: PathMaker,
-                 ser: pd.Series = pd.Series()):
+                 ser: pd.Series = pd.Series(dtype=str)):
         self.series = ser
         self.path_to = path_maker
         self.path_to_db = self.path_to.temp_db
@@ -40,13 +40,22 @@ class Mirror:
         return path in self.months_db_paths
 
     def init_(self, from_: str) -> object:
+
         series_list = []
         t = today()
         wbd = week_before_(t)
+        last_day_of_past_month = last_date_of_past_month(t)
+
         if wbd.month == t.month:
+            db_for_del_path = self.path_to.months_temp_db_by(last_day_of_past_month)
+
+            if self.temp_db_exists(db_for_del_path):
+                os.remove(db_for_del_path) # <-- удаляет, если вышел в тираж
+
             day_list = [t]
+
         else:
-            day_list = [last_date_of_past_month(t), t]
+            day_list = [last_date_of_past_month, t]
 
         for day in day_list:
             temp_db = MonthDB(self.path_to.months_temp_db_by(day),
@@ -56,10 +65,13 @@ class Mirror:
                 temp_db.create_empty_temp_db(temp_db.mf_from_file.columns.to_list())
 
             db_frame = temp_db.get_actual_dayrows_df_(from_, by_date=day)
+
             if not db_frame.empty:
                 series_list.append(db_frame['STATUS'])
+
         self.series = self.concat_series(series_list)
-        self.date_of_last_update = today()
+        self.date_of_last_update = t
+
         return self
 
     @staticmethod
@@ -110,27 +122,45 @@ class Mirror:
         return (self.path_to.months_temp_db_by(date),
                 self.path_to.mother_frame_by(date))
 
+    # сделай рефактор!!!
     def get_days_for_coef_correction(self) -> pd.Series:
         series_list = []
         t = today()
         day_dict = get_dates_dict(t, 7, 7)
 
-        for day in day_dict:
-            mdb = MonthDB(self.path_to.months_temp_db_by(day_dict[day]),
-                          self.path_to.mother_frame_by(day_dict[day]))
+        if is_same_months(day_dict):
+            print(is_same_months(day_dict))
+            mdb = MonthDB(self.path_to.months_temp_db_by(t),
+                          self.path_to.mother_frame_by(t))
             mf = mdb.mf_from_file
-            if day == 's':
-                days_status = mf[mf.index >= day_dict[day]]['STATUS']
-            else:
-                days_status = mf[mf.index <= day_dict[day]]['STATUS']
+            days_status = mf[day_dict['s']:day_dict['f']]['STATUS']
 
             if self.temp_db_exists(mdb.path_to_temp_db):
                 status_from_temp = mdb.temp_db_from_file['STATUS']
                 for date in days_status.index:
                     if date in status_from_temp.index:
-                        days_status.loc[date] = status_from_temp.loc[date]
+                        days_status[date] = status_from_temp.at[date]
 
-            series_list.append(days_status)
+            return days_status
+
+        else:
+            for day in day_dict:
+                mdb = MonthDB(self.path_to.months_temp_db_by(day_dict[day]),
+                              self.path_to.mother_frame_by(day_dict[day]))
+                mf = mdb.mf_from_file
+
+                if day == 's':
+                    days_status = mf[mf.index >= day_dict[day]]['STATUS']
+                else:
+                    days_status = mf[mf.index <= day_dict[day]]['STATUS']
+
+                if self.temp_db_exists(mdb.path_to_temp_db):
+                    status_from_temp = mdb.temp_db_from_file['STATUS']
+                    for date in days_status.index:
+                        if date in status_from_temp.index:
+                            days_status[date] = status_from_temp.at[date]
+
+                series_list.append(days_status)
 
         return self.concat_series(series_list)
 

@@ -19,7 +19,7 @@ class VedomostFiller:
 
         self.mark_ser = None
         self.day = None
-        self.cells_ser = pd.Series()
+        self.cells_ser = None
         self.path_to_mf = None
 
         self.active_cell = None
@@ -75,7 +75,7 @@ class VedomostFiller:
         r.get_r_positions_col()
         return r.mod_data.at[self.day.date, 'positions']
 
-    def filtering_(self, series=pd.Series(), by_='positions'):
+    def filtering_(self, series=pd.Series(dtype=str), by_='positions'):
         if by_ == 'coefs':
             return self.day.accessories
         else:
@@ -232,7 +232,7 @@ class VedomostFiller:
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
-                            behavior='filling')
+                            behavior='coefs')
     filler()
     print(filler.mark_ser)
     #filler.change_a_day('1.1.24')
