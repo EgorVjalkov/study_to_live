@@ -71,7 +71,7 @@ if __name__ == '__main__':
     path_to_mf = path_maker.path_to.mother_frame_by(t)
     price_fr = pd.read_excel(path_to_mf, sheet_name='price', index_col=0).fillna(0)
     if not does_need_correction(price_fr):
-        main(['Lera'],
+        main(['Egr', 'Lera'],
              MonthDB(path_to_mf=path_to_mf).mf_from_file,
              price_fr,
              month=path_maker.path_to.get_month(t),

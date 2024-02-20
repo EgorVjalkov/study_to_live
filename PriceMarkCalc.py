@@ -159,13 +159,13 @@ class PriceMarkCalc:
         return self.result
 
 
-results = ['L1', 'E1', 'L22:00', 'EF,LF', 'E1,L0', '1', '22:00']
-
-for i in results:
-    cc = PriceMarkCalc(result=i)
-    cc.extract_named_data('L', ['L', 'E'])
-    print(cc.result)
-    print()
+# results = ['L1', 'E1', 'L22:00', 'EF,LF', 'E1,L0', '1', '22:00']
+#
+# for i in results:
+#     cc = PriceMarkCalc(result=i)
+#     cc.extract_named_data('L', ['L', 'E'])
+#     print(cc.result)
+#     print()
 
 # cc = PriceMarkCalc('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
 #cc = PriceMarkCalc('21:50', '{"<.22": "20+1*", "<.23": 0, ">=.23": "-2*"}')

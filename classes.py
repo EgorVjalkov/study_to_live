@@ -17,8 +17,10 @@ r_liters = [i[0] for i in RECIPIENTS]
 
 
 def r_liters_in_column_data(column) -> bool:
+    print(r_liters)
     for cell in column:
-        l_ = [i for i in r_liters if i in cell]
+        print(cell)
+        l_ = [i for i in r_liters if i in str(cell)]
         if l_:
             return True
     return False
@@ -195,6 +197,7 @@ class Recipient:
         self.cat_data = categories[columns]
 
         for column in self.cat_data:
+            print(self.cat_data[column])
             if r_liters_in_column_data(self.cat_data[column]):
                 print(column)
                 self.cat_data[column] = self.cat_data[column].map(
@@ -298,7 +301,7 @@ class MonthData:
         self.mother_frame = mother_frame
         self.prices = prices
         self.accessory = pd.DataFrame()
-        self.categories = pd.DataFrame()
+        self.categories = pd.DataFrame(dtype=object)
         self.date = pd.Series()
 
     def get_frames_for_working(self, filled_frame=True) -> object:

@@ -3,6 +3,7 @@ import datetime
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import (Message, ReplyKeyboardRemove, CallbackQuery)
+import emoji
 
 from DB_main import mirror
 
@@ -102,6 +103,7 @@ async def finish_filling(message: Message, text: str = ''):
     SDB.remove_recipient(message)
 
     await message.answer(answer, reply_markup=ReplyKeyboardRemove())
+    await message.answer('Не забудь команду /sleep, когда соберешься ' + emoji.emojize(':sleeping_face:'))
     if not SDB.is_superuser(message):
         await bot.send_message(SDB.superuser_id, f'{s.user} завершил заполнение. {answer}')
 
@@ -203,6 +205,9 @@ router3.include_router(manually_fill_router)
 
 #@manually_fill_router.message(
 #    F.text.func(lambda text: len(text) == 5 and text.find(':') == 2))
+print()
+
+
 @manually_fill_router.message()
 async def fill_a_cell_with_time(message: Message):
     s = SDB.switch_session(by_message=message)
