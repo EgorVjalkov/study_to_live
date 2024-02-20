@@ -50,19 +50,7 @@ class BonusColumn:
             self.name += '_fire'
         return self.name
 
-    def count_a_bonus(self):
-        self.get_full_name()
-        self.mark_bonus_frame = pd.concat(
-            [self.mark_ser,
-             self.max_bonus_ser,
-             pd.Series(index=self.mark_ser.index, name=self.name, dtype=int)],
-            axis=1)
-        self.mark_bonus_frame = self.mark_bonus_frame.filter(items=self.not_cant_index, axis=0)
-
-        self.tools[self.logic]('mark', self.name)
-        self.tools[self.logic]('max_mark', 'max_bonus')
-
-    def get_remains_list(self, mark_col):
+    def get_remains_list(self, mark_col: pd.Series) -> list:
         remains_index_list = []
         if self.cond == 'T':
             remains_dict = self.mark_bonus_frame[mark_col].to_dict()
@@ -105,18 +93,37 @@ class BonusColumn:
                 self.mark_bonus_frame.at[i, bonus_col] = self.mark_bonus_frame.at[i, mark_col]
                 counter = 1
 
+    def count_a_bonus(self) -> object:
+        self.get_full_name()
+        self.mark_bonus_frame = pd.concat(
+            [self.mark_ser,
+             self.max_bonus_ser,
+             pd.Series(index=self.mark_ser.index, name=self.name, dtype=int)],
+            axis=1)
+        self.mark_bonus_frame = self.mark_bonus_frame.filter(items=self.not_cant_index, axis=0)
+
+        self.tools[self.logic]('mark', self.name)
+        self.tools[self.logic]('max_mark', 'max_bonus')
+        return self
+
     def get_bonus_ser_without_statistic(self):
         frame = pd.concat([self.output_bonus_ser, self.mark_bonus_frame[self.name]], axis=1)
         self.output_bonus_ser = frame[self.name].fillna('can`t')
         return self.output_bonus_ser
 
     def get_bonus_ser_with_statistic(self):
-        get_0_if_str = lambda i: 0 if type(i) == str else i
+        get_0_if_str = lambda i: 0 if isinstance(i, str) else i
         sum_of_bonus = self.mark_bonus_frame[self.name].map(get_0_if_str).sum()
         sum_of_max = self.mark_bonus_frame['max_bonus'].map(get_0_if_str).sum()
-        true_count = round(sum_of_bonus/sum_of_max, 2)
+
+        if sum_of_max == 0:
+            true_count = 0
+        else:
+            true_count = round(sum_of_bonus/sum_of_max, 2)
+
         if sum_of_max < 0:
             true_count = 1.00 - true_count
+
         stat_ser = pd.Series([true_count, sum_of_bonus])
 
         self.output_bonus_ser = pd.concat([self.output_bonus_ser, stat_ser], axis=0)

@@ -132,34 +132,40 @@ class PriceMarkCalc:
 
         return self.price
 
-    def prepare_named_result(self, recipient): # результат по литере
-        r_litera = recipient[0]
+    def liters_in_result(self, liters):
+        for l in liters:
+            if l in self.result:
+                return True
+        return False
+
+    def extract_named_data(self, r_litera, r_liters): # результат по литере
         print(self.result)
-        comp_result_dict = {i[0]: i[1:] for i in self.result.split(',')}
-        #comp_result_dict = {i[0]: i[1:] for i in self.result.split(',') if i}
-        print(comp_result_dict)
-        numeric_values = [int(comp_result_dict[i]) for i in comp_result_dict if comp_result_dict[i].isnumeric()]
-        #print(comp_result_dict)
-        #print(numeric_values)
-        if r_litera in comp_result_dict:
-            if comp_result_dict[r_litera] == '0' and sum(numeric_values) > 0:
-                self.result = 'wishn`t'
+        if self.liters_in_result(r_liters):
+            comp_result_dict = {i[0]: i[1:] for i in self.result.split(',')}
+            #comp_result_dict = {i[0]: i[1:] for i in self.result.split(',') if i}
+            print(comp_result_dict)
+            numeric_values = [int(comp_result_dict[i]) for i in comp_result_dict if comp_result_dict[i].isnumeric()]
+            #print(comp_result_dict)
+            #print(numeric_values)
+            if r_litera in comp_result_dict:
+                if comp_result_dict[r_litera] == '0' and sum(numeric_values) > 0:
+                    self.result = 'wishn`t'
+                else:
+                    self.result = comp_result_dict[r_litera]
             else:
-                self.result = comp_result_dict[r_litera]
-        else:
-            self.result = 'can`t'
-        #print(f'{r_litera} -> {self.result}')
+                self.result = 'can`t'
+            #print(f'{r_litera} -> {self.result}')
 
         return self.result
 
 
-#results = ['L1', 'E1', 'L22:00,Ecan`t', 'EF,LF', 'E1,L0']
-#
-#for i in results:
-#   cc = PriceMarkCalc(result=i)
-#   cc.prepare_named_result('Lera')
-#   print(cc.result)
-#   print()
+results = ['L1', 'E1', 'L22:00', 'EF,LF', 'E1,L0', '1', '22:00']
+
+for i in results:
+    cc = PriceMarkCalc(result=i)
+    cc.extract_named_data('L', ['L', 'E'])
+    print(cc.result)
+    print()
 
 # cc = PriceMarkCalc('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
 #cc = PriceMarkCalc('21:50', '{"<.22": "20+1*", "<.23": 0, ">=.23": "-2*"}')

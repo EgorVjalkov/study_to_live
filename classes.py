@@ -3,12 +3,25 @@ from statistics import mean
 import os
 from PriceMarkCalc import PriceMarkCalc
 from utils import analytic_utilities as au
-from math import prod
+
 
 pd.set_option('display.max.columns', None)
 
 
 ff = au.FrameForAnalyse()
+
+
+FORGOT_PRICE = -100
+RECIPIENTS = ['Egr', 'Lera']
+r_liters = [i[0] for i in RECIPIENTS]
+
+
+def r_liters_in_column_data(column) -> bool:
+    for cell in column:
+        l_ = [i for i in r_liters if i in cell]
+        if l_:
+            return True
+    return False
 
 
 class CompCoef:
@@ -50,9 +63,10 @@ class Recipient:
         self.r_name = name
         self.litera = name[0]
         self.private_position = self.litera.lower()
+        self.common_positions = ['a', 'z', 'h', 'f']
+        self.r_positions = self.common_positions.copy() + [self.private_position]
         self.mod_data = pd.DataFrame(date_ser, columns=[date_ser.name], index=date_ser.index)
         self.cat_data = pd.DataFrame(index=date_ser.index)
-        self.positions = ['a', 'z', 'h', 'f']
         mini_frame = pd.DataFrame({'DAY': ['done_percent', 'sum']}, index=[0, 1])
         self.result_frame = pd.concat([self.mod_data, mini_frame])
 
@@ -137,7 +151,7 @@ class Recipient:
 
     def get_r_positions_col(self):
         def extract_positions(children, place, family):
-            positions = [i for i in list(children+place+family) if i in self.positions]
+            positions = [i for i in list(children+place+family) if i in self.common_positions]
             positions.append(self.private_position)
             return positions
 
@@ -176,15 +190,17 @@ class Recipient:
         self.get_all_coefs_col()
         return self.mod_data
 
-    def get_r_vedomost(self, categories, only_private):
-        r_positions = self.positions + [self.private_position]
-        r_columns = [i for i in categories.columns if i[0] in r_positions]
-        self.cat_data = categories[r_columns]
-        for column in only_private:
-            print(column)
-            column_list = [PriceMarkCalc(i).prepare_named_result(self.r_name)
-                           for i in categories[column]]
-            self.cat_data[column] = column_list
+    def get_r_vedomost(self, categories) -> pd.DataFrame:
+        columns = [i for i in categories.columns if i[0] in self.r_positions]
+        self.cat_data = categories[columns]
+
+        for column in self.cat_data:
+            if r_liters_in_column_data(self.cat_data[column]):
+                print(column)
+                self.cat_data[column] = self.cat_data[column].map(
+                    lambda i: PriceMarkCalc(i).extract_named_data(self.r_name[0], r_liters))
+                print(self.cat_data[column])
+
         return self.cat_data
 
     def collect_to_result_frame(self, result_column, bonus_column: pd.Series):
@@ -192,7 +208,7 @@ class Recipient:
         if not bonus_column.empty:
             self.result_frame[bonus_column.name] = bonus_column
 
-    def get_in_time_sleeptime_ser(self):
+    def get_in_time_sleeptime_ser(self, null_after_0):
         def hour_extraction(time):
             hour = 0
             if time != '!':
@@ -203,13 +219,23 @@ class Recipient:
             return hour
 
         sleep_time_ser_name = self.private_position + ':sleeptime'
-        sleeptime_list = list(map(hour_extraction, self.cat_data[sleep_time_ser_name]))
-        sleeptime_list = list(map(lambda i: 'True' if i > 20 else 'False', sleeptime_list))
+
+        if null_after_0:
+            sleeptime_list = list(map(hour_extraction, self.cat_data[sleep_time_ser_name]))
+            print(sleeptime_list)
+            sleeptime_list = list(map(lambda i: 'True' if i > 20 else 'False', sleeptime_list))
+            print(sleeptime_list)
+        else:
+            sleeptime_list = ['True']*len(self.cat_data)
+
         percent = len([i for i in sleeptime_list if i == 'True']) / len(sleeptime_list)
         sleeptime_list.extend([round(percent, 2), ''])
         return pd.Series(sleeptime_list, name='sleep_in_time', index=self.result_frame.index)
 
-    def get_day_sum_if_sleep_in_time_and_save(self, path, demo_mode):
+    def get_day_sum_if_sleep_in_time_and_save(self,
+                                              path: str,
+                                              demo_mode: bool,
+                                              null_after_0: bool = False) -> pd.DataFrame:
         def get_day_sum(day_row, sleep_in_time_flag=''):
             percent_row_cell = day_row.pop('DAY')
             day_row = [0 if isinstance(day_row[i], str) else day_row[i]
@@ -236,7 +262,8 @@ class Recipient:
         self.result_frame['day_bonus'] = list(map(get_day_sum,
                                                   bonus_frame.to_dict('index').values()))
 
-        sleep_in_time_ser = self.get_in_time_sleeptime_ser()
+        sleep_in_time_ser = self.get_in_time_sleeptime_ser(null_after_0)
+
         self.result_frame = pd.concat(
             [self.result_frame, sleep_in_time_ser],
             axis=1)
@@ -260,6 +287,7 @@ class Recipient:
         self.result_frame['day_sum_in_time'] = sum_after_0_col
         if not demo_mode:
             self.result_frame.to_excel(path, index=False)
+        return self.result_frame
 
 
 class MonthData:
@@ -325,7 +353,7 @@ class CategoryData:
             'price': self.price_frame.at['PRICE'],
             'can`t': 0,
             'wishn`t': 0,
-            '!': -50}
+            '!': FORGOT_PRICE}
         if result in price_calc:
             if result in ['can`t', 'wishn`t']:
                 price = result
@@ -449,8 +477,11 @@ class CategoryData:
         def count_true_percent(mark_column):
             not_cant_mark_list = [i for i in mark_column if i != 'can`t']
             true_list = [i for i in mark_column if i == 'T']
-            percent = len(true_list) / len(not_cant_mark_list)
-            return round(percent, 2)
+            if not not_cant_mark_list:
+                return 0
+            else:
+                percent = len(true_list) / len(not_cant_mark_list)
+                return round(percent, 2)
 
         true_percent = count_true_percent(self.cat_frame['mark'])
         result_ser = self.cat_frame['result'].map(lambda i: 0 if isinstance(i, str) else i)
