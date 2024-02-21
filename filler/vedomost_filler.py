@@ -19,7 +19,7 @@ class VedomostFiller:
 
         self.mark_ser = None
         self.day = None
-        self.cells_ser = None
+        self.cells_ser = pd.Series(dtype=object)
         self.path_to_mf = None
 
         self.active_cell = None
