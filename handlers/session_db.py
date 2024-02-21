@@ -28,7 +28,8 @@ class Session:
     def get_inlines(self) -> list:
         self.inlines.extend(self.filler.unfilled_cells)
         if self.filler.behavior == 'filling':
-            self.inlines.remove(self.filler.r_sleeptime)
+            if self.filler.r_sleeptime in self.inlines:
+                self.inlines.remove(self.filler.r_sleeptime)
         return self.inlines
 
     def set_last_message(self, message: Message):
