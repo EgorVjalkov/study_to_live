@@ -145,22 +145,27 @@ class Mirror:
 
         else:
             for day in day_dict:
-                mdb = MonthDB(self.path_to.months_temp_db_by(day_dict[day]),
-                              self.path_to.mother_frame_by(day_dict[day]))
-                mf = mdb.mf_from_file
+                try:
+                    mdb = MonthDB(self.path_to.months_temp_db_by(day_dict[day]),
+                                  self.path_to.mother_frame_by(day_dict[day]))
 
-                if day == 's':
-                    days_status = mf[mf.index >= day_dict[day]]['STATUS']
-                else:
-                    days_status = mf[mf.index <= day_dict[day]]['STATUS']
+                    mf = mdb.mf_from_file
 
-                if self.temp_db_exists(mdb.path_to_temp_db):
-                    status_from_temp = mdb.temp_db_from_file['STATUS']
-                    for date in days_status.index:
-                        if date in status_from_temp.index:
-                            days_status[date] = status_from_temp.at[date]
+                    if day == 's':
+                        days_status = mf[mf.index >= day_dict[day]]['STATUS']
+                    else:
+                        days_status = mf[mf.index <= day_dict[day]]['STATUS']
 
-                series_list.append(days_status)
+                    if self.temp_db_exists(mdb.path_to_temp_db):
+                        status_from_temp = mdb.temp_db_from_file['STATUS']
+                        for date in days_status.index:
+                            if date in status_from_temp.index:
+                                days_status[date] = status_from_temp.at[date]
+
+                    series_list.append(days_status)
+
+                except FileNotFoundError:
+                    print(f'vedomost of {day} is not exist')
 
         return self.concat_series(series_list)
 
