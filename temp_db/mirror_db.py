@@ -5,7 +5,8 @@ from pathlib import Path
 
 from path_maker import PathMaker
 from temp_db.unfilled_rows_db import MonthDB
-from filler.date_funcs import yesterday, today, week_before_, last_date_of_past_month, get_dates_dict, is_same_months
+from filler.date_funcs import (today_for_filling, yesterday, today, week_before_,
+                               last_date_of_past_month, get_dates_dict, is_same_months)
 from filler.day_row import DayRow
 
 
@@ -42,7 +43,7 @@ class Mirror:
     def init_(self, from_: str) -> object:
 
         series_list = []
-        t = today()
+        t = today_for_filling()
         wbd = week_before_(t)
         last_day_of_past_month = last_date_of_past_month(t)
 
@@ -75,7 +76,7 @@ class Mirror:
         return self
 
     @staticmethod
-    def concat_series(series_list: list) -> pd.Series:
+    def concat_series(series_list: list) -> pd.Series | pd.DataFrame:
         if len(series_list) > 1:
             series = pd.concat(series_list)
         else:
@@ -84,11 +85,11 @@ class Mirror:
 
     @property
     def need_update(self):
-        flag = self.date_of_last_update < today()
+        flag = self.date_of_last_update < today_for_filling()
         return flag
 
     def update_by_date(self) -> object:
-        t = today()
+        t = today_for_filling()
         delta = t - self.date_of_last_update
         for day in range(1, delta.days+1):
             date = self.date_of_last_update + datetime.timedelta(days=day)
@@ -111,7 +112,9 @@ class Mirror:
                 days_ser = pd.concat([yesterday_ser, days_ser]).sort_index()
             days_ser: pd.Series = days_ser[days_ser != 'empty']
         else:
-            days_ser: pd.Series = self.series[self.series.index == today()]
+            # проблема локализована!!! он фильтрует по сегдня, а пытается пысать во вчера. Нужно муить спец фильтр для команды слееп
+            # или раздвинуть сроки для мануального заполнения
+            days_ser: pd.Series = self.series[self.series.index == today_for_filling()]
 
         print(f'get_dates_for_{recipient}_by_{by_behavior}')
         print(days_ser)
@@ -125,7 +128,7 @@ class Mirror:
     # сделай рефактор!!!
     def get_days_for_coef_correction(self) -> pd.Series:
         series_list = []
-        t = today()
+        t = today_for_filling()
         day_dict = get_dates_dict(t, 7, 7)
 
         if is_same_months(day_dict):

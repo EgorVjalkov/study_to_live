@@ -1,6 +1,7 @@
 import datetime
 import pandas as pd
 from utils.converter import Converter
+from typing import Hashable
 
 
 class DayRow:
@@ -48,7 +49,7 @@ class DayRow:
         self.row.at['STATUS'] = mark
 
     @property
-    def date(self) -> datetime.date:
+    def date(self) -> datetime.date | Hashable:
         return self.row.name
 
     @property

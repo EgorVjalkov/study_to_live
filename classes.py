@@ -151,7 +151,7 @@ class Recipient:
         if sleepless_col_name in vedomost:
             self.mod_data['sleep_coef'] = vedomost[sleepless_col_name].map(lambda i: i not in ['can`t', '!'])
 
-    def get_r_positions_col(self):
+    def get_r_positions_col(self) -> pd.Series:
         def extract_positions(children, place, family):
             positions = [i for i in list(children+place+family) if i in self.common_positions]
             positions.append(self.private_position)
@@ -161,6 +161,7 @@ class Recipient:
                                               self.mod_data['children'],
                                               self.mod_data['place'],
                                               self.mod_data['w_children']))
+        return self.mod_data['positions']
 
     def get_all_coefs_col(self):
         def get_coef_dict(row_of_coefs):

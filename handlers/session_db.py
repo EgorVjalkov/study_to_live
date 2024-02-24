@@ -5,6 +5,7 @@ from typing import Callable
 from aiogram.types import Message
 from filler.vedomost_filler import VedomostFiller
 from utils.converter import Converter
+from filler.date_funcs import today_for_filling
 
 
 username_dict = {'Jegor': 'Egr', 'Валерия': 'Lera'}
@@ -36,21 +37,18 @@ class Session:
         self.last_message = message
 
     def manually_fill_sleep_time(self, now: datetime.datetime) -> VedomostFiller:
-        message_day = now
-        message_time = message_day.time()
-        print(message_time, 'inside func')
+        message_day = today_for_filling() # <- date сохраняется после полуночи, чтобы писаться в соотв. ячейку а не
+        # а не другого числа
+        message_time = now.time()
+        print(message_day, message_time, 'inside func')
         if message_time.hour in range(6, 21):
             category = self.filler.r_siesta
             new_value = '+'
         else:
-            if message_time.hour in range(0, 6):
-                message_time = datetime.time(hour=0, minute=0)
-                message_day -= datetime.timedelta(days=1)
-
             category = self.filler.r_sleeptime
             new_value = datetime.time.strftime(message_time, '%H:%M')
 
-        self.filler.change_a_day(message_day.date())
+        self.filler.change_a_day(message_day)
         self.filler.get_cells_ser(by_=category)
         self.filler.fill_the_cell(new_value)
         return self.filler
