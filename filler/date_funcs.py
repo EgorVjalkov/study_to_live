@@ -15,8 +15,8 @@ def today_for_filling(date: Optional[datetime.date] = None) -> datetime.date:
         return now.date()
 
 
-def yesterday():
-    return today() - datetime.timedelta(days=1)
+def yesterday(today_: datetime.date):
+    return today_ - datetime.timedelta(days=1)
 
 
 def week_before_(day: datetime.date):

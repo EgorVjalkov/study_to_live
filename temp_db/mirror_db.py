@@ -101,11 +101,12 @@ class Mirror:
         return self
 
     def get_dates_for(self, recipient: str, by_behavior: str) -> pd.Series:
+        t = today_for_filling()
         if by_behavior == 'filling':
             r_done_mark = recipient[0]
             days_ser: pd.Series = self.series[self.series != r_done_mark]
         elif by_behavior == 'correction':
-            yesterday_ = yesterday()
+            yesterday_ = yesterday(t)
             days_ser: pd.Series = self.series[self.series.index >= yesterday_]
             if yesterday_ not in days_ser.index:
                 yesterday_ser = pd.Series({yesterday_: 'Y'})
@@ -114,7 +115,7 @@ class Mirror:
         else:
             # проблема локализована!!! он фильтрует по сегдня, а пытается пысать во вчера. Нужно муить спец фильтр для команды слееп
             # или раздвинуть сроки для мануального заполнения
-            days_ser: pd.Series = self.series[self.series.index == today_for_filling()]
+            days_ser: pd.Series = self.series[self.series.index == t]
 
         print(f'get_dates_for_{recipient}_by_{by_behavior}')
         print(days_ser)
