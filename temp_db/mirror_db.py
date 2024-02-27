@@ -176,11 +176,13 @@ class Mirror:
     def save_day_data(self, day: DayRow) -> object:
         paths = self.get_paths_by(day.date)
         temp_db = MonthDB(*paths)
+
         if day.is_filled or day.is_empty:
             data_type = 'mf'
             if day.is_filled:
                 temp_db.del_filled_row(day.date)
                 self.series = self.series[self.series.index != day.date]  # <- рескан серии после удаления
+
         else:
             data_type = 'temp_db'
             self.series.at[day.date] = day.mark
@@ -188,8 +190,12 @@ class Mirror:
         print(f'SAVE: {day.mark} --> {data_type}')
         frame = temp_db.load_as_(data_type)
         frame.loc[day.date] = day.row
-        frame.loc[day.date] = frame.loc[day.date].fillna('can`t')
+
+        if day.is_filled:
+            frame.loc[day.date] = frame.loc[day.date].fillna('can`t')
+
         temp_db.save_(frame, as_=data_type, mode='a')
+
         return self
 
     def load_prices_by(self, date: datetime.date, for_: str):
