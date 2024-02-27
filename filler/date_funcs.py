@@ -40,6 +40,6 @@ def is_same_months(day_dict: dict) -> bool:
     return day_dict['s'].month == day_dict['f'].month
 
 
-dd = get_dates_dict(today(), before=7, after=7)
-print(dd)
+#dd = get_dates_dict(today(), before=7, after=7)
+#print(dd)
 

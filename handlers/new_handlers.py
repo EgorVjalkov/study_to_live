@@ -1,18 +1,16 @@
 import datetime
+import emoji
 
 from aiogram import Router, F
 from aiogram.filters import Command
-from aiogram.types import (Message, ReplyKeyboardRemove, CallbackQuery)
-import emoji
+from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
+from aiogram import Bot
 
 from DB_main import mirror
-
-from aiogram import Bot
 from My_token import TOKEN
-
-from handlers.keyboards import get_keyboard, get_filling_inline
 from handlers.session_db import SessionDB, Session
-
+from handlers.keyboards import get_keyboard
+from handlers.inlines import get_filling_inline, CategoryCallback
 from filler.vedomost_cell import VedomostCell
 from filler.manual_filling_cells import manual_filling_cells
 
@@ -174,23 +172,36 @@ async def remove_keyboard_if_manually(message: Message, session: Session):
                          reply_markup=ReplyKeyboardRemove())
 
 
-@router3.callback_query(F.data.contains('fill_'))
+@router3.callback_query(F.data.contains(CategoryCallback.__prefix__))
 async def fill_by_callback(callback: CallbackQuery):
+
     call_data = callback.data.split('_')[1:]
     s = SDB.switch_session(by_name=call_data[0])
     cat_name, cat_value = call_data[1], call_data[2]
 
     if 'следующая' in cat_value:
         await get_categories_keyboard(s.last_message, s)
+
     elif 'завершить' in cat_value:
         await finish_filling(s.last_message)
+
     else:
         s.filler.change_a_cell(cat_name)
+
         if 'вручную' in cat_value:
             await remove_keyboard_if_manually(s.last_message, s)
+
         else:
-            s.filler.fill_the_cell(cat_value)
-            SDB.refresh_session(s)
+
+            if 'в койке!' in cat_value:
+                message_time = datetime.datetime.now().time()
+                cat_value = datetime.time.strftime(message_time, '%H:%M')
+                s.filler.fill_the_cell(cat_value)
+
+            else:
+                s.filler.fill_the_cell(cat_value)
+                SDB.refresh_session(s)
+
             await callback.answer(f"Вы заполнили '{cat_value}' в {s.filler.active_cell}")
         print(SDB.r)
         print(s.filler.active_cell)
@@ -205,7 +216,6 @@ router3.include_router(manually_fill_router)
 
 #@manually_fill_router.message(
 #    F.text.func(lambda text: len(text) == 5 and text.find(':') == 2))
-print()
 
 
 @manually_fill_router.message()

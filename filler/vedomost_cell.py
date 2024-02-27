@@ -48,14 +48,23 @@ class VedomostCell:
     def keys(self):
         if 'range' in self.type:
             keys = list(eval(self.type))
+            keys = [str(i) for i in keys]
+
         elif '[' in self.type:
             keys = eval(self.type)
+
         elif self.type == 'dict':
             keys = list(eval(self.category_data['PRICE']).keys())
-        else:
+
+        elif self.type == 'manual':
             keys = ['передать вручную']
+
+        else:
+            keys = []
+
         if pd.notna(self.category_data['add_keys']):
             keys.append(self.category_data['add_keys'])
+
         return keys
 
     @property

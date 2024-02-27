@@ -3,14 +3,13 @@ import pandas as pd
 import classes as cl
 import program2
 
+from typing import Optional
+
 from filler.vedomost_cell import VedomostCell
 from filler.day_row import DayRow
 from DB_main import mirror
 from temp_db.unfilled_rows_db import MonthDB
 from utils.converter import Converter
-
-
-
 
 
 class VedomostFiller:
@@ -21,12 +20,10 @@ class VedomostFiller:
         self.recipient = recipient
         self.behavior = behavior
 
-        self.mark_ser = None
-        self.day = None
-        self.cells_ser = pd.Series(dtype=object)
-        self.path_to_mf = None
-
-        self.active_cell = None
+        self.mark_ser: Optional[pd.Series] = None
+        self.day: Optional[DayRow] = None
+        self.cells_ser: Optional[pd.Series] = None
+        self.active_cell: Optional[str] = None
 
     def __call__(self, *args, **kwargs):
         if self.behavior == 'coefs':
@@ -72,50 +69,27 @@ class VedomostFiller:
         print(f'LOAD: {day_mark} --> {from_}')
         day_row = temp_db.load_as_('row', by_date=date, from_=from_)
         self.day = DayRow(day_row)
+        avail_pos_for_all_recipients = self.day.get_available_positions(cl.RECIPIENTS)
+        self.day.filter_by_available_positions(avail_pos_for_all_recipients)
 
         # если есть катуи не заполняемые, но данная фильтрация их фикусит в кант
-        filtered = self.day.categories.index.map(lambda i: i[0] not in self.available_positions(cl.RECIPIENTS))
-        cant_cats = self.day.categories[filtered == True]
-        if cant_cats.hasnans:
-            cant_cats = cant_cats.fillna('can`t')
-            self.day.categories = cant_cats.to_dict()
-        print(self.day.categories)
+        # if cant_cats.hasnans:
+        #     cant_cats = cant_cats.fillna('can`t')
+        #     self.day.categories = cant_cats.to_dict()
+        # print(self.day.categories)
 
         return self.day
-
-    def available_positions(self, recipients: list) -> list | set:
-        acc_frame = pd.DataFrame(self.day.accessories).T
-        date_ser = pd.Series({self.day.date: self.day.row['DAY']}, name='DAY')
-        pos_set = set()
-        for rec in recipients:
-            r = cl.Recipient(rec, date_ser)
-            r.extract_data_by_recipient(acc_frame)
-            r.get_with_children_col()
-            r_positions = r.get_r_positions_col().at[self.day.date]
-
-            if len(recipients) == 1:
-                return r_positions
-
-            else:
-                r_set = set(r_positions)
-                pos_set.update(r_set)
-
-        return pos_set
 
     def filtering_(self, series=pd.Series(dtype=str), by_='positions'):
         if by_ == 'coefs':
             return self.day.accessories
         else:
             filtered = list(self.day.categories.index)
-            if by_ == 'private':
-                filtered = [i for i in filtered
-                            if i[0] == self.recipient[0].lower()]
-            elif by_ == 'positions':
-                filtered = [i for i in filtered
-                            if i[0] in self.available_positions([self.recipient])]
+            if by_ == 'positions':
+                r_positions = self.day.get_available_positions([self.recipient])
+                filtered = [i for i in filtered if i[0] in r_positions]
             else:
-                filtered = [i for i in filtered
-                            if i == by_]
+                filtered = [i for i in filtered if i == by_]
 
         if not series.empty:
             return series[filtered]
@@ -258,13 +232,12 @@ class VedomostFiller:
 
 
 if __name__ == '__main__':
-    filler = VedomostFiller(recipient='Egr',
+    filler = VedomostFiller(recipient='Lera',
                             behavior='filling')
     filler()
-    filler.change_a_day('24.2.24')
-    print(filler.available_positions(['Egr', 'Lera']))
+    filler.change_a_day('22.2.24')
     filler.get_cells_ser()
-    print(filler.cells_ser)
+    #print(filler.cells_ser)
     #for i in filler.cells_ser:
 
     #    filler.change_a_cell('a:pipi')
