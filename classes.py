@@ -303,7 +303,7 @@ class MonthData:
         self.prices = prices
         self.accessory = pd.DataFrame()
         self.categories = pd.DataFrame(dtype=object)
-        self.date = pd.Series()
+        self.date = pd.Series(dtype=int)
 
     def get_frames_for_working(self, filled_frame=True) -> object:
         if filled_frame:

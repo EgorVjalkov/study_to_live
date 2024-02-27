@@ -188,6 +188,7 @@ class Mirror:
         print(f'SAVE: {day.mark} --> {data_type}')
         frame = temp_db.load_as_(data_type)
         frame.loc[day.date] = day.row
+        frame.loc[day.date] = frame.loc[day.date].fillna('can`t')
         temp_db.save_(frame, as_=data_type, mode='a')
         return self
 

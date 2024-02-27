@@ -22,7 +22,7 @@ class VedomostFiller:
 
         self.mark_ser: Optional[pd.Series] = None
         self.day: Optional[DayRow] = None
-        self.cells_ser: Optional[pd.Series] = None
+        self.cells_ser = pd.Series(dtype=object)
         self.active_cell: Optional[str] = None
 
     def __call__(self, *args, **kwargs):

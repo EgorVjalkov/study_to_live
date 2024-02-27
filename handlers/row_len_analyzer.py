@@ -9,8 +9,10 @@ class RowLenAnalyzer:
             yield bnt
 
     @staticmethod
-    def fit_in(row: list) -> bool:
-        if len(row) >=6 or len(''.join(row)) > 20:
+    def fit_in(row: list, btn: str) -> bool:
+        new_row = row.copy()
+        new_row.append(btn)
+        if len(new_row) >=7 or len(''.join(new_row)) > 20:
             return False
         return True
 
@@ -18,7 +20,7 @@ class RowLenAnalyzer:
         row = []
         bnt_gen = self.button_gen()
         for btn in bnt_gen:
-            if self.fit_in(row):
+            if self.fit_in(row, btn):
                 row.append(btn)
             else:
                 self.rows.append(row.copy())
