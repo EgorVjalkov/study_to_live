@@ -45,7 +45,7 @@ class Mirror:
         series_list = []
         t = today_for_filling()
         wbd = week_before_(t)
-        last_day_of_past_month = last_date_of_past_month(t)
+        last_of_past_month = last_date_of_past_month(t)
 
         if wbd.month == t.month:
             db_for_del_path = self.path_to.months_temp_db_by(last_day_of_past_month)
@@ -56,9 +56,11 @@ class Mirror:
             day_list = [t]
 
         else:
-            day_list = [last_date_of_past_month, t]
+            day_list = [last_of_past_month, t]
+        print(day_list)
 
         for day in day_list:
+            print(day)
             temp_db = MonthDB(self.path_to.months_temp_db_by(day),
                               self.path_to.mother_frame_by(day))
 

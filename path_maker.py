@@ -21,7 +21,7 @@ class PathMaker:
         return path_to_temp_db_dir
 
     @staticmethod
-    def get_month(date):
+    def get_month(date: datetime.date) -> str:
         return date.strftime('%b%y').lower()
 
     def mother_frame_by(self, date: datetime.date):
