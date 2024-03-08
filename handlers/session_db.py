@@ -37,6 +37,7 @@ class Session:
     def set_last_message(self, message: Message):
         self.last_message = message
 
+
     def manually_fill_sleep_time(self, now: datetime.datetime) -> VedomostFiller:
         message_day = today_for_filling() # <- date сохраняется после полуночи, чтобы писаться в соотв. ячейку а не
         # а не другого числа
@@ -152,5 +153,5 @@ class SessionDB:
         if not self.is_date_busy(date):
             await func(*args, **kwargs)
         else:
-            await asyncio.sleep(2)
+            await asyncio.sleep(10)
             await self.date_dispatcher(date, func, *args, **kwargs)

@@ -87,7 +87,7 @@ filler_router.include_router(router2)
 
 
 @router2.message(Command("finish"))
-async def finish_filling(message: Message, text: str = ''):
+async def finish_filling(message: Message):
     s = SDB.switch_session(by_message=message)
 
     if s.filler.already_filled_dict:
@@ -96,14 +96,18 @@ async def finish_filling(message: Message, text: str = ''):
         print(s.filler.already_filled_dict)
         answer = s.get_answer_if_finish()
     else:
-        answer = text if text else 'Вы ничего не заполнили'
-
-    SDB.remove_recipient(message)
+        answer = 'Вы ничего не заполнили'
 
     await message.answer(answer, reply_markup=ReplyKeyboardRemove())
-    await message.answer('Не забудь команду /sleep, когда соберешься ' + emoji.emojize(':sleeping_face:'))
+    if s.filler.sleeptime_is_empty:
+        await message.answer('Не забудь команду /sleep, когда соберешься ' + emoji.emojize(':sleeping_face:'))
+
     if not SDB.is_superuser(message):
         await bot.send_message(SDB.superuser_id, f'{s.user} завершил заполнение. {answer}')
+
+    print(SDB)
+    SDB.remove_recipient(message)
+    print(SDB)
 
 
 async def get_categories_keyboard(message: Message, s: Session):

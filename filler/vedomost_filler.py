@@ -41,6 +41,15 @@ class VedomostFiller:
         return f'{self.recipient[0].lower()}:sleeptime'
 
     @property
+    def sleeptime_is_empty(self):
+        if self.r_sleeptime not in self.already_filled_dict:
+            if pd.isna(self.day.row[self.r_sleeptime]):
+                return True
+        else:
+            return False
+
+
+    @property
     def r_siesta(self):
         return f'{self.recipient[0].lower()}:siesta'
 
