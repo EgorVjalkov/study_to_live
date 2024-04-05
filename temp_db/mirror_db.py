@@ -5,7 +5,7 @@ from pathlib import Path
 
 from path_maker import PathMaker
 from temp_db.unfilled_rows_db import MonthDB
-from filler.date_funcs import (today_for_filling, yesterday, today, week_before_,
+from filler.date_funcs import (today_for_filling, yesterday, week_before_,
                                last_date_of_past_month, get_dates_dict, is_same_months)
 from filler.day_row import DayRow
 
@@ -48,7 +48,7 @@ class Mirror:
         last_of_past_month = last_date_of_past_month(t)
 
         if wbd.month == t.month:
-            db_for_del_path = self.path_to.months_temp_db_by(last_day_of_past_month)
+            db_for_del_path = self.path_to.months_temp_db_by(last_of_past_month)
 
             if self.temp_db_exists(db_for_del_path):
                 os.remove(db_for_del_path) # <-- удаляет, если вышел в тираж
