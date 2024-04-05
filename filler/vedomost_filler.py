@@ -42,9 +42,10 @@ class VedomostFiller:
 
     @property
     def sleeptime_is_empty(self):
-        if self.r_sleeptime not in self.already_filled_dict:
-            if pd.isna(self.day.row[self.r_sleeptime]):
-                return True
+        if self.day:
+            if self.r_sleeptime not in self.already_filled_dict:
+                if pd.isna(self.day.row[self.r_sleeptime]):
+                    return True
         else:
             return False
 
