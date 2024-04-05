@@ -1,8 +1,9 @@
 import datetime
+from typing import Any
 
 
 class PriceMarkCalc:
-    def __init__(self, result='', condition='', date=''):
+    def __init__(self, result: Any = None, condition='', date=''):
         self.comparison_dict = {'<': lambda r, y: r < y,
                                 '<=': lambda r, y: r <= y,
                                 '>=': lambda r, y: r >= y,
@@ -59,19 +60,22 @@ class PriceMarkCalc:
 
                     inner_condition = self.comparison_dict[comparison_operator](self.result, comparison_value)
                     delta = 0
+                    per_minute_cond = '0*'
 
                     if inner_condition:
                         price_modifier = self.condition[k]
-                        #print(comparison_operator, comparison_value, price_modifier)
-                        if type(price_modifier) == int:
-                            self.price += price_modifier
-                            per_minute_cond = '0*'
-                        elif '+' in price_modifier:
-                            price_modifier = price_modifier.split('+')
-                            self.price += float(price_modifier[0])
-                            per_minute_cond = price_modifier[1]
-                        else:
-                            per_minute_cond = price_modifier
+                        print(comparison_operator, comparison_value, price_modifier)
+
+                        match price_modifier.split():
+                            case [num] if num.isdigit():
+                                self.price += float(num)
+
+                            case [per_min]:
+                                per_minute_cond = per_min
+
+                            case [num, per_min]:
+                                self.price += float(num)
+                                per_minute_cond = per_min
 
                         if not delta:
                             if comparison_value > self.result:
@@ -83,9 +87,9 @@ class PriceMarkCalc:
 
                         multiplic = float(per_minute_cond.replace('*', ''))
                         self.price += delta * multiplic
-                        #print(k, self.condition[k], inner_condition, self.price, '\n')
+                        print(k, self.condition[k], inner_condition, self.price)
     # limiting
-                    self.price = 200 if self.price > 200 else self.price
+                    self.price = 100 if self.price > 100 else self.price
         return self.price
 
     def get_price_if_comparison_logic(self):
@@ -159,23 +163,24 @@ class PriceMarkCalc:
         return self.result
 
 
-# results = ['L1', 'E1', 'L22:00', 'EF,LF', 'E1,L0', '1', '22:00']
-#
-# for i in results:
-#     cc = PriceMarkCalc(result=i)
-#     cc.extract_named_data('L', ['L', 'E'])
-#     print(cc.result)
-#     print()
+if __name__ == '__main__':
 
-# cc = PriceMarkCalc('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
-#cc = PriceMarkCalc('21:50', '{"<.22": "20+1*", "<.23": 0, ">=.23": "-2*"}')
-#cc = PriceMarkCalc('22:40', '{"<.22": "20+1*", ">=.22": "-0.5*", ">.23": "-2*"}')
-# cc = PriceMarkCalc(4.0, '10*')
-# cc = PriceMarkCalc('23:00', '{"<.22": "3*", "<.23": "2*", ">.23": 0}')
-# cc = PriceMarkCalc('4', '10*')
-# cc = PriceMarkCalc('1', '{1: 50, 0: 0}')
-# cc = PriceMarkCalc(result=True)
-# cc = PriceMarkCalc(4.0, '{">=.4": 50, "<.4": 0}')
-#print(cc.get_price())
+    for i in ['30 +1*', '30 -1*', '50', '-2*', '1*']:
+        print(i.split())
+    results = ['L1', 'E1', 'L22:00', 'EF,LF', 'E1,L0', '1', '22:00']
+    # cc = PriceMarkCalc('+F', '{"+": {"CDIF": 50, "P": 0}, "-": {"CDIF": 0, "P": -50}}')
+    #cc = PriceMarkCalc('21:50', '{"<.22": "20+1*", "<.23": 0, ">=.23": "-2*"}')
+    #cc = PriceMarkCalc('22:40', '{"<.22": "20+1*", ">=.22": "-0.5*", ">.23": "-2*"}')
+    # cc = PriceMarkCalc(4.0, '10*')
+    # cc = PriceMarkCalc('23:00', '{"<.22": "3*", "<.23": "2*", ">.23": 0}')
+    # cc = PriceMarkCalc('4', '10*')
+    # cc = PriceMarkCalc('1', '{1: 50, 0: 0}')
+    # cc = PriceMarkCalc(result=True)
+    # cc = PriceMarkCalc(4.0, '{">=.4": 50, "<.4": 0}')
+    for i in ['22:30', '23:00', '23:25', '23:35', '23:45', '23:55', '00:00', '00:30']:
+        cc = PriceMarkCalc(i, '{"<.23": "30 +1*", ">=.23": "-1.5*"}')
+        pr = cc.get_price()
+        print(pr, '/n')
+
 
 
