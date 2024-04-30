@@ -6,6 +6,17 @@ from utils.converter import Converter
 from typing import Hashable
 
 
+day_dict = {
+    1: 'понедельник',
+    2: 'вторник',
+    3: 'среда',
+    4: 'четверг',
+    5: 'пятница',
+    6: 'суббота',
+    7: 'воскресенье'
+}
+
+
 class DayRow:
     def __init__(self, day_row: pd.Series = pd.Series(dtype='object')):
         self.row = day_row
@@ -30,6 +41,13 @@ class DayRow:
         acc = self.row.index.map(lambda i: not i.find(':') == 1 and i not in ['DAY', 'STATUS'])
         acc = self.row[acc == True]
         return acc
+
+    @property
+    def date_n_day_dict(self):
+        day = self.row.at['DAY']
+        day_name = day_dict[day]
+        date = Converter(date_object=self.date).to('str')
+        return {date: day_name}
 
     @property
     def filled_cells(self):

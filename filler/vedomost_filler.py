@@ -149,13 +149,13 @@ class VedomostFiller:
 
     @property
     def acc_in_str(self) -> list:
-        acc = self.day.accessories.to_dict()
-        # можно замудиться тут и сделать красивое, т.е. отметка на своем месте
+        rep = self.day.date_n_day_dict
+        rep.update(self.day.accessories.to_dict())
         for i in self.already_filled_dict:
-            del acc[i]
+            del rep[i]
             new_i = '*'+i
-            acc[new_i] = self.already_filled_dict[i]
-        return [f'{i}: "{acc[i]}"' for i in acc]
+            rep[new_i] = self.already_filled_dict[i]
+        return [f'{i}: "{rep[i]}"' for i in rep]
 
     @property
     def already_filled_dict(self):

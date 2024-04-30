@@ -3,6 +3,7 @@ from statistics import mean
 import os
 from PriceMarkCalc import PriceMarkCalc
 from utils import analytic_utilities as au
+from complex_coef import CompCoef
 
 
 pd.set_option('display.max.columns', None)
@@ -24,40 +25,6 @@ def r_liters_in_column_data(column) -> bool:
         if l_:
             return True
     return False
-
-
-class CompCoef:
-    def __init__(self, coef_data):
-        self.coef_data = coef_data
-
-    def __repr__(self):
-        return f'CompCoef(coef_data={self.coef_data})'
-
-    @property
-    def severity_dict(self):
-        name = self.coef_data[:self.coef_data.find('(')]
-        severity = self.coef_data[self.coef_data.find('(')+1:self.coef_data.find(')')]
-        #print(severity)
-        return {'name': name, 'sev': severity}
-
-    @property
-    def have_coef_data(self):
-        return True if self.coef_data else False
-
-    def count_a_coef_value(self, coef, mark=''):
-        counted_coef = self.coef_data
-        if '{' in self.coef_data:
-            counted_coef = eval(self.coef_data)[mark]
-            #print(counted_coef)
-        elif '[' in self.coef_data:
-            counted_coef = eval(self.coef_data)[int(coef)]
-
-        #print(counted_coef)
-        if type(counted_coef) == str:
-            coef_value = PriceMarkCalc(coef).get_price_if_multiply(counted_coef)
-            return coef_value
-        else:
-            return counted_coef
 
 
 class Recipient:
@@ -198,12 +165,12 @@ class Recipient:
         self.cat_data = categories[columns]
 
         for column in self.cat_data:
-            print(self.cat_data[column])
+            # print(self.cat_data[column])
             if r_liters_in_column_data(self.cat_data[column]):
-                print(column)
+                # print(column)
                 self.cat_data[column] = self.cat_data[column].map(
                     lambda i: PriceMarkCalc(i).extract_named_data(self.r_name[0], r_liters))
-                print(self.cat_data[column])
+                # print(self.cat_data[column])
 
         return self.cat_data
 
@@ -415,15 +382,15 @@ class CategoryData:
                                   mark_series)
         return self
 
-    def count_a_modification(self, coefs, mark):
+    def count_a_modification(self, coefs_dict, mark):
         coef_dict = {'coef': 0}
         if mark not in ('T', 'F'):
             return coef_dict
 
-        for coef_name in coefs:
+        for coef_name in coefs_dict:
             coef = CompCoef(self.price_frame[coef_name])
             if coef.have_coef_data:
-                coef_value = coef.count_a_coef_value(coefs[coef_name], mark)
+                coef_value = coef.count_a_coef_value(coefs_dict[coef_name], mark)
                 coef_dict[coef_name] = coef_value
             else:
                 coef_dict[coef_name] = 0

@@ -42,7 +42,7 @@ path_to_project = path_to.path_to_project
 
 
 if __name__ == '__main__':
-    date = datetime.date(month=2, day=1, year=2024)
+    date = datetime.date(month=5, day=1, year=2024)
     p = path_to.mother_frame_by(date)
     p2 = path_to.months_temp_db_by(date)
     print(p, p2)

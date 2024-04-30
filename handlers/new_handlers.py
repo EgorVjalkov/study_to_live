@@ -131,7 +131,6 @@ async def change_a_date(message: Message):
     else:
         s.filler.change_a_day(message.text)
         s.filler.get_cells_ser()
-        # делаем сначала на одного, потом задумаемся о многочеловековом заполнении
         if not s.filler.unfilled_cells:
             await message.reply("Все заполнено!",
                                 reply_markup=ReplyKeyboardRemove())
