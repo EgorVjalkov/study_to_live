@@ -399,7 +399,7 @@ class CategoryData:
 
     def total_count(self, price, coef, full_family_flag):
         if price in ['can`t', 'wishn`t']:
-            return coef, price
+            return coef, price, ''
 
         else:
             if coef > 1.0:
@@ -409,13 +409,16 @@ class CategoryData:
             #запись ниже фиксит только личные катки.
             if full_family_flag and price > 0 and not self.private:
             #if full_family_flag and price > 0:
+                rdc = 'reduced'
                 reduced_price = 0.5 * price
                 coefed_price = reduced_price + (reduced_price*coef)
                 print(f'{self.name}:{reduced_price} -> {coefed_price}')
             else:
                 coefed_price = price + abs(price*coef)
                 print(f'{self.name}: {coefed_price} no reduced')
-            return round(coef, 2), round(coefed_price, 2)
+                rdc = ''
+
+            return round(coef, 2), round(coefed_price, 2), rdc
 
     def add_coef_and_result_column(self, show_calculation=False):
         coefs_list = list(map(self.count_a_modification,
@@ -429,7 +432,8 @@ class CategoryData:
                                self.mod_frame['full_family']))
         self.cat_frame['mod'] = [i[0] for i in result_list]
         self.cat_frame['result'] = [i[1] for i in result_list]
-        # self.cat_frame['reduced'] = [i[2] for i in result_list] #
+        print(result_list)
+        self.cat_frame['reduced'] = [i[2] for i in result_list]
         # self.cat_frame['full'] = self.mod_frame['full_family'] #
 
         if show_calculation:

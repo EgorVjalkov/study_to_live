@@ -5,12 +5,13 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
 from aiogram import Bot
+from aiogram_dialog import DialogManager
 
 from DB_main import mirror
 from My_token import TOKEN
-from handlers.session_db import SessionDB, Session
-from handlers.keyboards import get_keyboard
-from handlers.inlines import get_filling_inline, CategoryCallback
+from dialog.session_db import SessionDB, Session
+from dialog.keyboards import get_keyboard
+from dialog.inlines import get_filling_inline, CategoryCallback
 from filler.vedomost_cell import VedomostCell
 from filler.manual_filling_cells import manual_filling_cells
 

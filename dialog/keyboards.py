@@ -1,6 +1,6 @@
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
-from handlers.row_len_analyzer import RowLenAnalyzer
+from dialog.row_len_analyzer import RowLenAnalyzer
 
 
 def get_keyboard(keys_list) -> ReplyKeyboardMarkup:

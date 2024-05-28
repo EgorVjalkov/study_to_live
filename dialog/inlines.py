@@ -2,8 +2,8 @@ from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters.callback_data import CallbackData
 from filler.vedomost_cell import VedomostCell
-from handlers.session_db import Session
-from handlers.row_len_analyzer import RowLenAnalyzer
+from dialog.session_db import Session
+from dialog.row_len_analyzer import RowLenAnalyzer
 
 
 class CategoryCallback(CallbackData, prefix='f.i.l.l', sep='_'):
