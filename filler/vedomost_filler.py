@@ -12,6 +12,10 @@ from temp_db.unfilled_rows_db import MonthDB
 from utils.converter import Converter
 
 
+class BusyError(BaseException):
+    pass
+
+
 class VedomostFiller:
     def __init__(self,
                  recipient: str = '',
@@ -49,7 +53,6 @@ class VedomostFiller:
         else:
             return False
 
-
     @property
     def r_siesta(self):
         return f'{self.recipient[0].lower()}:siesta'
@@ -59,14 +62,19 @@ class VedomostFiller:
         days = self.mark_ser.index.to_list()
         days: list = [Converter(date_object=date_).to('str') for date_
                       in days]
+        days = [[i] for i in days] #для геттера по item
         return days
 
     def change_a_day(self, date: str | datetime.date) -> DayRow:
         if isinstance(date, str):
             date = Converter(date_in_str=date).to('date_object')
 
-        print(self.mark_ser)
         day_mark = self.mark_ser[date]
+        if day_mark == 'busy':
+            raise BusyError
+
+        mirror.series.at[date] = 'busy'
+
         paths_by_date = mirror.get_paths_by(date)
         temp_db = MonthDB(*paths_by_date)
 
@@ -245,8 +253,15 @@ if __name__ == '__main__':
     filler = VedomostFiller(recipient='Lera',
                             behavior='filling')
     filler()
-    filler.change_a_day('22.2.24')
-    filler.get_cells_ser()
+    print(filler.mark_ser)
+    filler.change_a_day('17.7.24')
+    print(filler.mark_ser)
+
+    filler = VedomostFiller(recipient='Lera',
+                            behavior='filling')
+    filler()
+    print(filler.mark_ser)
+    filler.change_a_day('17.7.24')
     #print(filler.cells_ser)
     #for i in filler.cells_ser:
 

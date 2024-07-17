@@ -115,8 +115,6 @@ class Mirror:
                 days_ser = pd.concat([yesterday_ser, days_ser]).sort_index()
             days_ser: pd.Series = days_ser[days_ser != 'empty']
         else:
-            # проблема локализована!!! он фильтрует по сегдня, а пытается пысать во вчера. Нужно муить спец фильтр для команды слееп
-            # или раздвинуть сроки для мануального заполнения
             days_ser: pd.Series = self.series[self.series.index == t]
 
         print(f'get_dates_for_{recipient}_by_{by_behavior}')
