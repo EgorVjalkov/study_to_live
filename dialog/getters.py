@@ -1,12 +1,16 @@
 from typing import Optional
+from collections import namedtuple
 
 from aiogram_dialog import DialogManager
 from aiogram.fsm.state import State
 
 from dialog.selected import get_filler, set_filler
 from filler.vedomost_filler import VedomostFiller
+from filler.vedomost_cell import VedomostCell
 from DB_main import mirror
 from dialog.start_handlers import bot, ADMIN_ID
+
+Btn = namedtuple('Btn', 'name id')
 
 
 def get_answer_if_r_data_is_filled(filler: VedomostFiller) -> list:
@@ -47,6 +51,24 @@ async def get_dates(dialog_manager: DialogManager,
     print(ctx)
     filler: VedomostFiller = get_filler(dialog_manager)
     data = {'dates': filler.days}
+    return data
+
+
+async def get_categories(dialog_manager: DialogManager,
+                    **middleware_data) -> dict:
+
+    filler: VedomostFiller = get_filler(dialog_manager)
+    category_btns = [[i.name] for i in filler.cells_ser]
+    data = {'categories': category_btns}
+    return data
+
+
+async def get_vars(dialog_manager: DialogManager,
+                         **middleware_data) -> dict:
+
+    filler: VedomostFiller = get_filler(dialog_manager)
+    variants = [[]]
+    data = {'vars': variants}
     return data
 
 

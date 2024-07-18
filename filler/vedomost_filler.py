@@ -149,6 +149,7 @@ class VedomostFiller:
 
         return self.cells_ser
 
+
     @property
     def unfilled_cells(self):
         unfilled = [i for i in self.cells_ser.index
