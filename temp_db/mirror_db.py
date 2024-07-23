@@ -25,6 +25,14 @@ class Mirror:
             return (f'Mirror:'
                     f'{self.series}')
 
+    def occupy(self, date: datetime.date) -> object:
+        self.series[date] = 'busy'
+        return self
+
+    def release(self, day: DayRow) -> object:
+        self.series[day.date] = day.mark
+        return self
+
     @property
     def dbs_files_list(self):
         return os.listdir(self.path_to_db)

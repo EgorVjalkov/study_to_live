@@ -1,17 +1,17 @@
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Const, Format
-from aiogram_dialog.widgets.kbd import Cancel, SwitchTo
-from aiogram_dialog.widgets.input.text import TextInput
+from aiogram_dialog.widgets.kbd import Cancel, SwitchTo, Button
 
 from dialog.states import FillingSleeptime, FillingVedomost
 from dialog import getters, kbs, selected
+from dialog.my_windows import CategoriesWindow
 
 
 def greet_and_choose_date_menu() -> Window:
     return Window(
-        Const('Выберите дату для заполнения'),
-        kbs.group_kb_by_item(selected.on_chosen_date,
-                             'date', 'dates'),
+        Format('{topic}'),
+        kbs.Keyboard('simple_by_item', 'date', 'dates'
+                     ).get_kb(selected.on_chosen_date),
         SwitchTo(Const('Завершить сеанс'),
                  id='sw_report',
                  state=FillingVedomost.report_menu),
@@ -20,16 +20,32 @@ def greet_and_choose_date_menu() -> Window:
     )
 
 
-def categories_menu() -> Window:
+def categories_menu_if_simple() -> Window:
+    return CategoriesWindow(
+        kbs.Keyboard('simple_by_attr', 'cat', 'categories'
+                     ).get_kb(selected.on_chosen_category),
+        state=FillingVedomost.category_menu_if_simple,
+    )
+
+
+def categories_menu_if_scroll() -> Window:
+    return CategoriesWindow(
+        kbs.Keyboard('scroll_by_attr', 'cat', 'categories'
+                     ).get_kb(selected.on_chosen_category),
+        state=FillingVedomost.category_menu_if_scroll,
+    )
+
+
+def filling_menu() -> Window:
     return Window(
-        Const('Выберите категорию для звполения'),
-        kbs.scrolling__kb_by_item(selected.on_chosen_category,
-                                  'cat', 'categories'),
-        SwitchTo(Const('<< назад'),
-             id='sw_to_dates',
-             state=FillingVedomost.date_menu),
-        state=FillingVedomost.category_menu,
-        getter=getters.get_categories,
+        Format('{topic}'),
+        kbs.Keyboard('simple_by_item', 'vars', 'variants'
+                     ).get_kb(selected.on_filling_category),
+        Button(Const('<< назад'),
+               id='sw_back',
+               on_click=selected.on_back_to_category_menu),
+        state=FillingVedomost.filling_menu,
+        getter=getters.get_vars,
     )
 
 
@@ -42,6 +58,8 @@ def report_window() -> Window:
 
 
 filler_dialog = Dialog(greet_and_choose_date_menu(),
-                       categories_menu(),
+                       categories_menu_if_simple(),
+                       categories_menu_if_scroll(),
+                       filling_menu(),
                        report_window()
                        )

@@ -27,7 +27,7 @@ class VedomostFiller:
         self.mark_ser: Optional[pd.Series] = None
         self.day: Optional[DayRow] = None
         self.cells_ser = pd.Series(dtype=object)
-        self.active_cell: Optional[str] = None
+        self.active_cell_name: Optional[str] = None
 
     def __call__(self, *args, **kwargs):
         if self.behavior == 'coefs':
@@ -73,7 +73,7 @@ class VedomostFiller:
         if day_mark == 'busy':
             raise BusyError
 
-        mirror.series.at[date] = 'busy'
+        mirror.occupy(date)
 
         paths_by_date = mirror.get_paths_by(date)
         temp_db = MonthDB(*paths_by_date)
@@ -139,7 +139,7 @@ class VedomostFiller:
             elif self.behavior == 'manually':
                 cell.revert_value()
                 self.cells_ser[cat] = cell
-                self.active_cell = cell.name
+                self.active_cell_name = cell.name
 
             else:
                 self.cells_ser[cat] = cell
@@ -149,12 +149,12 @@ class VedomostFiller:
 
         return self.cells_ser
 
-
     @property
-    def unfilled_cells(self):
-        unfilled = [i for i in self.cells_ser.index
-                    if i not in self.already_filled_dict]
-        return unfilled
+    def need_to_fill(self):
+        return len(self.cells_ser)
+
+    def get_bnts_of_categories(self) -> list:
+        return [i.btn for i in self.cells_ser]
 
     @property
     def acc_in_str(self) -> list:
@@ -174,20 +174,24 @@ class VedomostFiller:
             filled = {i: filled[i] for i in filled if filled[i]}
         return filled
 
-    def change_a_cell(self, name_from_tg):
-        self.active_cell = name_from_tg
+    def set_an_active_cell(self, name_from_tg):
+        self.active_cell_name = name_from_tg
         if self.behavior in ['correction', 'coefs']:
             cell_for_correction = self.cells_ser[self.active_cell]
             cell_for_correction.revert_value()
             self.cells_ser[self.active_cell] = cell_for_correction
         return self.active_cell
 
-    def fill_the_cell(self, value_from_tg) -> object:
+    @property
+    def active_cell(self) -> VedomostCell:
+        return self.cells_ser[self.active_cell_name]
+
+    def fill_the_active_cell(self, value_from_tg) -> object:
         if value_from_tg == 'не мог':
             value_from_tg = 'can`t'
         elif value_from_tg == 'забыл':
             value_from_tg = '!'
-        cell: VedomostCell = self.cells_ser[self.active_cell]
+        cell: VedomostCell = self.cells_ser[self.active_cell_name]
 
         if cell.is_filled:
             cell.new_cat_value = f'{cell.old_value},{self.recipient[0]}{value_from_tg}'
@@ -251,18 +255,21 @@ class VedomostFiller:
 
 
 if __name__ == '__main__':
+#    filler = VedomostFiller(recipient='Lera',
+#                            behavior='filling')
+#    filler()
+#    print(filler.mark_ser)
+#    filler.change_a_day('17.7.24')
+#    print(filler.mark_ser)
+#
     filler = VedomostFiller(recipient='Lera',
-                            behavior='filling')
+                            behavior='correct')
     filler()
     print(filler.mark_ser)
-    filler.change_a_day('17.7.24')
-    print(filler.mark_ser)
-
-    filler = VedomostFiller(recipient='Lera',
-                            behavior='filling')
-    filler()
-    print(filler.mark_ser)
-    filler.change_a_day('17.7.24')
+    filler.change_a_day('22.7.24')
+    filler.get_cells_ser()
+    print(filler.cells_ser)
+    print(filler.get_bnts_of_categories())
     #print(filler.cells_ser)
     #for i in filler.cells_ser:
 

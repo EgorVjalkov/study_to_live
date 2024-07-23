@@ -4,13 +4,19 @@ from collections import namedtuple
 from aiogram_dialog import DialogManager
 from aiogram.fsm.state import State
 
-from dialog.selected import get_filler, set_filler
+from dialog.selected import get_filler
 from filler.vedomost_filler import VedomostFiller
 from filler.vedomost_cell import VedomostCell
 from DB_main import mirror
 from dialog.start_handlers import bot, ADMIN_ID
 
-Btn = namedtuple('Btn', 'name id')
+
+
+topics = {
+    'filling': 'Выберите дату для заполнения ведомости',
+    'correction': 'Выберите дату для коректировки',
+    'coefs': 'Выберите дату для корректировки',
+}
 
 
 def get_answer_if_r_data_is_filled(filler: VedomostFiller) -> list:
@@ -47,19 +53,18 @@ def get_answer_if_finish(filler: VedomostFiller) -> str:
 async def get_dates(dialog_manager: DialogManager,
                     **middleware_data) -> dict:
 
-    ctx = dialog_manager.start_data
-    print(ctx)
     filler: VedomostFiller = get_filler(dialog_manager)
-    data = {'dates': filler.days}
+    data = {'dates': filler.days, 'topic': topics[filler.behavior]}
+    print(data)
     return data
 
 
-async def get_categories(dialog_manager: DialogManager,
-                    **middleware_data) -> dict:
+async def get_cats(dialog_manager: DialogManager,
+                   **middleware_data) -> dict:
 
     filler: VedomostFiller = get_filler(dialog_manager)
-    category_btns = [[i.name] for i in filler.cells_ser]
-    data = {'categories': category_btns}
+    data = {'categories': filler.get_bnts_of_categories()}
+    print(data)
     return data
 
 
@@ -67,8 +72,8 @@ async def get_vars(dialog_manager: DialogManager,
                          **middleware_data) -> dict:
 
     filler: VedomostFiller = get_filler(dialog_manager)
-    variants = [[]]
-    data = {'vars': variants}
+    variants = [[i] for i in filler.active_cell.keys]
+    data = {'variants': variants, 'topic': filler.active_cell.description}
     return data
 
 
@@ -82,6 +87,7 @@ async def get_report(dialog_manager: DialogManager,
         print(filler.already_filled_dict)
         report = get_answer_if_finish(filler)
     else:
+        mirror.release(filler.day)
         report = 'Вы ничего не заполнили'
 
     user = dialog_manager.event.from_user

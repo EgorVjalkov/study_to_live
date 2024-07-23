@@ -169,7 +169,7 @@ router2.include_router(router3)
 
 async def remove_keyboard_if_manually(message: Message, session: Session):
     if session.filler.behavior == 'coefs':
-        answer = f"Жду данные о {session.filler.active_cell}"
+        answer = f"Жду данные о {session.filler.active_cell_name}"
     else:
         answer = f"Жду сообщение в формате ЧЧ:ММ"
     await message.answer(answer,
@@ -190,7 +190,7 @@ async def fill_by_callback(callback: CallbackQuery):
         await finish_filling(s.last_message)
 
     else:
-        s.filler.change_a_cell(cat_name)
+        s.filler.set_an_active_cell(cat_name)
 
         if 'вручную' in cat_value:
             await remove_keyboard_if_manually(s.last_message, s)
@@ -200,21 +200,21 @@ async def fill_by_callback(callback: CallbackQuery):
             if 'в койке!' in cat_value:
                 message_time = datetime.datetime.now().time()
                 cat_value = datetime.time.strftime(message_time, '%H:%M')
-                s.filler.fill_the_cell(cat_value)
+                s.filler.fill_the_active_cell(cat_value)
 
             else:
-                s.filler.fill_the_cell(cat_value)
+                s.filler.fill_the_active_cell(cat_value)
                 SDB.refresh_session(s)
 
-            await callback.answer(f"Вы заполнили '{cat_value}' в {s.filler.active_cell}")
+            await callback.answer(f"Вы заполнили '{cat_value}' в {s.filler.active_cell_name}")
         print(SDB.r)
-        print(s.filler.active_cell)
+        print(s.filler.active_cell_name)
         print(s.filler.already_filled_dict)
 
 
 manually_fill_router = Router()
 manually_fill_router.message.filter(F.func(
-    lambda message: SDB.switch_session(by_message=message).filler.active_cell in manual_filling_cells))
+    lambda message: SDB.switch_session(by_message=message).filler.active_cell_name in manual_filling_cells))
 router3.include_router(manually_fill_router)
 
 
@@ -226,9 +226,9 @@ router3.include_router(manually_fill_router)
 async def fill_a_cell_with_time(message: Message):
     s = SDB.switch_session(by_message=message)
     cat_value = message.text
-    s.filler.fill_the_cell(cat_value)
+    s.filler.fill_the_active_cell(cat_value)
     SDB.refresh_session(s)
-    await message.answer(f"Вы заполнили '{cat_value}' в {s.filler.active_cell}")
+    await message.answer(f"Вы заполнили '{cat_value}' в {s.filler.active_cell_name}")
     print(SDB.r)
-    print(s.filler.active_cell)
+    print(s.filler.active_cell_name)
     print(s.filler.already_filled_dict)

@@ -51,7 +51,7 @@ class Session:
 
         self.filler.change_a_day(message_day)
         self.filler.get_cells_ser(by_=category)
-        self.filler.fill_the_cell(new_value)
+        self.filler.fill_the_active_cell(new_value)
         return self.filler
 
     def get_answer_if_r_data_is_filled(self) -> list:

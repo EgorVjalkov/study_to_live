@@ -1,5 +1,10 @@
+from collections import namedtuple
+
 import numpy as np
 import pandas as pd
+
+
+Btn = namedtuple('Btn', 'text id')
 
 
 class VedomostCell:
@@ -16,6 +21,16 @@ class VedomostCell:
             return f'Cell({self.name}, new: {self.new_value})'
         else:
             return f'Cell({self.name}, old: {self.old_value})'
+
+    @property
+    def btn(self):
+        match pd.notna(self.old_value), pd.notna(self.new_value):
+            case False, False:
+                return Btn(f'{self.name}', f'{self.name}')
+            case True, False:
+                return Btn(f'{self.name}: {self.old_value}', f'{self.name}')
+            case _, True:
+                return Btn(f'{self.name}: {self.new_value}', f'{self.name}')
 
     @property
     def r_litera(self):
@@ -39,10 +54,12 @@ class VedomostCell:
         return self.category_data.loc['type']
 
     @property
-    def description(self):
+    def description(self) -> str:
         descr_list = self.category_data.get(['description', 'hint', 'info']).to_list()
         descr_list = [e for e in descr_list if pd.notna(e)]
-        return descr_list
+        if not descr_list:
+            descr_list = ['Выберите вариант']
+        return '\n'.join(descr_list)
 
     @property
     def keys(self):
@@ -64,6 +81,8 @@ class VedomostCell:
 
         if pd.notna(self.category_data['add_keys']):
             keys.append(self.category_data['add_keys'])
+
+        keys.extend(['не мог', 'забыл'])
 
         return keys
 
@@ -109,18 +128,6 @@ class VedomostCell:
             revert_old_value = ''.join(revert_old_value)
             print(revert_old_value)
         self.old_value = revert_old_value
-
-    def extract_cell_data(self):
-        cell_data = {
-            'keys': self.keys,
-            'description': self.description,
-            'old_value': self.old_value,
-            'is_filled': self.is_filled,
-            'has_private_value': self.has_private_value,
-            'can_append_data': self.can_append_data,
-            'new_value': None
-        }
-        return pd.Series(cell_data)
 
     def print_description(self, acc_data=None):
         answer = self.description
