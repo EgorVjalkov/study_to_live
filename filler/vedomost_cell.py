@@ -120,7 +120,18 @@ class VedomostCell:
     def already_filled(self):
         return pd.notna(self.new_value) and str(self.old_value) != str(self.new_value)
 
-    def revert_value(self):
+    def fill(self, value) -> object:
+        if self.is_filled:
+            self.new_cat_value = f'{self.old_value},{self.recipient[0]}{value}'
+
+        else:
+            if self.has_private_value:
+                self.new_cat_value = f'{self.recipient[0]}{value}'
+            else:
+                self.new_cat_value = value
+        return self
+
+    def revert(self) -> object:
         revert_old_value = np.nan  # очистка ячейки в дефолте
         if self.is_filled and self.has_private_value:
             revert_old_value = [i for i in self.old_value.split(',')
@@ -128,6 +139,7 @@ class VedomostCell:
             revert_old_value = ''.join(revert_old_value)
             print(revert_old_value)
         self.old_value = revert_old_value
+        return self
 
     def print_description(self, acc_data=None):
         answer = self.description

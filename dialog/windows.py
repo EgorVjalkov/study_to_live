@@ -12,9 +12,8 @@ def greet_and_choose_date_menu() -> Window:
         Format('{topic}'),
         kbs.Keyboard('simple_by_item', 'date', 'dates'
                      ).get_kb(selected.on_chosen_date),
-        SwitchTo(Const('Завершить сеанс'),
-                 id='sw_report',
-                 state=FillingVedomost.report_menu),
+        Cancel(Format('{cancel}'),
+               ),
         state=FillingVedomost.date_menu,
         getter=getters.get_dates,
     )
@@ -52,6 +51,7 @@ def filling_menu() -> Window:
 def report_window() -> Window:
     return Window(
         Format("{report}"),
+        Cancel(Const('понятно')),
         state=FillingVedomost.report_menu,
         getter=getters.get_report
     )

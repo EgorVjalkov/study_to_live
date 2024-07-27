@@ -17,9 +17,10 @@ class CategoriesWindow(Window):
                      id='sw_back',
                      state=states.FillingVedomost.date_menu,
                      on_click=selected.on_back_to_date_menu),
-            SwitchTo(Const('сохранить и выйти'),
+            SwitchTo(Const('сохранить'),
                      id='sw_report',
-                     state=states.FillingVedomost.report_menu),
+                     state=states.FillingVedomost.report_menu,
+                     when='can_save'),
             state=state,
             getter=getters.get_cats,
         )

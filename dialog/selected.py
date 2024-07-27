@@ -46,7 +46,7 @@ async def on_chosen_date(c: CallbackQuery,
         await go_to_category_menu(c, dm)
     except BusyError:
         # здесь можно добавить другое сообщение при одной занятой дате
-        await c.answer('В данный момент строка занята, выберите другую дату или завершите сеанс')
+        await c.answer('Cтрока занята, выберите другую дату или завершите сеанс')
 
 
 async def on_back_to_date_menu(c: CallbackQuery,
@@ -65,7 +65,7 @@ async def on_chosen_category(c: CallbackQuery,
                              **kwargs) -> None:  # рефактор
 
     filler: VedomostFiller = get_filler(dm)
-    filler.set_an_active_cell(item_id)
+    filler.active_cell = item_id
     await dm.switch_to(FillingVedomost.filling_menu)
 
 

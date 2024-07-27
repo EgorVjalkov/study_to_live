@@ -37,8 +37,25 @@ class VedomostFiller:
                 print('need_update')
                 print(f'{mirror.need_update}')
                 mirror.update_by_date()
-            self.mark_ser: pd.Series = mirror.get_dates_for(self.recipient, by_behavior=self.behavior)
+            self.mark_ser = mirror.get_dates_for(self.recipient, by_behavior=self.behavior)
+        print(self.mark_ser)
         return self
+
+    @property
+    def active_cell(self) -> str:
+        return self.active_cell_name
+
+    @active_cell.setter
+    def active_cell(self, cell_name):
+        self.active_cell_name = cell_name
+
+    @property
+    def active_cell_data(self) -> VedomostCell:
+        return self.cells_ser[self.active_cell_name]
+
+    @active_cell_data.setter
+    def active_cell_data(self, cell_data: VedomostCell):
+        self.cells_ser[self.active_cell_name] = cell_data
 
     @property
     def r_sleeptime(self):
@@ -56,6 +73,10 @@ class VedomostFiller:
     @property
     def r_siesta(self):
         return f'{self.recipient[0].lower()}:siesta'
+
+    @property
+    def need_work(self):
+        return not self.mark_ser.empty
 
     @property
     def days(self) -> list:
@@ -137,7 +158,7 @@ class VedomostFiller:
                     self.cells_ser[cat] = cell
 
             elif self.behavior == 'manually':
-                cell.revert_value()
+                cell.revert()
                 self.cells_ser[cat] = cell
                 self.active_cell_name = cell.name
 
@@ -157,52 +178,31 @@ class VedomostFiller:
         return [i.btn for i in self.cells_ser]
 
     @property
-    def acc_in_str(self) -> list:
-        rep = self.day.date_n_day_dict
-        rep.update(self.day.accessories.to_dict())
-        for i in self.already_filled_dict:
-            del rep[i]
-            new_i = '*'+i
-            rep[new_i] = self.already_filled_dict[i]
-        return [f'{i}: "{rep[i]}"' for i in rep]
+    def something_done(self):
+        for cell in self.cells_ser:
+            if cell.already_filled:
+                return True
 
     @property
     def already_filled_dict(self):
-        filled = {}
-        if not self.cells_ser.empty:
-            filled = self.cells_ser.map(lambda cell: cell.new_value if cell.already_filled else None).to_dict()
-            filled = {i: filled[i] for i in filled if filled[i]}
+        filled = self.cells_ser.map(lambda cell: cell.new_value if cell.already_filled else None).to_dict()
+        filled = {i: filled[i] for i in filled if filled[i]}
         return filled
 
-    def set_an_active_cell(self, name_from_tg):
-        self.active_cell_name = name_from_tg
-        if self.behavior in ['correction', 'coefs']:
-            cell_for_correction = self.cells_ser[self.active_cell]
-            cell_for_correction.revert_value()
-            self.cells_ser[self.active_cell] = cell_for_correction
-        return self.active_cell
-
-    @property
-    def active_cell(self) -> VedomostCell:
-        return self.cells_ser[self.active_cell_name]
-
     def fill_the_active_cell(self, value_from_tg) -> object:
-        if value_from_tg == 'не мог':
-            value_from_tg = 'can`t'
-        elif value_from_tg == 'забыл':
-            value_from_tg = '!'
-        cell: VedomostCell = self.cells_ser[self.active_cell_name]
+        if self.behavior in ['correction', 'coefs']:
+            print(self.active_cell_data)
+            self.active_cell_data = self.active_cell_data.revert()
+            print(self.active_cell_data)
 
-        if cell.is_filled:
-            cell.new_cat_value = f'{cell.old_value},{self.recipient[0]}{value_from_tg}'
+        print(value_from_tg)
+        translation_dict = {'не мог': 'can`t', 'забыл': '!'}
+        value_from_tg = translation_dict.get(value_from_tg, value_from_tg)
+        print(value_from_tg)
 
-        else:
-            if cell.has_private_value:
-                cell.new_cat_value = f'{self.recipient[0]}{value_from_tg}'
-            else:
-                cell.new_cat_value = value_from_tg
-        #print(cell.new_cat_value)
-        self.cells_ser[cell.name] = cell
+        print(self.active_cell_data)
+        self.active_cell_data = self.active_cell_data.fill(value_from_tg)
+        print(self.active_cell_data)
         return self
 
     def collect_data_to_day_row(self):
@@ -224,6 +224,16 @@ class VedomostFiller:
                 self.day.mark = self.recipient[0]
             else:
                 self.day.mark = 'at work'
+
+    @property
+    def acc_in_str(self) -> list:
+        rep = self.day.date_n_day_dict
+        rep.update(self.day.accessories.to_dict())
+        for i in self.already_filled_dict:
+            del rep[i]
+            new_i = '*'+i
+            rep[new_i] = self.already_filled_dict[i]
+        return [f'{i}: "{rep[i]}"' for i in rep]
 
     def count_day_sum(self):
         dict_ = self.day.row.to_dict()
