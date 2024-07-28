@@ -82,8 +82,6 @@ class VedomostCell:
         if pd.notna(self.category_data['add_keys']):
             keys.append(self.category_data['add_keys'])
 
-        keys.extend(['не мог', 'забыл'])
-
         return keys
 
     @property

@@ -85,6 +85,9 @@ async def get_vars(dialog_manager: DialogManager,
     filler: VedomostFiller = get_filler(dialog_manager)
 
     variants = [[i] for i in filler.active_cell_data.keys]
+    if filler.behavior != 'coefs':
+        variants.extend([['не мог'], ['забыл']])
+
     data = {'variants': variants, 'topic': filler.active_cell_data.description}
     return data
 
@@ -93,27 +96,12 @@ async def get_report(dialog_manager: DialogManager,
                      **middleware_data) -> dict:
 
     filler: VedomostFiller = get_filler(dialog_manager)
-    report = {'report': 'какаято ошибка?'}
-    print(filler.need_work, filler.day, filler.something_done)
-    match filler.need_work, filler.day, filler.something_done:
-        case False, _, _:
-            report['report'] = topics.get(filler.behavior).get('none')
+    updated = filler.update_day_row()
+    mirror.update_db(updated)
+    report = get_answer_if_finish(filler)
 
-        case _, None, _:
-            report['report'] = 'Вы не внесли изменений'
+    user = dialog_manager.event.from_user
+    if user.id != ADMIN_ID:
+        await bot.send_message(ADMIN_ID, f'{user.username} завершил заполнение. {report}')
 
-        case _, day, None:
-            report['report'] = 'Вы не внесли изменений'
-            mirror.release(day)
-
-        case _, day, True:
-            filler.collect_data_to_day_row()
-            mirror.save_day_data(day)
-            print(filler.already_filled_dict)
-            report['report'] = get_answer_if_finish(filler)
-
-            user = dialog_manager.event.from_user
-            if user.id != ADMIN_ID:
-                await bot.send_message(ADMIN_ID, f'{user.username} завершил заполнение. {report}')
-
-    return report
+    return {'report': report}

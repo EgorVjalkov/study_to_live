@@ -181,7 +181,7 @@ class Mirror:
 
         return self.concat_series(series_list)
 
-    def save_day_data(self, day: DayRow) -> object:
+    def update_db(self, day: DayRow) -> object:
         paths = self.get_paths_by(day.date)
         temp_db = MonthDB(*paths)
 

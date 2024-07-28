@@ -2,6 +2,7 @@ from aiogram.fsm.state import State
 from aiogram_dialog import Window
 from aiogram_dialog.widgets.text import Format, Const
 from aiogram_dialog.widgets.kbd import SwitchTo, Group, ScrollingGroup, Button
+from aiogram_dialog.widgets.input import TextInput
 
 from dialog import kbs, selected, getters, states
 

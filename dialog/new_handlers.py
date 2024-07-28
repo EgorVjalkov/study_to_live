@@ -92,8 +92,8 @@ async def finish_filling(message: Message):
     s = SDB.switch_session(by_message=message)
 
     if s.filler.already_filled_dict:
-        s.filler.collect_data_to_day_row()
-        mirror.save_day_data(s.filler.day)
+        s.filler.update_day_row()
+        mirror.update_db(s.filler.day)
         print(s.filler.already_filled_dict)
         answer = s.get_answer_if_finish()
     else:
@@ -136,7 +136,7 @@ async def change_a_date(message: Message):
             await message.reply("Все заполнено!",
                                 reply_markup=ReplyKeyboardRemove())
             s.filler.change_done_mark()
-            mirror.save_day_data(s.filler.day)
+            mirror.update_db(s.filler.day)
         else:
             s.get_inlines()
             await get_categories_keyboard(message, s)

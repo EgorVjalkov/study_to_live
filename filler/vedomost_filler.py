@@ -205,10 +205,11 @@ class VedomostFiller:
         print(self.active_cell_data)
         return self
 
-    def collect_data_to_day_row(self):
+    def update_day_row(self):
         self.day.categories = self.already_filled_dict # <- очень удачно пишет все!
         if self.behavior != 'coefs':
             self.change_done_mark()
+        return self.day
 
     @property
     def is_r_categories_filled(self) -> bool:
