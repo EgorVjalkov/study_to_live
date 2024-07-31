@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["EgorVjalkov <e.vjalkov@yandex.ru>"]
 
-packages = [{include = "handlers"}]
+packages = [{include = "dialog"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
