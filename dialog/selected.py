@@ -1,7 +1,8 @@
 from typing import Optional
+from datetime import datetime
 
 from aiogram import Bot
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, Message, TelegramObject
 from aiogram_dialog import DialogManager
 from aiogram_dialog.widgets.kbd import Select, Cancel, Button, SwitchTo
 from aiogram_dialog.widgets.input.text import TextInput
@@ -22,7 +23,7 @@ def get_filler(dm: DialogManager) -> Optional[VedomostFiller]: # подумай,
         return None
 
 
-async def go_to_category_menu(c: CallbackQuery,
+async def go_to_category_menu(tgo: TelegramObject,
                               dm: DialogManager,
                               ** kwargs) -> None:
 
@@ -80,11 +81,33 @@ async def on_filling_category(c: CallbackQuery,
                               w: Select,
                               dm: DialogManager,
                               item_id: str,
-                              **kwargs) -> None:  # рефактор
+                              **kwargs) -> None:
+
+    if item_id == 'вручную':
+        await dm.switch_to(FillingVedomost.filling_by_kb)
+        return
 
     filler: VedomostFiller = get_filler(dm)
-    filler.fill_the_active_cell(item_id)
+
+    if item_id == 'сейчас!':
+        message_time = datetime.now().time()
+        cat_value = message_time.strftime('%H:%M')
+        filler.fill_the_active_cell(cat_value)
+
+    else:
+        filler.fill_the_active_cell(item_id)
+
     print(filler.cells_ser)
     await go_to_category_menu(c, dm)
+
+
+async def on_filling_by_kb(m: Message,
+                           w: TextInput,
+                           dm: DialogManager,
+                           input_data: str,
+                           **kwargs) -> None:
+    filler: VedomostFiller = get_filler(dm)
+    filler.fill_the_active_cell(input_data)
+    await go_to_category_menu(m, dm)
 
 

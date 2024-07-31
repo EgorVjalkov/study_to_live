@@ -191,31 +191,13 @@ class VedomostFiller:
 
     def fill_the_active_cell(self, value_from_tg) -> object:
         if self.behavior in ['correction', 'coefs']:
-            print(self.active_cell_data)
             self.active_cell_data = self.active_cell_data.revert()
-            print(self.active_cell_data)
 
-        print(value_from_tg)
         translation_dict = {'не мог': 'can`t', 'забыл': '!'}
         value_from_tg = translation_dict.get(value_from_tg, value_from_tg)
-        print(value_from_tg)
 
-        print(self.active_cell_data)
         self.active_cell_data = self.active_cell_data.fill(value_from_tg)
-        print(self.active_cell_data)
         return self
-
-    def update_day_row(self):
-        self.day.categories = self.already_filled_dict # <- очень удачно пишет все!
-        if self.behavior != 'coefs':
-            self.change_done_mark()
-        return self.day
-
-    @property
-    def is_r_categories_filled(self) -> bool:
-        pos_ser = self.filtering_(by_='positions')
-        nans = pos_ser[pos_ser.map(lambda i: pd.isna(i)) == True]
-        return len(nans) == 0
 
     def change_done_mark(self):
         if self.day.is_filled:
@@ -225,6 +207,22 @@ class VedomostFiller:
                 self.day.mark = self.recipient[0]
             else:
                 self.day.mark = 'at work'
+
+    def update_day_row(self):
+        self.day.categories = self.already_filled_dict # <- очень удачно пишет все!
+        if self.behavior != 'coefs':
+            self.change_done_mark()
+        else:
+            mirror.release(self.day)
+        print(self.day)
+        print(mirror.series)
+        return self.day
+
+    @property
+    def is_r_categories_filled(self) -> bool:
+        pos_ser = self.filtering_(by_='positions')
+        nans = pos_ser[pos_ser.map(lambda i: pd.isna(i)) == True]
+        return len(nans) == 0
 
     @property
     def acc_in_str(self) -> list:

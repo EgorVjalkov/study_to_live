@@ -8,7 +8,7 @@ def today():
 
 def today_for_filling(date: Optional[datetime.date] = None) -> datetime.date:
     now = datetime.datetime.now()
-    if  0 <= now.hour < 6:
+    if 0 <= now.hour < 6:
         # кароч, время заполнения расширяется. Хоть и более нуля, но все равнр прошой датой
         return now.date() - datetime.timedelta(days=1)
     else:

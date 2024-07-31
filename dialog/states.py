@@ -9,8 +9,6 @@ class FillingVedomost(StatesGroup):
 
     filling_menu = State()
 
-    filling_by_now = State()
-
     filling_by_kb = State()
 
     report_menu = State()

@@ -1,8 +1,10 @@
+import datetime
 from collections import namedtuple
 
 import numpy as np
 import pandas as pd
 
+from filler.date_funcs import today_for_filling
 
 Btn = namedtuple('Btn', 'text id')
 
@@ -61,26 +63,30 @@ class VedomostCell:
             descr_list = ['Выберите вариант']
         return '\n'.join(descr_list)
 
-    @property
-    def keys(self):
-        if 'range' in self.type:
-            keys = list(eval(self.type))
-            keys = [str(i) for i in keys]
+    def get_keys(self, behavior: str, date: datetime.date):
+        keys = []
+        match self.type:
+            case t if 'range' in t:
+                keys = [str(i) for i in (eval(t))]
 
-        elif '[' in self.type:
-            keys = eval(self.type)
+            case 'dict':
+                keys = list(eval(self.category_data['PRICE']).keys())
 
-        elif self.type == 'dict':
-            keys = list(eval(self.category_data['PRICE']).keys())
+            case 'time':
+                if date == today_for_filling():
+                    keys = ['сейчас!']
 
-        elif self.type == 'manual':
-            keys = ['передать вручную']
+            case 'manual':
+                keys = ['вручную']
 
-        else:
-            keys = []
+            case t:
+                keys = eval(t)
 
         if pd.notna(self.category_data['add_keys']):
             keys.append(self.category_data['add_keys'])
+
+        if behavior != 'coefs':
+            keys.extend(['не мог', 'забыл'])
 
         return keys
 

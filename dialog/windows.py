@@ -1,6 +1,7 @@
 from aiogram_dialog import Dialog, Window
 from aiogram_dialog.widgets.text import Const, Format
-from aiogram_dialog.widgets.kbd import Cancel, SwitchTo, Button
+from aiogram_dialog.widgets.kbd import Cancel, Button, Back
+from aiogram_dialog.widgets.input import TextInput
 
 from dialog.states import FillingSleeptime, FillingVedomost
 from dialog import getters, kbs, selected
@@ -48,6 +49,19 @@ def filling_menu() -> Window:
     )
 
 
+def filling_by_kb_menu() -> Window:
+    return Window(
+        Format('Для заполнения {cat_name} введите данные с клавиатуры. {old_value}'),
+        TextInput(
+            id='f_by_kb',
+            on_success=selected.on_filling_by_kb
+        ),
+        Back(Const('<< назад')),
+        getter=getters.get_topic,
+        state=FillingVedomost.filling_by_kb
+    )
+
+
 def report_window() -> Window:
     return Window(
         Format("{report}"),
@@ -61,5 +75,6 @@ filler_dialog = Dialog(greet_and_choose_date_menu(),
                        categories_menu_if_simple(),
                        categories_menu_if_scroll(),
                        filling_menu(),
-                       report_window()
+                       filling_by_kb_menu(),
+                       report_window(),
                        )

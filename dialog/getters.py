@@ -84,12 +84,22 @@ async def get_vars(dialog_manager: DialogManager,
 
     filler: VedomostFiller = get_filler(dialog_manager)
 
-    variants = [[i] for i in filler.active_cell_data.keys]
-    if filler.behavior != 'coefs':
-        variants.extend([['не мог'], ['забыл']])
-
+    variants = [[i] for i in filler.active_cell_data.get_keys(filler.behavior, filler.day.date)]
+    print(variants)
     data = {'variants': variants, 'topic': filler.active_cell_data.description}
     return data
+
+
+async def get_topic(dialog_manager: DialogManager,
+                    **middleware_data) -> dict:
+
+    filler: VedomostFiller = get_filler(dialog_manager)
+    cat_name = filler.active_cell_name
+    if filler.active_cell_data.is_filled:
+        old_value_sent = f'Предидущее значение - {filler.active_cell_data.old_value}'
+    else:
+        old_value_sent = ''
+    return {'cat_name': cat_name, 'old_value': old_value_sent}
 
 
 async def get_report(dialog_manager: DialogManager,
