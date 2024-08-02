@@ -160,8 +160,10 @@ class Recipient:
         self.get_all_coefs_col()
         return self.mod_data
 
-    def get_r_vedomost(self, categories) -> pd.DataFrame:
-        columns = [i for i in categories.columns if i[0] in self.r_positions]
+    def get_r_vedomost(self, categories: pd.DataFrame, not_count_categories: list) -> pd.DataFrame:
+        columns = [i for i in categories.columns if i not in not_count_categories]
+        columns = [i for i in columns if i[0] in self.r_positions]
+        print(columns)
         self.cat_data = categories[columns]
 
         for column in self.cat_data:
@@ -405,7 +407,8 @@ class CategoryData:
             if coef > 1.0:
                 coef = 1.0
 
-            print(f'is private --> {self.private}')
+            print(f'{self.name} is private --> {self.private}')
+            print(price, type(price))
             #запись ниже фиксит только личные катки.
             if full_family_flag and price > 0 and not self.private:
             #if full_family_flag and price > 0:

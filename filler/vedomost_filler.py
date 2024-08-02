@@ -1,9 +1,10 @@
 import datetime
 import pandas as pd
+import numpy as np
+from typing import Optional
+
 import classes as cl
 import program2
-
-from typing import Optional
 
 from filler.vedomost_cell import VedomostCell
 from filler.day_row import DayRow
@@ -233,23 +234,23 @@ class VedomostFiller:
         return [f'{i}: "{rep[i]}"' for i in rep]
 
     def count_day_sum(self):
-        dict_ = self.day.row.to_dict()
-        frame = pd.DataFrame(dict_, index=[self.day.date])
-        #print(frame.index)
+        columns = [i for i in self.day.row.index if ':' not in i]
+        columns.extend(self.cells_ser.index)
+        r_frame = pd.DataFrame(self.day.row[columns].to_dict(), index=[self.day.date])
+
         result = program2.main(
             recipients=[self.recipient],
-            data_frame=frame,
+            data_frame=r_frame,
             price_frame=mirror.load_prices_by(self.day.date, 'filling'),
             filled_frame=False,
             demo_mode=True,
             show_calc=False)
 
         result_row = result.loc[self.day.date]
-        categories = self.filtering_(by_='positions').map(lambda i: f'"{i}"')
-        result_row = self.filtering_(series=result_row, by_='positions').replace('can`t', 0)
-        result_row.name = 'result'
-        result_frame = pd.concat([categories, result_row], axis=1)
-        return result_frame
+        result_row = result_row.replace('can`t', 0)
+        r_frame.loc['result'] = result_row
+        r_frame = r_frame[self.cells_ser.index].T.replace(np.nan, 0)
+        return r_frame
 
     @property
     def date_to_str(self):
@@ -262,25 +263,8 @@ class VedomostFiller:
 
 
 if __name__ == '__main__':
-#    filler = VedomostFiller(recipient='Lera',
-#                            behavior='filling')
-#    filler()
-#    print(filler.mark_ser)
-#    filler.change_a_day('17.7.24')
-#    print(filler.mark_ser)
-#
-    filler = VedomostFiller(recipient='Lera',
-                            behavior='filling')
+    filler = VedomostFiller(recipient='Egr',
+                            behavior='correction')
     filler()
-    filler.change_a_day('30.7.24')
+    filler.change_a_day('1.8.24')
     filler.get_cells_ser()
-    print(filler.cells_ser)
-    print(filler.get_bnts_of_categories())
-    filler.active_cell_name = 'l:diet'
-    filler.fill_the_active_cell('+')
-    print(filler.cells_ser)
-    #filler.collect_data_to_day_row()
-    #print(filler.count_day_sum())
-
-
-    #mirror.save_day_data(filler.day)

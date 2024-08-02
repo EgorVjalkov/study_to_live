@@ -9,6 +9,9 @@ from temp_db.unfilled_rows_db import MonthDB
 from filler.date_funcs import last_date_of_past_month
 
 
+not_count_categories = ['a:sleeptime', 'z:sleeptime']
+
+
 def main(recipients: list,
          data_frame: pd.DataFrame,
          price_frame: pd.DataFrame,
@@ -28,7 +31,8 @@ def main(recipients: list,
         if not demo_mode:
             r.create_output_dir(f'output_files', month)
             r.mod_data.to_excel(f'output_files/{month}/{r_name}/{r_name}_mods.xlsx')
-        r.get_r_vedomost(md.categories)
+
+        r.get_r_vedomost(md.categories, not_count_categories)
         # print(r.cat_data)
         for column in r.cat_data:
             # column = 'e:velo'
@@ -55,6 +59,7 @@ def main(recipients: list,
             else:
                 result_col = cd.cat_frame['result']
                 result_col.name = column
+                print(result_col)
             r.collect_to_result_frame(result_col,
                                       bc_with_statistic)
 
@@ -77,4 +82,5 @@ if __name__ == '__main__':
              MonthDB(path_to_mf=path_to_mf).mf_from_file,
              price_fr,
              month=path_maker.path_to.get_month(t),
-             null_after_midnight=False)
+             null_after_midnight=False,
+             )
