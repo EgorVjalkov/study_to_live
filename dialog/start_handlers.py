@@ -44,7 +44,6 @@ async def start_dialog(m: Message, dialog_manager: DialogManager):
 @filler_router.message(Command('coefs'))
 async def start_dialog(m: Message, dialog_manager: DialogManager):
     rec_data = m.from_user
-    print(rec_data)
     if rec_data.id != ADMIN_ID:
         await m.reply('Только Егорок шарит в коеффициентах, тебе оно надо???')
         return

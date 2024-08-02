@@ -94,8 +94,6 @@ class VedomostFiller:
         if day_mark == 'busy':
             raise BusyError
 
-        mirror.occupy(date)
-
         paths_by_date = mirror.get_paths_by(date)
         temp_db = MonthDB(*paths_by_date)
 
@@ -272,19 +270,15 @@ if __name__ == '__main__':
 #    print(filler.mark_ser)
 #
     filler = VedomostFiller(recipient='Lera',
-                            behavior='correct')
+                            behavior='filling')
     filler()
-    print(filler.mark_ser)
-    filler.change_a_day('22.7.24')
+    filler.change_a_day('30.7.24')
     filler.get_cells_ser()
     print(filler.cells_ser)
     print(filler.get_bnts_of_categories())
-    #print(filler.cells_ser)
-    #for i in filler.cells_ser:
-
-    #    filler.change_a_cell('a:pipi')
-    #    filler.fill_the_cell('0')
-    ##print(filler.cells_ser)
+    filler.active_cell_name = 'l:diet'
+    filler.fill_the_active_cell('+')
+    print(filler.cells_ser)
     #filler.collect_data_to_day_row()
     #print(filler.count_day_sum())
 

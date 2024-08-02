@@ -67,8 +67,8 @@ def main(recipients: list,
 
 
 if __name__ == '__main__':
-    # t = last_date_of_past_month(datetime.date.today())
-    t = datetime.date.today()
+    t = last_date_of_past_month(datetime.date.today())
+    #t = datetime.date.today()
     print(t)
     path_to_mf = path_maker.path_to.mother_frame_by(t)
     price_fr = pd.read_excel(path_to_mf, sheet_name='price', index_col=0).fillna(0)
