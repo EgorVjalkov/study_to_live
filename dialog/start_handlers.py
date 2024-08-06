@@ -1,20 +1,14 @@
 import datetime
-import emoji
 
-from aiogram import Router, F
+from aiogram import Router
 from aiogram.filters import Command
-from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
+from aiogram.types import Message
 from aiogram import Bot
 from aiogram_dialog import DialogManager, StartMode
-from dialog.states import FillingVedomost, FillingSleeptime
+from dialog.states import FillingVedomost
 
-from DB_main import mirror
 from My_token import TOKEN, ADMIN_ID
-from dialog.keyboards import get_keyboard
-from dialog.inlines import get_filling_inline, CategoryCallback
 from filler.vedomost_filler import VedomostFiller
-from filler.vedomost_cell import VedomostCell
-from filler.manual_filling_cells import manual_filling_cells
 from filler.date_funcs import today_for_filling
 
 

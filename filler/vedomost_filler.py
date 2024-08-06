@@ -63,15 +63,6 @@ class VedomostFiller:
         return f'{self.recipient[0].lower()}:sleeptime'
 
     @property
-    def sleeptime_is_empty(self):
-        if self.day:
-            if self.r_sleeptime not in self.already_filled_dict:
-                if pd.isna(self.day.row[self.r_sleeptime]):
-                    return True
-        else:
-            return False
-
-    @property
     def r_siesta(self):
         return f'{self.recipient[0].lower()}:siesta'
 
@@ -92,30 +83,25 @@ class VedomostFiller:
             date = Converter(date_in_str=date).to('date_object')
 
         day_mark = self.mark_ser[date]
-        if day_mark == 'busy':
-            raise BusyError
+        match day_mark:
+            case 'busy':
+                raise BusyError
+            case 'empty' | 'Y':
+                from_ = 'mf'
+            case _:
+                from_ = 'temp_db'
 
         paths_by_date = mirror.get_paths_by(date)
         temp_db = MonthDB(*paths_by_date)
-
-        if day_mark in ['empty', 'Y']:
-            from_ = 'mf'
-
-        else:
-            from_ = 'temp_db'
-
         print(f'LOAD: {day_mark} --> {from_}')
+
         day_row = temp_db.load_as_('row', by_date=date, from_=from_)
         self.day = DayRow(day_row)
+        print(self.day)
         avail_pos_for_all_recipients = self.day.get_available_positions(cl.RECIPIENTS)
+        print(avail_pos_for_all_recipients)
         self.day.filter_by_available_positions(avail_pos_for_all_recipients)
-
-        # если есть катуи не заполняемые, но данная фильтрация их фикусит в кант
-        # if cant_cats.hasnans:
-        #     cant_cats = cant_cats.fillna('can`t')
-        #     self.day.categories = cant_cats.to_dict()
-        # print(self.day.categories)
-
+        print(self.day)
         return self.day
 
     def filtering_(self, series=pd.Series(dtype=str), by_='positions'):
@@ -140,6 +126,8 @@ class VedomostFiller:
             self.cells_ser = self.filtering_(by_='coefs')
         else:
             self.cells_ser = self.filtering_(by_=by_)
+
+        print(self.cells_ser)
 
         prices = mirror.load_prices_by(self.day.date, for_=self.behavior)
 
@@ -264,7 +252,10 @@ class VedomostFiller:
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
-                            behavior='correction')
+                            behavior='filling')
     filler()
     filler.change_a_day('1.8.24')
-    filler.get_cells_ser()
+    ser = filler.get_cells_ser()
+    print(ser)
+
+

@@ -6,7 +6,7 @@ from aiogram import Bot, Dispatcher
 from aiogram_dialog import setup_dialogs
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from dialog import new_handlers, start_handlers, windows
+from dialog import start_handlers, windows
 
 logging.basicConfig(level=logging.INFO)
 
