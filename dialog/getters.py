@@ -20,7 +20,9 @@ topics = {
         'none': 'Нечего исправлять'
     },
     'coefs': {
-        'greet': 'Выберите дату для корректировки'}
+        'greet': 'Выберите дату для корректировки'},
+    'count': {
+        'greet': 'Выбрите дату для расчета'},
     }
 
 
@@ -106,6 +108,10 @@ async def get_report(dialog_manager: DialogManager,
                      **middleware_data) -> dict:
 
     filler: VedomostFiller = get_filler(dialog_manager)
+    if filler.behavior == 'count':
+        return {'report': '\n'.join(
+            get_answer_if_r_data_is_filled(filler))}
+
     updated = filler.update_day_row()
     mirror.update_db(updated)
     report = get_answer_if_finish(filler)

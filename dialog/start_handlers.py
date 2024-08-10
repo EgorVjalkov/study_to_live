@@ -35,6 +35,15 @@ async def start_dialog(m: Message, dialog_manager: DialogManager):
                                )
 
 
+@filler_router.message(Command('count'))
+async def start_dialog(m: Message, dialog_manager: DialogManager):
+    recipient = username_dict[m.from_user.first_name]
+    await dialog_manager.start(FillingVedomost.date_menu,
+                               mode=StartMode.RESET_STACK,
+                               data={'filler': VedomostFiller(recipient, 'count').__call__()},
+                               )
+
+
 @filler_router.message(Command('coefs'))
 async def start_dialog(m: Message, dialog_manager: DialogManager):
     rec_data = m.from_user
@@ -65,7 +74,7 @@ async def start_dialog(message: Message, dialog_manager: DialogManager):
         new_value = datetime.time.strftime(message_time, '%H:%M')
 
     filler.change_a_day(message_day)
-    filler.get_cells_ser(by_=category)
+    filler.get_r_cells(by_=category)
     filler.fill_the_active_cell(new_value)
 
     await dialog_manager.start(FillingVedomost.report_menu,
