@@ -3,8 +3,7 @@ import pandas as pd
 import numpy as np
 from typing import Optional
 
-import classes as cl
-import program2
+from counter import program2, classes as cl
 
 from filler.vedomost_cell import VedomostCell
 from filler.day_row import DayRow

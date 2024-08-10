@@ -1,6 +1,5 @@
 import pandas as pd
-import program2 as prog2
-import classes as cl
+from counter import program2 as prog2, classes as cl
 from analytic_utilities import FrameForAnalyse
 
 recp = ['Egr']
