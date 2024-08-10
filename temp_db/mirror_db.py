@@ -112,8 +112,8 @@ class Mirror:
 
     def get_dates_for(self, recipient: str, by_behavior: str) -> pd.Series:
         t = today_for_filling()
+        r_done_mark = recipient[0]
         if by_behavior == 'filling':
-            r_done_mark = recipient[0]
             days_ser: pd.Series = self.series[self.series != r_done_mark]
         elif by_behavior == 'correction':
             yesterday_ = yesterday(t)
@@ -122,6 +122,9 @@ class Mirror:
                 yesterday_ser = pd.Series({yesterday_: 'Y'})
                 days_ser = pd.concat([yesterday_ser, days_ser]).sort_index()
             days_ser: pd.Series = days_ser[days_ser != 'empty']
+        elif by_behavior == 'count':
+            days_ser: pd.Series = self.get_days_for_coef_correction(by_behavior)
+            days_ser = days_ser[days_ser.map(lambda i: i in [r_done_mark, 'Y']) == True]
         else:
             days_ser: pd.Series = self.series[self.series.index == t]
 
@@ -135,10 +138,13 @@ class Mirror:
                 self.path_to.mother_frame_by(date))
 
     # сделай рефактор!!!
-    def get_days_for_coef_correction(self) -> pd.Series:
+    def get_days_for_coef_correction(self, mode) -> pd.Series:
         series_list = []
         t = today_for_filling()
-        day_dict = get_dates_dict(t, 7, 7)
+        if mode == 'coefs':
+            day_dict = get_dates_dict(t, 7, 7)
+        else:
+            day_dict = get_dates_dict(t, 7, 0)
 
         if is_same_months(day_dict):
             print(is_same_months(day_dict))

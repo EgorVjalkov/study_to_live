@@ -43,9 +43,12 @@ async def on_chosen_date(c: CallbackQuery,
     filler: VedomostFiller = get_filler(dm)
     try:
         filler.change_a_day(item_id)
-        mirror.occupy(filler.day.date)
-        filler.get_cells_ser()
-        await go_to_category_menu(c, dm)
+        filler.get_r_cells()
+        if filler.behavior == 'count':
+            await dm.switch_to(FillingVedomost.report_menu)
+        else:
+            mirror.occupy(filler.day.date)
+            await go_to_category_menu(c, dm)
     except BusyError:
         await c.answer('Cтрока занята, выберите другую дату или завершите сеанс')
     except BaseException as error:
