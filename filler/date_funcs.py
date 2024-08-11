@@ -2,6 +2,10 @@ import datetime
 from typing import Optional
 
 
+def get_month(date: datetime.date) -> str:
+    return date.strftime('%b%y').lower()
+
+
 def today():
     return datetime.date.today()
 
@@ -28,12 +32,15 @@ def last_date_of_past_month(date: datetime.date):
     return first_date_of_month - datetime.timedelta(days=1)
 
 
-def get_dates_dict(date: datetime.date,
+def get_dates_list(date: datetime.date,
                    before: int = 0,
-                   after: int = 0) -> dict:
-    dates = {'s': date - datetime.timedelta(days=before),
-             'f': date + datetime.timedelta(days=after)}
-    return dates
+                   after: int = 0) -> list:
+    dates_range = range(before, after+1, 1)
+    dates_list = [date+datetime.timedelta(days=i) for i in dates_range]
+    return dates_list
+
+
+print(get_dates_list(datetime.date.today(), -7, 7))
 
 
 def is_same_months(day_dict: dict) -> bool:

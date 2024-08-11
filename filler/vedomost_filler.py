@@ -213,7 +213,7 @@ class VedomostFiller:
         else:
             mirror.release(self.day)
         print(self.day)
-        print(mirror.series)
+        print(mirror.mirror_df)
         return self.day
 
     @property

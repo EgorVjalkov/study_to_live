@@ -8,7 +8,6 @@ packages = [{include = "dialog"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-pandas = "^1.5.2"
 openpyxl = "^3.0.10"
 colorama = "^0.4.6"
 aiogram = "^3.0.0"
@@ -16,6 +15,8 @@ pathlib = "^1.0.1"
 emoji = "^2.10.1"
 aiogram-dialog = "^2.1.0"
 sqlalchemy = "^2.0.32"
+psycopg2-binary = "^2.9.9"
+pandas = "^2.2.2"
 
 [tool.poetry.dev-dependencies]
 

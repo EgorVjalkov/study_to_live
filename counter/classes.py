@@ -1,9 +1,9 @@
 import pandas as pd
 from statistics import mean
 import os
-from PriceMarkCalc import PriceMarkCalc
+from counter.PriceMarkCalc import PriceMarkCalc
 from utils import analytic_utilities as au
-from complex_coef import CompCoef
+from counter.complex_coef import CompCoef
 
 
 pd.set_option('display.max.columns', None)

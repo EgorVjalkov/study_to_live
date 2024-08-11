@@ -1,4 +1,4 @@
-from PriceMarkCalc import PriceMarkCalc
+from counter.PriceMarkCalc import PriceMarkCalc
 
 
 class CompCoef:
