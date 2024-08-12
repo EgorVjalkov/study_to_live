@@ -4,10 +4,11 @@ import numpy as np
 from typing import Optional
 
 from counter import program2, classes as cl
+from DB_main import mirror
 
 from filler.vedomost_cell import VedomostCell
 from filler.day_row import DayRow
-from DB_main import mirror
+from filler.date_funcs import today_for_filling
 from temp_db.unfilled_rows_db import MonthDB
 from utils.converter import Converter
 
@@ -24,21 +25,12 @@ class VedomostFiller:
         self.recipient = recipient
         self.behavior = behavior
 
-        self.mark_ser: Optional[pd.Series] = None
         self.day: Optional[DayRow] = None
         self.cells_ser = pd.Series(dtype=object)
         self.active_cell_name: Optional[str] = None
 
     def __call__(self, *args, **kwargs):
-        if self.behavior == 'coefs':
-            self.mark_ser = mirror.get_days_for_coef_correction()
-        else:
-            if mirror.need_update:
-                print('need_update')
-                print(f'{mirror.need_update}')
-                mirror.update_by_date()
-            self.mark_ser = mirror.get_dates_for(self.recipient, by_behavior=self.behavior)
-        print(self.mark_ser)
+        mirror.date = today_for_filling()
         return self
 
     @property
@@ -62,49 +54,29 @@ class VedomostFiller:
         return f'{self.recipient[0].lower()}:sleeptime'
 
     @property
-    def sleeptime_is_empty(self):
-        if self.day:
-            if self.r_sleeptime not in self.already_filled_dict:
-                if pd.isna(self.day.row[self.r_sleeptime]):
-                    return True
-        else:
-            return False
-
-    @property
     def r_siesta(self):
         return f'{self.recipient[0].lower()}:siesta'
 
-    @property
-    def need_work(self):
-        return not self.mark_ser.empty
-
-    @property
-    def days(self) -> list:
-        days = self.mark_ser.index.to_list()
+    def get_day_btns(self) -> list:
+        days = mirror.get_dates_for(self.recipient, self.behavior).to_list()
         days: list = [Converter(date_object=date_).to('str') for date_
                       in days]
         days = [[i] for i in days] #для геттера по item
         return days
 
+    @property
+    def need_work(self):
+        return
+
     def change_a_day(self, date: str | datetime.date) -> DayRow:
         if isinstance(date, str):
             date = Converter(date_in_str=date).to('date_object')
 
+# с бизи не складывается!!!
         day_mark = self.mark_ser[date]
         if day_mark == 'busy':
             raise BusyError
 
-        paths_by_date = mirror.get_paths_by(date)
-        temp_db = MonthDB(*paths_by_date)
-
-        if day_mark in ['empty', 'Y']:
-            from_ = 'mf'
-
-        else:
-            from_ = 'temp_db'
-
-        print(f'LOAD: {day_mark} --> {from_}')
-        day_row = temp_db.load_as_('row', by_date=date, from_=from_)
         self.day = DayRow(day_row)
         avail_pos_for_all_recipients = self.day.get_available_positions(cl.RECIPIENTS)
         self.day.filter_by_available_positions(avail_pos_for_all_recipients)
@@ -263,7 +235,9 @@ class VedomostFiller:
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
-                            behavior='correction')
+                            behavior='count')
     filler()
+    d = filler.get_day_btns()
+    print(d)
     filler.change_a_day('1.8.24')
-    filler.get_cells_ser()
+    #filler.get_cells_ser()
