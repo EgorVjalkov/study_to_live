@@ -1,20 +1,20 @@
 import datetime
 from typing import Optional
-import os
 
 import pandas as pd
-from sqlalchemy import Engine
 
 from temp_db.recipes import set_filter
 from temp_db.unfilled_rows_db import DataBase
-from filler.date_funcs import (today_for_filling, yesterday, week_before_, get_month,
-                               last_date_of_past_month, get_dates_list, is_same_months)
+from filler.date_funcs import today_for_filling, get_month
 from filler.day_row import DayRow
 
 
+class BusyError(BaseException):
+    pass
+
+
 class Mirror:
-    def __init__(self, engine: Engine):
-        self.engine = engine
+    def __init__(self):
         self.mirror_df: Optional[pd.DataFrame] = None
         self.date_of_last_update: datetime.date = today_for_filling()
 
@@ -26,12 +26,22 @@ class Mirror:
                     f'{self.mirror_df}')
 
     @property
-    def series(self) -> pd.Series:
+    def df(self) -> pd.DataFrame:
+        return self.mirror_df
+
+    @df.setter
+    def df(self, data_frame: pd.DataFrame):
+        self.mirror_df = data_frame
+
+    @property
+    def status_series(self) -> pd.Series:
         return self.mirror_df.set_index('DATE')['STATUS']
 
-    @series.setter
-    def series(self, series: pd.Series):
-        self.mirror_df['STATUS'] = series
+    #@status_series.setter
+    #def status_series(self, series):
+    #    self.mirror_df['STATUS'] =
+
+
 
     @property
     def date(self):
@@ -49,8 +59,9 @@ class Mirror:
     def prices_table_name(self):
         return f'{get_month(self.date_of_last_update)}_price'
 
-    def get_mirror_frame(self) -> object:
-        return DataBase(self.vedomost_table_name).get_table(with_dates=True, columns=['DATE', 'STATUS'])
+    def init_frame(self) -> object:
+        self.df = DataBase(self.vedomost_table_name).get_table(with_dates=True, columns=['DATE', 'STATUS'])
+        return self
 
     def get_day_row(self, date: datetime.date):
         return DataBase(self.vedomost_table_name).get_day_row(date)
@@ -58,8 +69,13 @@ class Mirror:
     def get_prices(self):
         return DataBase(self.prices_table_name).get_table(with_dates=False)
 
+    def check_date(self, date: datetime.date) -> None:
+        day_status = self.df.set_index('DATE')['STATUS'].get(date)
+        if day_status == 'busy':
+            raise BusyError
+
     def occupy(self, date: datetime.date) -> object:
-        self.mirror_df[date] = 'busy'
+        self.df[date] = 'busy'
         return self
 
     def release(self, day: DayRow) -> object:
@@ -84,4 +100,3 @@ class Mirror:
             days_df = days_df.loc[filtered == True]
         print(f'get_dates_for_{recipient}_by_{by_behavior}')
         return days_df['DATE']
-

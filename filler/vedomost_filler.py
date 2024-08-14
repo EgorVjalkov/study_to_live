@@ -9,12 +9,8 @@ from DB_main import mirror
 from filler.vedomost_cell import VedomostCell
 from filler.day_row import DayRow
 from filler.date_funcs import today_for_filling
-from temp_db.unfilled_rows_db import MonthDB
+from temp_db.unfilled_rows_db import DataBase
 from utils.converter import Converter
-
-
-class BusyError(BaseException):
-    pass
 
 
 class VedomostFiller:
@@ -71,12 +67,8 @@ class VedomostFiller:
     def change_a_day(self, date: str | datetime.date) -> DayRow:
         if isinstance(date, str):
             date = Converter(date_in_str=date).to('date_object')
-
-# с бизи не складывается!!!
-        day_mark = self.mark_ser[date]
-        if day_mark == 'busy':
-            raise BusyError
-
+        mirror.check_date(date)
+        mirror.occupy(date)
         self.day = DayRow(day_row)
         avail_pos_for_all_recipients = self.day.get_available_positions(cl.RECIPIENTS)
         self.day.filter_by_available_positions(avail_pos_for_all_recipients)
@@ -235,9 +227,19 @@ class VedomostFiller:
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
-                            behavior='count')
+                            behavior='filling')
+
     filler()
+
+    new_df = mirror.df
+    index = new_df[new_df['DATE'] == today_for_filling()].index[0]
+    new_df.at[index, 'STATUS'] = 'busy'
+    mirror.df = new_df
+
+    print(mirror.df)
     d = filler.get_day_btns()
-    print(d)
-    filler.change_a_day('1.8.24')
+    try:
+        filler.change_a_day('14.8.24')
+    except BusyError:
+        print('error')
     #filler.get_cells_ser()
