@@ -9,6 +9,7 @@ from DB_main import mirror
 from filler.vedomost_cell import VedomostCell
 from filler.day_row import DayRow
 from filler.date_funcs import today_for_filling
+from filler.recipient import Recipient
 from temp_db.unfilled_rows_db import DataBase
 from utils.converter import Converter
 
@@ -25,7 +26,7 @@ class VedomostFiller:
         self.cells_ser = pd.Series(dtype=object)
         self.active_cell_name: Optional[str] = None
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> object:
         mirror.date = today_for_filling()
         return self
 
@@ -69,16 +70,9 @@ class VedomostFiller:
             date = Converter(date_in_str=date).to('date_object')
         mirror.check_date(date)
         mirror.occupy(date)
-        self.day = DayRow(day_row)
-        avail_pos_for_all_recipients = self.day.get_available_positions(cl.RECIPIENTS)
-        self.day.filter_by_available_positions(avail_pos_for_all_recipients)
-
-        # если есть катуи не заполняемые, но данная фильтрация их фикусит в кант
-        # if cant_cats.hasnans:
-        #     cant_cats = cant_cats.fillna('can`t')
-        #     self.day.categories = cant_cats.to_dict()
-        # print(self.day.categories)
-
+        self.day = DayRow(mirror.get_day_row(date))
+        r_positions = self.day.get_available_positions(self.recipient)
+        self.day.filter_by_available_positions(r_positions)
         return self.day
 
     def filtering_(self, series=pd.Series(dtype=str), by_='positions'):
@@ -177,7 +171,7 @@ class VedomostFiller:
         else:
             mirror.release(self.day)
         print(self.day)
-        print(mirror.mirror_df)
+        print(mirror.status_series)
         return self.day
 
     @property
@@ -230,16 +224,4 @@ if __name__ == '__main__':
                             behavior='filling')
 
     filler()
-
-    new_df = mirror.df
-    index = new_df[new_df['DATE'] == today_for_filling()].index[0]
-    new_df.at[index, 'STATUS'] = 'busy'
-    mirror.df = new_df
-
-    print(mirror.df)
-    d = filler.get_day_btns()
-    try:
-        filler.change_a_day('14.8.24')
-    except BusyError:
-        print('error')
-    #filler.get_cells_ser()
+    filler.change_a_day('12.8.24')

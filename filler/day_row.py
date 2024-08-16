@@ -89,24 +89,14 @@ class DayRow:
         frame = pd.DataFrame(data=row_with_date, index=[0]).set_index('DATE')
         return frame
 
-    def get_available_positions(self, recipients: list) -> list | set:
+    def get_available_positions(self, recipient: str) -> list | set:
         acc_frame = pd.DataFrame(self.accessories).T
         date_ser = pd.Series({self.date: self.row['DAY']}, name='DAY')
-        pos_set = set()
-        for rec in recipients:
-            r = cl.Recipient(rec, date_ser)
-            r.extract_data_by_recipient(acc_frame)
-            r.get_with_children_col()
-            r_positions = r.get_r_positions_col().at[self.date]
-
-            if len(recipients) == 1:
-                return r_positions
-
-            else:
-                r_set = set(r_positions)
-                pos_set.update(r_set)
-
-        return pos_set
+        r = cl.Recipient(recipient, date_ser)
+        r.extract_data_by_recipient(acc_frame)
+        r.get_with_children_col()
+        r_positions = r.get_r_positions_col().at[self.date]
+        return r_positions
 
     def filter_by_available_positions(self, avail_pos):
         filtered = self.row.index.map(

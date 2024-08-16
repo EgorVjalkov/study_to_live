@@ -15,33 +15,32 @@ class BusyError(BaseException):
 
 class Mirror:
     def __init__(self):
-        self.mirror_df: Optional[pd.DataFrame] = None
+        self.status_series: Optional[pd.Series] = None
         self.date_of_last_update: datetime.date = today_for_filling()
 
     def __repr__(self):
-        if self.mirror_df.empty:
+        if self.status_series.empty:
             return 'Mirror(empty)'
         else:
             return (f'Mirror:'
-                    f'{self.mirror_df}')
+                    f'{self.status_series}')
 
     @property
-    def df(self) -> pd.DataFrame:
-        return self.mirror_df
-
-    @df.setter
-    def df(self, data_frame: pd.DataFrame):
-        self.mirror_df = data_frame
+    def mirror_df(self) -> pd.DataFrame:
+        index = range(len(self.series))
+        date_ser = pd.Series(self.status_series.index, index=index)
+        status_ser = self.status_series.copy()
+        status_ser.index = index
+        df = pd.concat([date_ser, status_ser], axis=1)
+        return df
 
     @property
-    def status_series(self) -> pd.Series:
-        return self.mirror_df.set_index('DATE')['STATUS']
+    def series(self) -> pd.Series:
+        return self.status_series
 
-    #@status_series.setter
-    #def status_series(self, series):
-    #    self.mirror_df['STATUS'] =
-
-
+    @series.setter
+    def series(self, series: pd.Series):
+        self.status_series = series
 
     @property
     def date(self):
@@ -59,27 +58,29 @@ class Mirror:
     def prices_table_name(self):
         return f'{get_month(self.date_of_last_update)}_price'
 
-    def init_frame(self) -> object:
-        self.df = DataBase(self.vedomost_table_name).get_table(with_dates=True, columns=['DATE', 'STATUS'])
+    def init_series(self) -> object:
+        df = DataBase(self.vedomost_table_name).get_table(with_dates=True, columns=['DATE', 'STATUS'])
+        self.series = df.set_index('DATE')['STATUS']
         return self
 
     def get_day_row(self, date: datetime.date):
         return DataBase(self.vedomost_table_name).get_day_row(date)
+    # здесь нужно подумать, т.к. устроено все топорно. и работает лишь там где месяц соответствует!
 
     def get_prices(self):
         return DataBase(self.prices_table_name).get_table(with_dates=False)
 
     def check_date(self, date: datetime.date) -> None:
-        day_status = self.df.set_index('DATE')['STATUS'].get(date)
+        day_status = self.series.get(date)
         if day_status == 'busy':
             raise BusyError
 
     def occupy(self, date: datetime.date) -> object:
-        self.df[date] = 'busy'
+        self.series[date] = 'busy'
         return self
 
     def release(self, day: DayRow) -> object:
-        self.mirror_df[day.date] = day.mark
+        self.series[day.date] = day.mark
         return self
 
     @staticmethod
