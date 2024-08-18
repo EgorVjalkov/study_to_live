@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from typing import Optional
 
-from counter import program2, classes as cl
+from counter import program2
 from DB_main import mirror
 
 from filler.vedomost_cell import VedomostCell
@@ -23,12 +23,50 @@ class VedomostFiller:
         self.behavior = behavior
 
         self.day: Optional[DayRow] = None
-        self.cells_ser = pd.Series(dtype=object)
         self.active_cell_name: Optional[str] = None
 
     def __call__(self, *args, **kwargs) -> object:
         mirror.date = today_for_filling()
         return self
+
+    @property
+    def r_sleeptime(self):
+        return f'{self.recipient[0].lower()}:sleeptime'
+
+    @property
+    def r_siesta(self):
+        return f'{self.recipient[0].lower()}:siesta'
+
+    @property
+    def day_btns(self) -> list:
+        days = mirror.get_dates_for(self.recipient, self.behavior).to_list()
+        days: list = [Converter(date_object=date_).to('str') for date_
+                      in days]
+        days = [[i] for i in days] #для геттера по item
+        return days
+
+    def change_day_and_filter_cells(self, date: str | datetime.date) -> DayRow:
+        if isinstance(date, str):
+            date = Converter(date_in_str=date).to('date_object')
+        mirror.check_date(date)
+        mirror.occupy(date)
+        self.day = DayRow(mirror.get_day_row(date), for_=self.recipient, by_=self.behavior)
+        return self.day
+
+    def load_cell_data(self) -> object:
+        price_frame = mirror.get_price()
+        for cell in self.day.cells:
+            self.day.row[cell] = VedomostCell(
+                cell,
+                self.day.row[cell],
+                self.recipient,
+                price_frame[cell],
+            )
+        return self
+
+    @property
+    def categories_btns(self):
+        return [self.day.row[i].btn for i in self.day.cells]
 
     @property
     def active_cell(self) -> str:
@@ -40,98 +78,15 @@ class VedomostFiller:
 
     @property
     def active_cell_data(self) -> VedomostCell:
-        return self.cells_ser[self.active_cell_name]
+        return self.day.row[self.active_cell]
 
     @active_cell_data.setter
     def active_cell_data(self, cell_data: VedomostCell):
-        self.cells_ser[self.active_cell_name] = cell_data
-
-    @property
-    def r_sleeptime(self):
-        return f'{self.recipient[0].lower()}:sleeptime'
-
-    @property
-    def r_siesta(self):
-        return f'{self.recipient[0].lower()}:siesta'
-
-    def get_day_btns(self) -> list:
-        days = mirror.get_dates_for(self.recipient, self.behavior).to_list()
-        days: list = [Converter(date_object=date_).to('str') for date_
-                      in days]
-        days = [[i] for i in days] #для геттера по item
-        return days
-
-    @property
-    def need_work(self):
-        return
-
-    def change_a_day(self, date: str | datetime.date) -> DayRow:
-        if isinstance(date, str):
-            date = Converter(date_in_str=date).to('date_object')
-        mirror.check_date(date)
-        mirror.occupy(date)
-        self.day = DayRow(mirror.get_day_row(date))
-        r_positions = self.day.get_available_positions(self.recipient)
-        self.day.filter_by_available_positions(r_positions)
-        return self.day
-
-    def filtering_(self, series=pd.Series(dtype=str), by_='positions'):
-        if by_ == 'coefs':
-            return self.day.accessories
-        else:
-            filtered = list(self.day.categories.index)
-            if by_ == 'positions':
-                r_positions = self.day.get_available_positions([self.recipient])
-                filtered = [i for i in filtered if i[0] in r_positions]
-            else:
-                filtered = [i for i in filtered if i == by_]
-
-        if not series.empty:
-            return series[filtered]
-        else:
-            return self.day.categories[filtered]
-
-    def get_cells_ser(self, by_: str = 'positions'):
-        # нужно попробовать загружать категории по одиночке и сравнить производительность в моменте
-        if self.behavior == 'coefs':
-            self.cells_ser = self.filtering_(by_='coefs')
-        else:
-            self.cells_ser = self.filtering_(by_=by_)
-
-        prices = mirror.load_prices_by(self.day.date, for_=self.behavior)
-
-        for cat in self.cells_ser.index:
-            cell = VedomostCell(prices,
-                                self.recipient,
-                                name=cat,
-                                value=self.cells_ser[cat])
-            if self.behavior == 'filling':
-                if cell.can_be_filled:
-                    self.cells_ser[cat] = cell
-
-            elif self.behavior == 'correction':
-                if cell.can_be_corrected:
-                    self.cells_ser[cat] = cell
-
-            elif self.behavior == 'manually':
-                cell.revert()
-                self.cells_ser[cat] = cell
-                self.active_cell_name = cell.name
-
-            else:
-                self.cells_ser[cat] = cell
-
-        filtered = self.cells_ser.map(lambda i: isinstance(i, VedomostCell))
-        self.cells_ser = self.cells_ser[filtered == True]
-
-        return self.cells_ser
+        self.day.row[self.active_cell] = cell_data
 
     @property
     def need_to_fill(self):
         return len(self.cells_ser)
-
-    def get_bnts_of_categories(self) -> list:
-        return [i.btn for i in self.cells_ser]
 
     @property
     def something_done(self):
@@ -155,7 +110,7 @@ class VedomostFiller:
         self.active_cell_data = self.active_cell_data.fill(value_from_tg)
         return self
 
-    def change_done_mark(self):
+    def correct_day_status(self):
         if self.day.is_filled:
             self.day.mark = 'Y'
         else:
@@ -165,9 +120,9 @@ class VedomostFiller:
                 self.day.mark = 'at work'
 
     def update_day_row(self):
-        self.day.categories = self.already_filled_dict # <- очень удачно пишет все!
+        self.day.cells = self.already_filled_dict # <- очень удачно пишет все!
         if self.behavior != 'coefs':
-            self.change_done_mark()
+            self.correct_day_status()
         else:
             mirror.release(self.day)
         print(self.day)
@@ -224,4 +179,15 @@ if __name__ == '__main__':
                             behavior='filling')
 
     filler()
-    filler.change_a_day('12.8.24')
+    #print(mirror.date)
+    mirror.date = datetime.date(day=2, month=8, year=2024)
+    print(mirror.date)
+    print(filler.day_btns)
+    filler.change_day_and_filter_cells('16.8.24')
+    filler.load_cell_data()
+    print(filler.categories_btns)
+    filler.active_cell = 'e:desire'
+    filler.fill_the_active_cell('1')
+    print(filler.day.row
+          )
+

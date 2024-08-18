@@ -1,5 +1,7 @@
 import datetime
 from collections import namedtuple
+from dataclasses import dataclass
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -9,28 +11,27 @@ from filler.date_funcs import today_for_filling
 Btn = namedtuple('Btn', 'text id')
 
 
+@dataclass
 class VedomostCell:
-    def __init__(self, price_frame, recipient, name='', value=''):
-        self.prices = price_frame
-        self.recipient = recipient
-
-        self.name = name
-        self.old_value = value
-        self.new_value = np.nan
+    name: str
+    current_value: str
+    recipient: str
+    category_data: pd.Series
+    new_value: Optional[str] = None
 
     def __repr__(self):
         if self.already_filled:
             return f'Cell({self.name}, new: {self.new_value})'
         else:
-            return f'Cell({self.name}, old: {self.old_value})'
+            return f'Cell({self.name}, old: {self.current_value})'
 
     @property
     def btn(self):
-        match pd.notna(self.old_value), pd.notna(self.new_value):
+        match pd.notna(self.current_value), pd.notna(self.new_value):
             case False, False:
                 return Btn(f'{self.name}', f'{self.name}')
             case True, False:
-                return Btn(f'{self.name}: {self.old_value}', f'{self.name}')
+                return Btn(f'{self.name}: {self.current_value}', f'{self.name}')
             case _, True:
                 return Btn(f'{self.name}: {self.new_value}', f'{self.name}')
 
@@ -45,11 +46,6 @@ class VedomostCell:
     @new_cat_value.setter
     def new_cat_value(self, new_value):
         self.new_value = new_value
-
-    @property
-    def category_data(self):
-        cat_data = self.prices[self.name]
-        return cat_data
 
     @property
     def type(self):
@@ -92,7 +88,7 @@ class VedomostCell:
 
     @property
     def is_filled(self):
-        return pd.notna(self.old_value)
+        return pd.notna(self.current_value)
 
     @property
     def has_private_value(self):
@@ -101,7 +97,7 @@ class VedomostCell:
     @property
     def can_append_data(self):
         flag = False
-        if self.is_filled and self.r_litera not in self.old_value:
+        if self.is_filled and self.r_litera not in self.current_value:
             flag = True
         return flag
 
@@ -122,11 +118,11 @@ class VedomostCell:
 
     @property
     def already_filled(self):
-        return pd.notna(self.new_value) and str(self.old_value) != str(self.new_value)
+        return pd.notna(self.new_value) and str(self.current_value) != str(self.new_value)
 
     def fill(self, value) -> object:
         if self.is_filled:
-            self.new_cat_value = f'{self.old_value},{self.recipient[0]}{value}'
+            self.new_cat_value = f'{self.current_value},{self.recipient[0]}{value}'
 
         else:
             if self.has_private_value:
@@ -138,11 +134,11 @@ class VedomostCell:
     def revert(self) -> object:
         revert_old_value = np.nan  # очистка ячейки в дефолте
         if self.is_filled and self.has_private_value:
-            revert_old_value = [i for i in self.old_value.split(',')
+            revert_old_value = [i for i in self.current_value.split(',')
                                 if self.r_litera not in i]
             revert_old_value = ''.join(revert_old_value)
             print(revert_old_value)
-        self.old_value = revert_old_value
+        self.current_value = revert_old_value
         return self
 
     def print_description(self, acc_data=None):
@@ -157,7 +153,7 @@ class VedomostCell:
 
     def print_old_value_by(self, behavior: str):
         if behavior in ['correction', 'coefs']:
-            answer = f'Принято. Предыдущие значение - "{self.old_value}"'
+            answer = f'Принято. Предыдущие значение - "{self.current_value}"'
         else:
             answer = 'Принято'
         return answer

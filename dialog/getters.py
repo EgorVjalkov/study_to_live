@@ -62,21 +62,22 @@ async def get_dates(dialog_manager: DialogManager,
     filler: VedomostFiller = get_filler(dialog_manager)
     topic_vars = topics.get(filler.behavior)
 
-    if filler.need_work:
+    days = filler.day_btns
+    if days:
         topic = topic_vars.get('greet')
         cancel = 'завершить сеанс'
     else:
         topic = topic_vars.get('none')
         cancel = 'понятно'
 
-    return {'dates': filler.days, 'topic': f"Привет! {topic}", 'cancel': cancel}
+    return {'dates': days, 'topic': f"Привет! {topic}", 'cancel': cancel}
 
 
 async def get_cats(dialog_manager: DialogManager,
                    **middleware_data) -> dict:
 
     filler: VedomostFiller = get_filler(dialog_manager)
-    data = {'categories': filler.get_bnts_of_categories(), 'can_save': filler.something_done}
+    data = {'categories': filler.categories_btns, 'can_save': filler.something_done}
     print(data)
     return data
 
@@ -98,7 +99,7 @@ async def get_topic(dialog_manager: DialogManager,
     filler: VedomostFiller = get_filler(dialog_manager)
     cat_name = filler.active_cell_name
     if filler.active_cell_data.is_filled:
-        old_value_sent = f'Предидущее значение - {filler.active_cell_data.old_value}'
+        old_value_sent = f'Предидущее значение - {filler.active_cell_data.current_value}'
     else:
         old_value_sent = ''
     return {'cat_name': cat_name, 'old_value': old_value_sent}

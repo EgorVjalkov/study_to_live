@@ -14,10 +14,14 @@ class DataBase:
     def __init__(self, table_name):
         self.table_name = table_name
 
-    def get_table(self, with_dates: bool, columns: Optional[list] = None) -> pd.DataFrame:
+    def get_table(self,
+                  with_dates: bool,
+                  index_col: Optional[str] = None,
+                  columns: Optional[list] = None) -> pd.DataFrame:
         table = pd.read_sql_table(self.table_name,
                                   con=engine,
                                   schema='public',
+                                  index_col=index_col,
                                   columns=columns)
         if with_dates:
             table['DATE'] = table['DATE'].map(lambda i: i.date())
@@ -38,7 +42,6 @@ class DataBase:
         table.loc[day_row.name] = day_row
         self.update_table(table)
         return table
-
 
 
 if __name__ == '__main__':

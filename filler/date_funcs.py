@@ -40,7 +40,7 @@ def get_dates_list(date: datetime.date,
     return dates_list
 
 
-print(get_dates_list(datetime.date.today(), -7, 7))
+#print(get_dates_list(datetime.date.today(), -7, 7))
 
 
 def is_same_months(day_dict: dict) -> bool:

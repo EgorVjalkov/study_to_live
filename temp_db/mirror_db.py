@@ -67,8 +67,11 @@ class Mirror:
         return DataBase(self.vedomost_table_name).get_day_row(date)
     # здесь нужно подумать, т.к. устроено все топорно. и работает лишь там где месяц соответствует!
 
-    def get_prices(self):
-        return DataBase(self.prices_table_name).get_table(with_dates=False)
+    def get_price(self):
+        return DataBase(self.prices_table_name).get_table(with_dates=False,
+                                                          index_col='category',
+                                                          #columns=[category_name],
+                                                          )
 
     def check_date(self, date: datetime.date) -> None:
         day_status = self.series.get(date)
@@ -99,5 +102,5 @@ class Mirror:
             filter_ = recipe[col_name]
             filtered = days_df[col_name].map(filter_)
             days_df = days_df.loc[filtered == True]
-        print(f'get_dates_for_{recipient}_by_{by_behavior}')
+        print(f'get_dates_for_{recipient}_by_{by_behavior}_in_{self.date}')
         return days_df['DATE']
