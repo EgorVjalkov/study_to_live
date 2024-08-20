@@ -53,7 +53,7 @@ class VedomostFiller:
         self.day = DayRow(mirror.get_day_row(date), for_=self.recipient, by_=self.behavior)
         return self.day
 
-    def load_cell_data(self) -> object:
+    def load_cell_data(self) -> DayRow:
         price_frame = mirror.get_price()
         for cell in self.day.cells:
             self.day.row[cell] = VedomostCell(
@@ -62,7 +62,7 @@ class VedomostFiller:
                 self.recipient,
                 price_frame[cell],
             )
-        return self
+        return self.day
 
     @property
     def categories_btns(self):
@@ -86,11 +86,12 @@ class VedomostFiller:
 
     @property
     def need_to_fill(self):
-        return len(self.cells_ser)
+        return len(self.day.cells)
 
     @property
-    def something_done(self):
-        for cell in self.cells_ser:
+    def something_done(self) -> None | bool:
+        for cell in self.day.row[self.day.cells]:
+            print(cell, type(cell))
             if cell.already_filled:
                 return True
 
@@ -107,7 +108,7 @@ class VedomostFiller:
         translation_dict = {'не мог': 'can`t', 'забыл': '!'}
         value_from_tg = translation_dict.get(value_from_tg, value_from_tg)
 
-        self.active_cell_data = self.active_cell_data.fill(value_from_tg)
+        self.active_cell_data.fill(value_from_tg)
         return self
 
     def correct_day_status(self):
@@ -176,18 +177,36 @@ class VedomostFiller:
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
-                            behavior='filling')
+                            behavior='correction')
 
     filler()
     #print(mirror.date)
     mirror.date = datetime.date(day=2, month=8, year=2024)
     print(mirror.date)
     print(filler.day_btns)
-    filler.change_day_and_filter_cells('16.8.24')
+    filler.change_day_and_filter_cells('15.8.24')
     filler.load_cell_data()
-    print(filler.categories_btns)
-    filler.active_cell = 'e:desire'
+    filler.active_cell = 'a:stroll'
+    filler.active_cell_data.current_value = 'EF'
+    print(filler.active_cell_data.current_value)
+    filler.fill_the_active_cell('F')
+
+    for i in filler.day.cells:
+        cell: VedomostCell = filler.day.row[i]
+        if cell.already_filled:
+            filler.day.row[i] = cell.new_value
+        else:
+            filler.day.row[i] = cell.current_value
+
+    filler.load_cell_data()
+    print(filler.day.row)
+    filler.active_cell = 'a:stroll'
+
+    filler.active_cell_data.recipient = 'Lera'
+    print(filler.active_cell_data)
+    filler.active_cell_data.fill('F')
+    print(filler.active_cell_data)
     filler.fill_the_active_cell('1')
-    print(filler.day.row
-          )
+    print(filler.active_cell_data)
+
 

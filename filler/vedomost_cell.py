@@ -88,7 +88,11 @@ class VedomostCell:
 
     @property
     def is_filled(self):
-        return pd.notna(self.current_value)
+        return bool(self.current_value)
+
+    @property
+    def already_filled(self):
+        return bool(self.new_value)
 
     @property
     def has_private_value(self):
@@ -105,7 +109,7 @@ class VedomostCell:
     def can_be_filled(self) -> bool:
         flag = False
         if self.is_filled:  # прoверка на заполненность
-            if self.has_private_value: # проверка на возможность иметь несколько значение
+            if self.has_private_value:  # проверка на возможность иметь несколько значение
                 if self.can_append_data:  # проверка на возможность дописывания в яйчейку
                     flag = True
         else:
@@ -116,11 +120,8 @@ class VedomostCell:
     def can_be_corrected(self) -> bool:
         return not self.can_be_filled
 
-    @property
-    def already_filled(self):
-        return pd.notna(self.new_value) and str(self.current_value) != str(self.new_value)
-
-    def fill(self, value) -> object:
+    def fill(self, value: str) -> object:
+        print(self.is_filled)
         if self.is_filled:
             self.new_cat_value = f'{self.current_value},{self.recipient[0]}{value}'
 
@@ -132,13 +133,15 @@ class VedomostCell:
         return self
 
     def revert(self) -> object:
-        revert_old_value = np.nan  # очистка ячейки в дефолте
+        reverted_old_value = None  # очистка ячейки в дефолте
         if self.is_filled and self.has_private_value:
-            revert_old_value = [i for i in self.current_value.split(',')
-                                if self.r_litera not in i]
-            revert_old_value = ''.join(revert_old_value)
-            print(revert_old_value)
-        self.current_value = revert_old_value
+            print(self.current_value)
+            values_list = self.current_value.split(',')
+            print(values_list)
+            filtered_values_list = [i for i in values_list if i[0] != self.r_litera]
+            print(filtered_values_list)
+            reverted_old_value = ','.join(values_list)
+        self.current_value = reverted_old_value
         return self
 
     def print_description(self, acc_data=None):
