@@ -168,24 +168,14 @@ if __name__ == '__main__':
 
     filler()
     #print(mirror.date)
-    filler.change_day_and_filter_cells('15.8.24')
-    print(filler.day[filler.day.working_cells])
-    #filler.load_cell_data()
-    #filler.active_cell = 'a:stroll'
-    #filler.active_cell_data.current_value = 'EF'
-    #print(filler.active_cell_data.current_value)
-    #filler.fill_the_active_cell('F')
+    filler.change_day_and_filter_cells('20.8.24')
+    print(filler.working_space)
+    filler.active_cell = 'a:stroll'
+    filler.active_cell_data.current_value = 'EF'
+    print(filler.active_cell_data.revert())
+    print(filler.working_space)
+    print(filler.day)
 
-    #for i in filler.day.cells:
-    #    cell: VedomostCell = filler.day.row[i]
-    #    if cell.already_filled:
-    #        filler.day.row[i] = cell.new_value
-    #    else:
-    #        filler.day.row[i] = cell.current_value
-
-    #filler.load_cell_data()
-    #print(filler.day.row)
-    #filler.active_cell = 'a:stroll'
 
     #filler.active_cell_data.recipient = 'Lera'
     #print(filler.active_cell_data)

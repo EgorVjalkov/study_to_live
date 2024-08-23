@@ -3,7 +3,6 @@ from collections import namedtuple
 from dataclasses import dataclass
 from typing import Optional
 
-import numpy as np
 import pandas as pd
 
 from filler.date_funcs import today_for_filling
@@ -14,16 +13,13 @@ Btn = namedtuple('Btn', 'text id')
 @dataclass
 class VedomostCell:
     name: str
-    current_value: str
+    value: Optional[str]
     recipient: str
     category_data: pd.Series
-    new_value: Optional[str] = None
+    #new_value: Optional[str] = None
 
     def __repr__(self):
-        if self.already_filled:
-            return f'Cell({self.name}, new: {self.new_value})'
-        else:
-            return f'Cell({self.name}, old: {self.current_value})'
+        return f'Cell({self.name}, v: {self.v})'
 
     @property
     def btn(self):
@@ -40,12 +36,12 @@ class VedomostCell:
         return self.recipient[0]
 
     @property
-    def new_cat_value(self):
-        return self.new_value
+    def v(self):
+        return self.value
 
-    @new_cat_value.setter
-    def new_cat_value(self, new_value):
-        self.new_value = new_value
+    @v.setter
+    def v(self, new_value: str):
+        self.value = new_value
 
     @property
     def type(self):
@@ -88,33 +84,32 @@ class VedomostCell:
 
     @property
     def is_filled(self):
-        return bool(self.current_value)
+        return bool(self.v)
+
+    #@property
+    #def already_filled(self):
+    #    return bool(self.new_value)
 
     @property
-    def already_filled(self):
-        return bool(self.new_value)
+    def has_many_values(self) -> bool:
+        return bool(self.category_data['private_value'])
 
     @property
-    def has_private_value(self):
-        return pd.notna(self.category_data['private_value'])
-
-    @property
-    def can_append_data(self):
-        flag = False
-        if self.is_filled and self.r_litera not in self.current_value:
-            flag = True
-        return flag
+    def can_append_data(self) -> bool:
+        match self.is_filled, self.r_litera:
+            case True, r_litera if r_litera not in self.v:
+                return True
+        return False
 
     @property
     def can_be_filled(self) -> bool:
-        flag = False
-        if self.is_filled:  # прoверка на заполненность
-            if self.has_private_value:  # проверка на возможность иметь несколько значение
-                if self.can_append_data:  # проверка на возможность дописывания в яйчейку
-                    flag = True
-        else:
-            flag = True
-        return flag
+        print(self.is_filled, self.has_many_values, self.can_append_data)
+        match self.is_filled, self.has_many_values, self.can_append_data:
+            case False, _, _:
+                return True
+            case True, True, True:
+                return True
+        return False
 
     @property
     def can_be_corrected(self) -> bool:
@@ -123,25 +118,26 @@ class VedomostCell:
     def fill(self, value: str) -> object:
         print(self.is_filled)
         if self.is_filled:
-            self.new_cat_value = f'{self.current_value},{self.recipient[0]}{value}'
+            self.v = f'{self.current_value},{self.recipient[0]}{value}'
 
         else:
-            if self.has_private_value:
-                self.new_cat_value = f'{self.recipient[0]}{value}'
+            if self.has_many_values:
+                self.v = f'{self.recipient[0]}{value}'
             else:
-                self.new_cat_value = value
+                self.v = value
         return self
 
     def revert(self) -> object:
         reverted_old_value = None  # очистка ячейки в дефолте
-        if self.is_filled and self.has_private_value:
+        if self.is_filled and self.has_many_values:
             print(self.current_value)
             values_list = self.current_value.split(',')
             print(values_list)
             filtered_values_list = [i for i in values_list if i[0] != self.r_litera]
-            print(filtered_values_list)
-            reverted_old_value = ','.join(values_list)
-        self.current_value = reverted_old_value
+            if filtered_values_list:
+                self.current_value = ','.join(values_list)
+            else:
+                self.current_value = None
         return self
 
     def print_description(self, acc_data=None):

@@ -85,7 +85,7 @@ class Mirror:
         return self
 
     def release(self, day: DayRow) -> object:
-        self.series[day.date] = day.mark
+        self.series[day.name] = day.STATUS
         return self
 
     @staticmethod
