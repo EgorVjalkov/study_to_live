@@ -67,11 +67,13 @@ class Mirror:
         return DataBase(self.vedomost_table_name).get_day_row(date)
     # здесь нужно подумать, т.к. устроено все топорно. и работает лишь там где месяц соответствует!
 
-    def get_price(self):
-        return DataBase(self.prices_table_name).get_table(with_dates=False,
-                                                          index_col='category',
-                                                          #columns=[category_name],
-                                                          )
+    def get_cells_data(self, behavior) -> pd.DataFrame:
+        if behavior == 'coefs':
+            return DataBase('coefs_data').get_table(with_dates=False,
+                                                    index_col='coef')
+        else:
+            return DataBase(self.prices_table_name).get_table(with_dates=False,
+                                                              index_col='category')
 
     def check_date(self, date: datetime.date) -> None:
         day_status = self.series.get(date)

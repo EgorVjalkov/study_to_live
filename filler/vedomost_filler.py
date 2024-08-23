@@ -50,23 +50,21 @@ class VedomostFiller:
             date = Converter(date_in_str=date).to('date_object')
         mirror.check_date(date)
         mirror.occupy(date)
-        self.day = DayRow(mirror.get_day_row(date), for_=self.recipient, by_=self.behavior)
-        return self.day
-
-    def load_cell_data(self) -> DayRow:
-        price_frame = mirror.get_price()
-        for cell in self.day.cells:
-            self.day.row[cell] = VedomostCell(
-                cell,
-                self.day.row[cell],
-                self.recipient,
-                price_frame[cell],
-            )
+        self.day = DayRow(mirror.get_day_row(date))
+        self.day.load_cell_data(self.recipient, self.behavior, mirror.get_cells_data(self.behavior))
         return self.day
 
     @property
+    def working_space(self) -> pd.Series:
+        return self.day[self.day.working_cells]
+
+    @property
+    def need_to_fill(self):
+        return bool(self.day.working_cells)
+
+    @property
     def categories_btns(self):
-        return [self.day.row[i].btn for i in self.day.cells]
+        return [self.day.row[i].btn for i in self.working_space]
 
     @property
     def active_cell(self) -> str:
@@ -78,28 +76,11 @@ class VedomostFiller:
 
     @property
     def active_cell_data(self) -> VedomostCell:
-        return self.day.row[self.active_cell]
+        return self.day[self.active_cell]
 
     @active_cell_data.setter
     def active_cell_data(self, cell_data: VedomostCell):
-        self.day.row[self.active_cell] = cell_data
-
-    @property
-    def need_to_fill(self):
-        return len(self.day.cells)
-
-    @property
-    def something_done(self) -> None | bool:
-        for cell in self.day.row[self.day.cells]:
-            print(cell, type(cell))
-            if cell.already_filled:
-                return True
-
-    @property
-    def already_filled_dict(self):
-        filled = self.cells_ser.map(lambda cell: cell.new_value if cell.already_filled else None).to_dict()
-        filled = {i: filled[i] for i in filled if filled[i]}
-        return filled
+        self.day[self.active_cell] = cell_data
 
     def fill_the_active_cell(self, value_from_tg) -> object:
         if self.behavior in ['correction', 'coefs']:
@@ -111,6 +92,18 @@ class VedomostFiller:
         self.active_cell_data.fill(value_from_tg)
         return self
 
+    @property
+    def something_done(self) -> None | bool:
+        for cell in self.working_space:
+            if cell.already_filled:
+                return True
+
+    @property
+    def already_filled_dict(self):
+        #return {cell.name: cell.new_value for cell in self.working_space if cell.already_filled}
+        filled = {cell.name: cell.new_value for cell in self.working_space if cell.already_filled}
+        return filled
+
     def correct_day_status(self):
         if self.day.is_filled:
             self.day.mark = 'Y'
@@ -120,21 +113,15 @@ class VedomostFiller:
             else:
                 self.day.mark = 'at work'
 
-    def update_day_row(self):
-        self.day.cells = self.already_filled_dict # <- очень удачно пишет все!
-        if self.behavior != 'coefs':
-            self.correct_day_status()
-        else:
-            mirror.release(self.day)
-        print(self.day)
-        print(mirror.status_series)
-        return self.day
-
-    @property
-    def is_r_categories_filled(self) -> bool:
-        pos_ser = self.filtering_(by_='positions')
-        nans = pos_ser[pos_ser.map(lambda i: pd.isna(i)) == True]
-        return len(nans) == 0
+    #def update_day_row(self):
+    #    self.day.cells = self.already_filled_dict # <- очень удачно пишет все!
+    #    if self.behavior != 'coefs':
+    #        self.correct_day_status()
+    #    else:
+    #        mirror.release(self.day)
+    #    print(self.day)
+    #    print(mirror.status_series)
+    #    return self.day
 
     @property
     def acc_in_str(self) -> list:
@@ -177,36 +164,34 @@ class VedomostFiller:
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
-                            behavior='correction')
+                            behavior='coefs')
 
     filler()
     #print(mirror.date)
-    mirror.date = datetime.date(day=2, month=8, year=2024)
-    print(mirror.date)
-    print(filler.day_btns)
     filler.change_day_and_filter_cells('15.8.24')
-    filler.load_cell_data()
-    filler.active_cell = 'a:stroll'
-    filler.active_cell_data.current_value = 'EF'
-    print(filler.active_cell_data.current_value)
-    filler.fill_the_active_cell('F')
+    print(filler.day[filler.day.working_cells])
+    #filler.load_cell_data()
+    #filler.active_cell = 'a:stroll'
+    #filler.active_cell_data.current_value = 'EF'
+    #print(filler.active_cell_data.current_value)
+    #filler.fill_the_active_cell('F')
 
-    for i in filler.day.cells:
-        cell: VedomostCell = filler.day.row[i]
-        if cell.already_filled:
-            filler.day.row[i] = cell.new_value
-        else:
-            filler.day.row[i] = cell.current_value
+    #for i in filler.day.cells:
+    #    cell: VedomostCell = filler.day.row[i]
+    #    if cell.already_filled:
+    #        filler.day.row[i] = cell.new_value
+    #    else:
+    #        filler.day.row[i] = cell.current_value
 
-    filler.load_cell_data()
-    print(filler.day.row)
-    filler.active_cell = 'a:stroll'
+    #filler.load_cell_data()
+    #print(filler.day.row)
+    #filler.active_cell = 'a:stroll'
 
-    filler.active_cell_data.recipient = 'Lera'
-    print(filler.active_cell_data)
-    filler.active_cell_data.fill('F')
-    print(filler.active_cell_data)
-    filler.fill_the_active_cell('1')
-    print(filler.active_cell_data)
+    #filler.active_cell_data.recipient = 'Lera'
+    #print(filler.active_cell_data)
+    #filler.active_cell_data.fill('F')
+    #print(filler.active_cell_data)
+    #filler.fill_the_active_cell('1')
+    #print(filler.active_cell_data)
 
 

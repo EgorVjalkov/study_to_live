@@ -1,10 +1,11 @@
 import datetime
 import pandas as pd
 from dataclasses import dataclass, InitVar
+from typing import Optional
 
 from counter import classes as cl
 from utils.converter import Converter
-from typing import Hashable
+from filler.vedomost_cell import VedomostCell
 
 
 day_dict = {
@@ -18,83 +19,103 @@ day_dict = {
 }
 
 
-@dataclass
-class DayRow:
-    row: InitVar[pd.Series]
-    for_: InitVar[str]
-    by_: InitVar[str]
-
-    def __post_init__(self, row, for_, by_):
-        accessories_index = [i for i in row.index if i.isupper()]
-        accessories = row[accessories_index]
-
-        if by_ == 'coefs':
-            self.row: pd.Series = accessories
-
-        else:
-            date = row.name
-            date_ser = pd.Series({date: row['DAY']}, name='DAY')
-
-            r = cl.Recipient(for_, date_ser)
-            acc_frame = pd.DataFrame(accessories).T
-            r.extract_data_by_recipient(acc_frame)
-            r.get_with_children_col()
-            r_positions = r.get_r_positions_col().at[date]
-
-            index = ['STATUS']+[i for i in row.index if i[0] in r_positions]
-            self.row: pd.Series = row[index]
+class DayRow(pd.Series):
+    def __init__(self, day_data: pd.Series):
+        super().__init__(day_data)
+        self.index_for_working: Optional[list] = None
 
     def __repr__(self):
-        date_ = Converter(date_object=self.date).to('str')
-        return f'DayRow {date_}: {self.mark}(filled: {self.filled_cells.index.to_list()})'
+        date_ = Converter(date_object=self.name).to('str')
+        return f'DayRow {date_}: {self.STATUS}(working on: {self.working_cells})'
 
     @property
-    def mark(self):
-        return self.row.at['STATUS']
+    def working_cells(self):
+        return self.index_for_working
 
-    @mark.setter
-    def mark(self, mark):
-        self.row.at['STATUS'] = mark
-
-    @property
-    def date(self) -> datetime.date | Hashable:
-        return self.row.name
-
-    # мжет быть здесь только индекс сделать
-    @property
-    def cells(self) -> list:
-        return [i for i in self.row.index if i not in ['DAY', 'STATUS']]
-
-    #@cells.setter
-    #def cells(self, cells_ser: pd.Series):
-    #    for cell_name in cells_ser.index:
-    #        self.row[cell_name] = cells_ser[cell_name]
+    @working_cells.setter
+    def working_cells(self, seq: list):
+        self.index_for_working = seq
 
     @property
-    def date_n_day_dict(self):
-        day = self.row.at['DAY']
-        day_name = day_dict[day]
-        date = Converter(date_object=self.date).to('str')
-        return {date: day_name}
+    def accessory_index(self):
+        return [i for i in self.index if i.isupper() and i not in ['DAY', 'STATUS']]
 
-    @property
-    def filled_cells(self):
-        filled_flag_ser = self.cells.map(pd.notna)
-        filled = self.cells[filled_flag_ser == True]
-        return filled
+    def set_working_categories(self, recipient: str) -> list:
+        date_ser = pd.Series({self.name: self.DAY}, name='DAY')
+        r = cl.Recipient(recipient, date_ser)
+        acc_frame = pd.DataFrame(self[self.accessory_index]).T
+        r.extract_data_by_recipient(acc_frame)
+        r.get_with_children_col()
+        r_positions = r.get_r_positions_col().at[self.name]
+        return [i for i in self.index if i[0] in r_positions]
 
-    @property
-    def is_filled(self) -> bool:
-        nans = [i for i in self.row if pd.isna(i)]
-        return nans == []
+    def set_working_cells(self, recipient: str, behavior: str):
+        if behavior == 'coefs':
+            self.working_cells = self.accessory_index
+        else:
+            self.working_cells = self.set_working_categories(recipient)
+        return self.working_cells
 
-    @property
-    def frame(self) -> pd.DataFrame:
-        row_with_date = pd.concat([pd.Series({'DATE': self.date}),
-                                   self.row], axis=0)
-        frame = pd.DataFrame(data=row_with_date, index=[0]).set_index('DATE')
-        return frame
+    def load_cell_data(self, recipient: str, behavior: str, price_frame: pd.DataFrame) -> pd.Series:
+        cells = self.set_working_cells(recipient, behavior)
+        for c_name in cells:
+            vedomost_cell = VedomostCell(c_name, self[c_name], recipient, price_frame[c_name])
+            match behavior, vedomost_cell:
+                case 'filling', vc if vc.can_be_filled:
+                    self[c_name] = vc
+                case 'correction', vc if vc.can_be_corrected:
+                    self[c_name] = vc
+                case 'coefs' | 'manually', vc:
+                    self[c_name] = vc
+        return self
 
+#    @property
+#    def mark(self):
+#        return self.row.at['STATUS']
+#
+#    @mark.setter
+#    def mark(self, mark):
+#        self.row.at['STATUS'] = mark
+#
+#    @property
+#    def date(self) -> datetime.date | Hashable:
+#        return self.row.name
+#
+#    # мжет быть здесь только индекс сделать
+#    @property
+#    def cells(self) -> list:
+#        return [i for i in self.row.index if i not in ['DAY', 'STATUS']]
+#
+#    #@cells.setter
+#    #def cells(self, cells_ser: pd.Series):
+#    #    for cell_name in cells_ser.index:
+#    #        self.row[cell_name] = cells_ser[cell_name]
+#
+#    @property
+#    def date_n_day_dict(self):
+#        day = self.row.at['DAY']
+#        day_name = day_dict[day]
+#        date = Converter(date_object=self.date).to('str')
+#        return {date: day_name}
+#
+#    @property
+#    def filled_cells(self):
+#        filled_flag_ser = self.cells.map(pd.notna)
+#        filled = self.cells[filled_flag_ser == True]
+#        return filled
+#
+#    @property
+#    def is_filled(self) -> bool:
+#        nans = [i for i in self.row if pd.isna(i)]
+#        return nans == []
+#
+#    @property
+#    def frame(self) -> pd.DataFrame:
+#        row_with_date = pd.concat([pd.Series({'DATE': self.date}),
+#                                   self.row], axis=0)
+#        frame = pd.DataFrame(data=row_with_date, index=[0]).set_index('DATE')
+#        return frame
+#
     #def get_available_positions(self, recipient: str) -> list | set:
     #    acc_frame = pd.DataFrame(self.accessories).T
     #    date_ser = pd.Series({self.date: self.row['DAY']}, name='DAY')
