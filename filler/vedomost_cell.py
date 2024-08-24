@@ -103,7 +103,7 @@ class VedomostCell:
 
     @property
     def can_be_filled(self) -> bool:
-        print(self.is_filled, self.has_many_values, self.can_append_data)
+        #print(self.is_filled, self.has_many_values, self.can_append_data)
         match self.is_filled, self.has_many_values, self.can_append_data:
             case False, _, _:
                 return True
@@ -116,28 +116,29 @@ class VedomostCell:
         return not self.can_be_filled
 
     def fill(self, value: str) -> object:
-        print(self.is_filled)
-        if self.is_filled:
-            self.v = f'{self.current_value},{self.recipient[0]}{value}'
-
-        else:
-            if self.has_many_values:
-                self.v = f'{self.recipient[0]}{value}'
-            else:
-                self.v = value
+        print('filled?', self.is_filled)
+        match self.is_filled, self.has_many_values, self.can_append_data:
+            case True, True, True:
+                self.v = f'{self.v},{self.recipient[0]}{value}' # сложное в заплненную
+            case True, True, False:
+                self.clear_r_value()
+                self.fill(value) # значение сбрасывается и клетка снова запускается в запись
+            case True, False, _:
+                self.v = value # простое со сбросом
+            case False, True, _:
+                self.v = f'{self.recipient[0]}{value}' # именное в пустую
+            case False, False, _:
+                self.v = value # простое в пустую
         return self
 
-    def revert(self) -> object:
-        reverted_old_value = None  # очистка ячейки в дефолте
-        if self.is_filled and self.has_many_values:
-            print(self.current_value)
-            values_list = self.current_value.split(',')
-            print(values_list)
-            filtered_values_list = [i for i in values_list if i[0] != self.r_litera]
-            if filtered_values_list:
-                self.current_value = ','.join(values_list)
-            else:
-                self.current_value = None
+    def clear_r_value(self) -> object:
+        values_list = self.v.split(',')
+        filtered_values_by_recipient = [i for i in values_list if i[0] != self.r_litera]
+        if filtered_values_by_recipient:
+            self.v = ','.join(filtered_values_by_recipient)
+        else:
+            self.v = None
+        print('cleared', self.v)
         return self
 
     def print_description(self, acc_data=None):

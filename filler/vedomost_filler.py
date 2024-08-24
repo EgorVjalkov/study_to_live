@@ -83,9 +83,6 @@ class VedomostFiller:
         self.day[self.active_cell] = cell_data
 
     def fill_the_active_cell(self, value_from_tg) -> object:
-        if self.behavior in ['correction', 'coefs']:
-            self.active_cell_data = self.active_cell_data.revert()
-
         translation_dict = {'не мог': 'can`t', 'забыл': '!'}
         value_from_tg = translation_dict.get(value_from_tg, value_from_tg)
 
@@ -164,24 +161,13 @@ class VedomostFiller:
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
-                            behavior='coefs')
+                            behavior='filling')
 
     filler()
     #print(mirror.date)
-    filler.change_day_and_filter_cells('20.8.24')
-    print(filler.working_space)
-    filler.active_cell = 'a:stroll'
-    filler.active_cell_data.current_value = 'EF'
-    print(filler.active_cell_data.revert())
-    print(filler.working_space)
-    print(filler.day)
-
-
-    #filler.active_cell_data.recipient = 'Lera'
-    #print(filler.active_cell_data)
-    #filler.active_cell_data.fill('F')
-    #print(filler.active_cell_data)
-    #filler.fill_the_active_cell('1')
-    #print(filler.active_cell_data)
+    filler.change_day_and_filter_cells('18.8.24')
+    filler.active_cell = 'h:dishwash'
+    filler.fill_the_active_cell('1')
+    print(filler.active_cell_data)
 
 
