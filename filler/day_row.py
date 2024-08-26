@@ -24,17 +24,21 @@ class DayRow(pd.Series):
         super().__init__(day_data)
         self.index_for_working: list = []
 
-    def __repr__(self):
-        date_ = Converter(date_object=self.name).to('str')
-        return f'DayRow {date_}: {self.STATUS}(working on: {self.working_cells})'
+    #def __repr__(self):
+    #    date_ = Converter(date_object=self.name).to('str')
+    #    return f'DayRow {date_}: {self.STATUS}(working on: {self.recipient_cells})'
 
     @property
-    def working_cells(self):
+    def recipient_cells(self):
         return self.index_for_working
 
-    @working_cells.setter
-    def working_cells(self, seq: list):
+    @recipient_cells.setter
+    def recipient_cells(self, seq: list):
         self.index_for_working = seq
+
+    @property
+    def categories_index(self):
+        return [i for i in self.index if ':' in i]
 
     @property
     def accessory_index(self):
@@ -58,7 +62,7 @@ class DayRow(pd.Series):
 
     def set_cell(self, name: str, data: VedomostCell) -> object:
         self[name] = data
-        self.working_cells.append(name)
+        self.recipient_cells.append(name)
         return self
 
     def load_cell_data(self, recipient: str, behavior: str, price_frame: pd.DataFrame) -> pd.Series:
@@ -73,6 +77,23 @@ class DayRow(pd.Series):
                 case 'coefs' | 'manually', vc:
                     self.set_cell(c_name, vc)
         return self
+
+    def save_values(self):
+        for c_name in self.recipient_cells:
+            if self[c_name].already_filled:
+                self[c_name] = self[c_name].new_v
+            else:
+                self[c_name] = self[c_name].current_v
+        return self
+
+    @property
+    def all_filled(self):
+        return not bool([i for i in self[self.categories_index] if not i])
+
+    @property
+    def r_cells_filled(self):
+        print([i for i in self[self.recipient_cells] if not i])
+        return not bool([i for i in self[self.recipient_cells] if not i])
 
 #    @property
 #    def date_n_day_dict(self):

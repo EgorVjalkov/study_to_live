@@ -56,11 +56,11 @@ class VedomostFiller:
 
     @property
     def working_space(self) -> pd.Series:
-        return self.day[self.day.working_cells]
+        return self.day[self.day.recipient_cells]
 
     @property
     def need_to_fill(self):
-        return bool(self.day.working_cells)
+        return bool(self.day.recipient_cells)
 
     @property
     def categories_btns(self):
@@ -101,24 +101,22 @@ class VedomostFiller:
         filled = {cell.name: cell.new_value for cell in self.working_space if cell.already_filled}
         return filled
 
-    def correct_day_status(self):
-        if self.day.is_filled:
-            self.day.mark = 'Y'
-        else:
-            if self.is_r_categories_filled:
-                self.day.mark = self.recipient[0]
-            else:
-                self.day.mark = 'at work'
+    def update_day_row(self):
+        self.day.save_values()
+        if self.behavior != 'coefs':
+            self.correct_day_status()
+        mirror.release(self.day)
+        return self.day
 
-    #def update_day_row(self):
-    #    self.day.cells = self.already_filled_dict # <- очень удачно пишет все!
-    #    if self.behavior != 'coefs':
-    #        self.correct_day_status()
-    #    else:
-    #        mirror.release(self.day)
-    #    print(self.day)
-    #    print(mirror.status_series)
-    #    return self.day
+    def correct_day_status(self):
+        match self.day:
+            case DayRow(all_filled=True):
+                self.day.STATUS = 'Y'
+            case DayRow(all_filled=False, r_cells_filled=True):
+                self.day.STATUS = self.recipient[0]
+            case DayRow(all_filled=False, r_cells_filled=False):
+                self.day.STATUS = 'at work'
+        return self
 
     @property
     def acc_in_str(self) -> list:
@@ -168,6 +166,7 @@ if __name__ == '__main__':
     filler.change_day_and_filter_cells('18.8.24')
     filler.active_cell = 'h:dishwash'
     filler.fill_the_active_cell('1')
-    print(filler.active_cell_data)
+    filler.update_day_row()
+    print(filler.day)
 
 

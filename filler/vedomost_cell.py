@@ -13,18 +13,21 @@ Btn = namedtuple('Btn', 'text id')
 @dataclass
 class VedomostCell:
     name: str
-    value: Optional[str]
+    current_value: Optional[str]
     recipient: str
     category_data: pd.Series
-    #new_value: Optional[str] = None
+    new_value: Optional[str] = None
 
     def __repr__(self):
-        return f'Cell({self.name}, v: {self.v})'
+        if self.new_v:
+            return f'Cell({self.name}, v: {self.new_v})'
+        else:
+            return f'Cell({self.name}, v: {self.current_v})'
 
     @property
     def btn(self):
-        match pd.notna(self.current_value), pd.notna(self.new_value):
-            case False, False:
+        match bool(self.current_value), bool(self.new_value):
+            case False, _:
                 return Btn(f'{self.name}', f'{self.name}')
             case True, False:
                 return Btn(f'{self.name}: {self.current_value}', f'{self.name}')
@@ -36,12 +39,20 @@ class VedomostCell:
         return self.recipient[0]
 
     @property
-    def v(self):
-        return self.value
+    def current_v(self):
+        return self.current_value
 
-    @v.setter
-    def v(self, new_value: str):
-        self.value = new_value
+    @current_v.setter
+    def current_v(self, new_value: str):
+        self.current_value = new_value
+
+    @property
+    def new_v(self):
+        return self.new_value
+
+    @new_v.setter
+    def new_v(self, new_value: str):
+        self.new_value = new_value
 
     @property
     def type(self):
@@ -50,7 +61,7 @@ class VedomostCell:
     @property
     def description(self) -> str:
         descr_list = self.category_data.get(['description', 'hint', 'info']).to_list()
-        descr_list = [e for e in descr_list if pd.notna(e)]
+        descr_list = [e for e in descr_list if e]
         if not descr_list:
             descr_list = ['Выберите вариант']
         return '\n'.join(descr_list)
@@ -74,7 +85,7 @@ class VedomostCell:
             case t:
                 keys = eval(t)
 
-        if pd.notna(self.category_data['add_keys']):
+        if self.category_data['add_keys']:
             keys.append(self.category_data['add_keys'])
 
         if behavior != 'coefs':
@@ -84,11 +95,11 @@ class VedomostCell:
 
     @property
     def is_filled(self):
-        return bool(self.v)
+        return bool(self.current_v)
 
-    #@property
-    #def already_filled(self):
-    #    return bool(self.new_value)
+    @property
+    def already_filled(self):
+        return bool(self.new_v)
 
     @property
     def has_many_values(self) -> bool:
@@ -97,7 +108,7 @@ class VedomostCell:
     @property
     def can_append_data(self) -> bool:
         match self.is_filled, self.r_litera:
-            case True, r_litera if r_litera not in self.v:
+            case True, r_litera if r_litera not in self.current_v:
                 return True
         return False
 
@@ -119,44 +130,31 @@ class VedomostCell:
         print('filled?', self.is_filled)
         match self.is_filled, self.has_many_values, self.can_append_data:
             case True, True, True:
-                self.v = f'{self.v},{self.recipient[0]}{value}' # сложное в заплненную
+                self.new_v = f'{self.v},{self.recipient[0]}{value}' # сложное в заплненную
             case True, True, False:
                 self.clear_r_value()
                 self.fill(value) # значение сбрасывается и клетка снова запускается в запись
             case True, False, _:
-                self.v = value # простое со сбросом
+                self.new_v = value # простое со сбросом
             case False, True, _:
-                self.v = f'{self.recipient[0]}{value}' # именное в пустую
+                self.new_v = f'{self.recipient[0]}{value}' # именное в пустую
             case False, False, _:
-                self.v = value # простое в пустую
+                self.new_v = value # простое в пустую
         return self
 
     def clear_r_value(self) -> object:
-        values_list = self.v.split(',')
+        values_list = self.current_v.split(',')
         filtered_values_by_recipient = [i for i in values_list if i[0] != self.r_litera]
         if filtered_values_by_recipient:
-            self.v = ','.join(filtered_values_by_recipient)
+            self.current_v = ','.join(filtered_values_by_recipient)
         else:
-            self.v = None
-        print('cleared', self.v)
+            self.current_v = None
+        print('cleared', self.current_v)
         return self
 
-    def print_description(self, acc_data=None):
-        answer = self.description
-        if not answer:
-            answer = 'Нажмите кнопку на экране'
-        else:
-            if acc_data:
-                answer.append(acc_data)
-            answer = '\n'.join(answer)
-        return answer
-
-    def print_old_value_by(self, behavior: str):
-        if behavior in ['correction', 'coefs']:
+    def print_current_value(self):
+        if self.current_value:
             answer = f'Принято. Предыдущие значение - "{self.current_value}"'
         else:
             answer = 'Принято'
         return answer
-
-#a = np.nan
-#print(pd.isna(a))
