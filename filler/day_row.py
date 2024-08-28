@@ -95,6 +95,10 @@ class DayRow(pd.Series):
         print([i for i in self[self.recipient_cells] if not i])
         return not bool([i for i in self[self.recipient_cells] if not i])
 
+    @property
+    def like_frame(self) -> pd.DataFrame:
+        return pd.DataFrame({self.name: self}).T
+
 #    @property
 #    def date_n_day_dict(self):
 #        day = self.row.at['DAY']
@@ -113,10 +117,4 @@ class DayRow(pd.Series):
 #        nans = [i for i in self.row if pd.isna(i)]
 #        return nans == []
 #
-#    @property
-#    def frame(self) -> pd.DataFrame:
-#        row_with_date = pd.concat([pd.Series({'DATE': self.date}),
-#                                   self.row], axis=0)
-#        frame = pd.DataFrame(data=row_with_date, index=[0]).set_index('DATE')
-#        return frame
 #

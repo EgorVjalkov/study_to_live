@@ -75,6 +75,13 @@ class Mirror:
             return DataBase(self.prices_table_name).get_table(with_dates=False,
                                                               index_col='category')
 
+    def update_vedomost(self, day_row: DayRow):
+        vedomost = DataBase(self.vedomost_table_name)
+        frame = vedomost.get_table(with_dates=True).set_index('DATE')
+        frame.loc[day_row.name] = day_row
+        #vedomost.update_table(frame)
+        self.release(day_row)
+
     def check_date(self, date: datetime.date) -> None:
         day_status = self.series.get(date)
         if day_status == 'busy':

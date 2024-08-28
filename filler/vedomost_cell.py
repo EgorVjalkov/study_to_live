@@ -130,7 +130,7 @@ class VedomostCell:
         print('filled?', self.is_filled)
         match self.is_filled, self.has_many_values, self.can_append_data:
             case True, True, True:
-                self.new_v = f'{self.v},{self.recipient[0]}{value}' # сложное в заплненную
+                self.new_v = f'{self.current_v},{self.recipient[0]}{value}' # сложное в заплненную
             case True, True, False:
                 self.clear_r_value()
                 self.fill(value) # значение сбрасывается и клетка снова запускается в запись

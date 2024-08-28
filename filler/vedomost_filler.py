@@ -101,14 +101,14 @@ class VedomostFiller:
         filled = {cell.name: cell.new_value for cell in self.working_space if cell.already_filled}
         return filled
 
-    def update_day_row(self):
+    def update_day_row(self) -> object:
         self.day.save_values()
         if self.behavior != 'coefs':
             self.correct_day_status()
-        mirror.release(self.day)
-        return self.day
+        mirror.update_vedomost(self.day)
+        return self
 
-    def correct_day_status(self):
+    def correct_day_status(self) -> object:
         match self.day:
             case DayRow(all_filled=True):
                 self.day.STATUS = 'Y'
@@ -131,7 +131,7 @@ class VedomostFiller:
     def count_day_sum(self):
         columns = [i for i in self.day.row.index if ':' not in i]
         columns.extend(self.cells_ser.index)
-        r_frame = pd.DataFrame(self.day.row[columns].to_dict(), index=[self.day.date])
+        r_frame = pd.DataFrame(self.day.row[columns].to_dict(), index=[self.day.name])
 
         result = program2.main(
             recipients=[self.recipient],
@@ -158,15 +158,16 @@ class VedomostFiller:
 
 
 if __name__ == '__main__':
-    filler = VedomostFiller(recipient='Egr',
-                            behavior='filling')
+    filler = VedomostFiller(recipient='Lera',
+                            behavior='correction')
 
     filler()
     #print(mirror.date)
-    filler.change_day_and_filter_cells('18.8.24')
-    filler.active_cell = 'h:dishwash'
-    filler.fill_the_active_cell('1')
-    filler.update_day_row()
-    print(filler.day)
+    filler.change_day_and_filter_cells('17.8.24')
+    print(filler.working_space)
+    #filler.active_cell = 'l:velo'
+    #filler.active_cell_data.current_value = None
+    #print(filler.working_space)
+    #filler.update_day_row()
 
 
