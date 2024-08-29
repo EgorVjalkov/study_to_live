@@ -78,8 +78,13 @@ class Mirror:
     def update_vedomost(self, day_row: DayRow):
         vedomost = DataBase(self.vedomost_table_name)
         frame = vedomost.get_table(with_dates=True).set_index('DATE')
-        frame.loc[day_row.name] = day_row
-        #vedomost.update_table(frame)
+
+        #matched_ser = frame.loc[day_row.name].eq(day_row)
+        #print(matched_ser)
+        if frame.loc[day_row.name].ne(day_row).any(): # перевод: хоть один из эелементов не равен
+            frame.loc[day_row.name] = day_row
+            vedomost.update_table(frame)
+            print('не равен, запись, update')
         self.release(day_row)
 
     def check_date(self, date: datetime.date) -> None:

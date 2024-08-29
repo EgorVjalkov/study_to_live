@@ -9,8 +9,6 @@ from DB_main import mirror
 from filler.vedomost_cell import VedomostCell
 from filler.day_row import DayRow
 from filler.date_funcs import today_for_filling
-from filler.recipient import Recipient
-from temp_db.unfilled_rows_db import DataBase
 from utils.converter import Converter
 
 
@@ -45,22 +43,25 @@ class VedomostFiller:
         days = [[i] for i in days] #для геттера по item
         return days
 
-    def change_day_and_filter_cells(self, date: str | datetime.date) -> DayRow:
+    def change_day(self, date: str | datetime.date) -> DayRow:
         if isinstance(date, str):
             date = Converter(date_in_str=date).to('date_object')
         mirror.check_date(date)
         mirror.occupy(date)
         self.day = DayRow(mirror.get_day_row(date))
-        self.day.load_cell_data(self.recipient, self.behavior, mirror.get_cells_data(self.behavior))
+        return self.day
+
+    def filter_cells(self) -> DayRow:
+        self.day.filter_by_args_and_load_data(self.recipient, self.behavior, mirror.get_cells_data(self.behavior))
         return self.day
 
     @property
     def working_space(self) -> pd.Series:
-        return self.day[self.day.recipient_cells]
+        return self.day[self.day.recipient_cells_for_working]
 
     @property
     def need_to_fill(self):
-        return bool(self.day.recipient_cells)
+        return bool(self.day.recipient_cells_for_working)
 
     @property
     def categories_btns(self):
@@ -95,11 +96,11 @@ class VedomostFiller:
             if cell.already_filled:
                 return True
 
-    @property
-    def already_filled_dict(self):
-        #return {cell.name: cell.new_value for cell in self.working_space if cell.already_filled}
-        filled = {cell.name: cell.new_value for cell in self.working_space if cell.already_filled}
-        return filled
+    #@property
+    #def already_filled_dict(self):
+    #    #return {cell.name: cell.new_value for cell in self.working_space if cell.already_filled}
+    #    filled = {cell.name: cell.new_value for cell in self.working_space if cell.already_filled}
+    #    return filled
 
     def update_day_row(self) -> object:
         self.day.save_values()
@@ -110,11 +111,11 @@ class VedomostFiller:
 
     def correct_day_status(self) -> object:
         match self.day:
-            case DayRow(all_filled=True):
+            case DayRow(is_all_filled=True):
                 self.day.STATUS = 'Y'
-            case DayRow(all_filled=False, r_cells_filled=True):
+            case DayRow(is_all_filled=False, is_r_cells_filled=True):
                 self.day.STATUS = self.recipient[0]
-            case DayRow(all_filled=False, r_cells_filled=False):
+            case DayRow(is_all_filled=False, is_r_cells_filled=False):
                 self.day.STATUS = 'at work'
         return self
 
@@ -129,23 +130,24 @@ class VedomostFiller:
         return [f'{i}: "{rep[i]}"' for i in rep]
 
     def count_day_sum(self):
-        columns = [i for i in self.day.row.index if ':' not in i]
-        columns.extend(self.cells_ser.index)
-        r_frame = pd.DataFrame(self.day.row[columns].to_dict(), index=[self.day.name])
-
+        print(self.day.frame_for_counting)
         result = program2.main(
             recipients=[self.recipient],
-            data_frame=r_frame,
-            price_frame=mirror.load_prices_by(self.day.date, 'filling'),
+            data_frame=self.day.frame_for_counting,
+            price_frame=mirror.get_cells_data(self.behavior),
             filled_frame=False,
             demo_mode=True,
             show_calc=False)
 
-        result_row = result.loc[self.day.date]
+        result_row = result.loc[self.day.name]
         result_row = result_row.replace('can`t', 0)
-        r_frame.loc['result'] = result_row
-        r_frame = r_frame[self.cells_ser.index].T.replace(np.nan, 0)
-        return r_frame
+        print('row')
+        print(result_row)
+        #r_frame = self.day[self.day.categories_index]
+        #print(r_frame)
+#        r_frame.loc['result'] = result_row
+#        r_frame = r_frame[self.cells_ser.index].T.replace(np.nan, 0)
+        return
 
     @property
     def date_to_str(self):
@@ -159,12 +161,18 @@ class VedomostFiller:
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Lera',
-                            behavior='correction')
+                            behavior='filling')
 
     filler()
     #print(mirror.date)
-    filler.change_day_and_filter_cells('17.8.24')
+    filler.change_day('28.8.24')
+    filler.filter_cells()
+    #filler.active_cell = 'l:desire'
+    #filler.fill_the_active_cell('3')
     print(filler.working_space)
+    filler.update_day_row()
+    filler.count_day_sum()
+    #filler.filter_cells()
     #filler.active_cell = 'l:velo'
     #filler.active_cell_data.current_value = None
     #print(filler.working_space)

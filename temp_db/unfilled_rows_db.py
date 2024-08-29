@@ -46,15 +46,17 @@ class DataBase:
 
 if __name__ == '__main__':
 
-    db = DataBase('aug24_vedomost')
-    day_row = db.get_day_row(datetime.date.today())
-    day_row['l:velo'] = '4'
-    print(day_row)
-    db.set_day_row_and_upload(day_row)
-    df = db.get_table(with_dates=True)
+    month = 'aug24'
+    path_to_excel = f'{month}.xlsx'
+
+    vedomost = f'{month}_vedomost'
+    price = f'{month}_price'
+    coefs = 'coefs'
+
+    ved_frame = pd.read_excel(path_to_excel, sheet_name='vedomost', index_col=0, dtype=str)
+    print(ved_frame)
+    df = DataBase(vedomost)
+    #df.update_table(ved_frame)
+
+    df = df.get_table(with_dates=True, index_col='DATE')
     print(df)
-
-
-#df = DataBase('aug24_prices').get_table(with_dates=False)
-
-#get-set vedomost
