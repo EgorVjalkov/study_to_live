@@ -9,7 +9,8 @@ from aiogram_dialog.widgets.input.text import TextInput
 from aiogram_dialog.api.exceptions import NoContextError
 
 from DB_main import mirror
-from filler.vedomost_filler import VedomostFiller, BusyError
+from temp_db.mirror_db import BusyError
+from filler.vedomost_filler import VedomostFiller
 from filler.vedomost_cell import VedomostCell
 from dialog.kbs import SCROLLING_HEIGHT
 from dialog.states import FillingVedomost
@@ -42,12 +43,13 @@ async def on_chosen_date(c: CallbackQuery,
     
     filler: VedomostFiller = get_filler(dm)
     try:
-        filler.change_a_day(item_id)
-        filler.get_r_cells()
+        filler.change_day(item_id)
+        # если каунтер то филтер селлс не надо
         if filler.behavior == 'count':
             await dm.switch_to(FillingVedomost.report_menu)
         else:
-            mirror.occupy(filler.day.date)
+            filler.filter_cells()
+            mirror.occupy(filler.day.name)
             await go_to_category_menu(c, dm)
     except BusyError:
         await c.answer('Cтрока занята, выберите другую дату или завершите сеанс')
@@ -103,7 +105,7 @@ async def on_filling_category(c: CallbackQuery,
     else:
         filler.fill_the_active_cell(item_id)
 
-    print(filler.cells_ser)
+    print(filler.working_space)
     await go_to_category_menu(c, dm)
 
 

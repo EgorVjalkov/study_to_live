@@ -73,8 +73,9 @@ async def start_dialog(message: Message, dialog_manager: DialogManager):
         category = filler.r_sleeptime
         new_value = datetime.time.strftime(message_time, '%H:%M')
 
-    filler.change_a_day(message_day)
-    filler.get_r_cells(by_=category)
+    filler.change_day(message_day)
+    filler.filter_cells()
+    filler.active_cell = category
     filler.fill_the_active_cell(new_value)
 
     await dialog_manager.start(FillingVedomost.report_menu,

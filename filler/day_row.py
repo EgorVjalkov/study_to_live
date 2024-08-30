@@ -9,63 +9,64 @@ from filler.vedomost_cell import VedomostCell
 
 
 day_dict = {
-    1: 'понедельник',
-    2: 'вторник',
-    3: 'среда',
-    4: 'четверг',
-    5: 'пятница',
-    6: 'суббота',
-    7: 'воскресенье'
+    '1': 'понедельник',
+    '2': 'вторник',
+    '3': 'среда',
+    '4': 'четверг',
+    '5': 'пятница',
+    '6': 'суббота',
+    '7': 'воскресенье'
 }
 
 
 class DayRow(pd.Series):
     def __init__(self, day_data: pd.Series):
         super().__init__(day_data)
-        self.index_for_working: list = []
-        self.all_recipient_cells_index: list = []
+        self.cell_list_for_working = []
+        self.all_recipient_cells_index: Optional[pd.Index] = None
 
     @property
-    def recipient_cells_for_working(self):
-        return self.index_for_working
-
-    @recipient_cells_for_working.setter
-    def recipient_cells_for_working(self, seq: list):
-        self.index_for_working = seq
+    def categories(self) -> pd.Series: # для внутриклассового использования
+        categories_index = self.index.map(lambda i: ':' in i)
+        return self[categories_index == True]
+    
+    @property
+    def filled_recipient_cells_for_working(self) -> dict: # для репорта
+        filled = self[self.recipient_cells_for_working_index].map(lambda i: i is not None)
+        return self[filled[filled == True].index].to_dict()
 
     @property
-    def categories_index(self):
-        return [i for i in self.index if ':' in i]
+    def accessory_index(self) -> pd.Index: # как источник клеток для coefs и внктриклассово
+        return pd.Index([i for i in self.index if i.isupper() and i not in ['DAY', 'STATUS']])
 
     @property
-    def accessory_index(self):
-        return [i for i in self.index if i.isupper() and i not in ['DAY', 'STATUS']]
+    def recipient_cells_for_working_index(self) -> pd.Index:
+        return pd.Index(self.cell_list_for_working)
 
     @property
-    def recipient_cells_with_value_index(self) -> list:
-        return [i for i in self[self.all_recipient_cells_index].index if self[i]]
+    def all_filled_recipient_cells_index(self) -> pd.Index: # для подсчета всех ячееек заполненных реципиентом
+        return pd.Index([i for i in self.all_recipient_cells_index if self[i]])
 
-
-    def get_all_recipient_cells_index(self, recipient: str) -> object:
+    def get_all_recipient_cells_index(self, recipient: str) -> pd.Index:
         date_ser = pd.Series({self.name: self.DAY}, name='DAY')
         r = cl.Recipient(recipient, date_ser)
         acc_frame = pd.DataFrame(self[self.accessory_index]).T
         r.extract_data_by_recipient(acc_frame)
         r.get_with_children_col()
         r_positions = r.get_r_positions_col().at[self.name]
-        self.all_recipient_cells_index = [i for i in self.index if i[0] in r_positions]
+        self.all_recipient_cells_index = pd.Index([i for i in self.index if i[0] in r_positions])
         return self.all_recipient_cells_index
 
-    def get_working_cells_index(self, recipient: str, behavior: str):
+    def get_working_cells_index(self, recipient: str, behavior: str) -> pd.Index:
+        # все равно подтягиваем ячейки реципиента, т. к. при подсчете они все равно потребуются
         if behavior == 'coefs':
-            cells = self.accessory_index
+            return self.accessory_index
         else:
-            cells = self.get_all_recipient_cells_index(recipient)
-        return cells
+            return self.all_recipient_cells_index
 
-    def set_cell(self, name: str, data: VedomostCell) -> object:
+    def transform_cell_and_append_to_working_list(self, name: str, data: VedomostCell) -> object:
         self[name] = data
-        self.recipient_cells_for_working.append(name)
+        self.cell_list_for_working.append(name)
         return self
 
     def filter_by_args_and_load_data(self, recipient: str, behavior: str, price_frame: pd.DataFrame) -> pd.Series:
@@ -74,15 +75,15 @@ class DayRow(pd.Series):
             vedomost_cell = VedomostCell(c_name, self[c_name], recipient, price_frame[c_name])
             match behavior, vedomost_cell:
                 case 'filling', vc if vc.can_be_filled:
-                    self.set_cell(c_name, vc)
+                    self.transform_cell_and_append_to_working_list(c_name, vc)
                 case 'correction', vc if vc.can_be_corrected:
-                    self.set_cell(c_name, vc)
+                    self.transform_cell_and_append_to_working_list(c_name, vc)
                 case 'coefs' | 'manually', vc:
-                    self.set_cell(c_name, vc)
+                    self.transform_cell_and_append_to_working_list(c_name, vc)
         return self
 
     def save_values(self):
-        for c_name in self.recipient_cells_for_working:
+        for c_name in self.recipient_cells_for_working_index:
             if self[c_name].already_filled:
                 self[c_name] = self[c_name].new_v
             else:
@@ -91,19 +92,25 @@ class DayRow(pd.Series):
 
     @property
     def is_all_filled(self) -> bool:
-        return not bool([i for i in self[self.categories_index] if not i])
+        without_none = self.categories.map(lambda i: i is not None) # ищем пустое в субстрате
+        return not without_none.any() # преверяем нет ли хоть одной пустышки в субстрате
 
     @property
-    def is_r_cells_filled(self) -> bool:
-        print([i for i in self[self.recipient_cells_for_working] if not i])
-        return not bool([i for i in self[self.recipient_cells_for_working] if not i])
+    def is_all_r_cells_filled(self):
+        without_none = self[self.all_recipient_cells_index].map(lambda i: i is not None) # ищем пустое в субстрате
+        return not without_none.any() # преверяем нет ли хоть одной пустышки в субстрате
+
+    @property
+    def no_recipient_cells_filled(self):
+        return self.all_filled_recipient_cells_index.empty
 
     @property
     def frame_for_counting(self) -> pd.DataFrame:
-        index_for_counting = ['DAY'] + self.accessory_index + self.recipient_cells_with_value_index
+        index_for_counting = ['DAY'] + list(self.accessory_index) + list(self.all_filled_recipient_cells_index)
         return pd.DataFrame({self.name: self[index_for_counting]}).T
 
     @property
-    def date_n_day_dict(self):
+    def date_n_day_str(self):
         date = Converter(date_object=self.name).to('str')
-        return {date: self['DAY']}
+        day_name = day_dict[self['DAY']]
+        return f'{date} ({day_name})'

@@ -27,12 +27,12 @@ class VedomostCell:
     @property
     def btn(self):
         match bool(self.current_value), bool(self.new_value):
-            case False, _:
-                return Btn(f'{self.name}', f'{self.name}')
-            case True, False:
-                return Btn(f'{self.name}: {self.current_value}', f'{self.name}')
             case _, True:
                 return Btn(f'{self.name}: {self.new_value}', f'{self.name}')
+            case True, False:
+                return Btn(f'{self.name}: {self.current_value}', f'{self.name}')
+            case False, _:
+                return Btn(f'{self.name}', f'{self.name}')
 
     @property
     def r_litera(self):

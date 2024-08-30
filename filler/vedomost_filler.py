@@ -12,6 +12,10 @@ from filler.date_funcs import today_for_filling
 from utils.converter import Converter
 
 
+class ResultEmptyError(BaseException):
+    pass
+
+
 class VedomostFiller:
     def __init__(self,
                  recipient: str = '',
@@ -49,6 +53,7 @@ class VedomostFiller:
         mirror.check_date(date)
         mirror.occupy(date)
         self.day = DayRow(mirror.get_day_row(date))
+        self.day.get_all_recipient_cells_index(self.recipient)
         return self.day
 
     def filter_cells(self) -> DayRow:
@@ -57,15 +62,15 @@ class VedomostFiller:
 
     @property
     def working_space(self) -> pd.Series:
-        return self.day[self.day.recipient_cells_for_working]
+        return self.day[self.day.recipient_cells_for_working_index]
 
     @property
-    def need_to_fill(self):
-        return bool(self.day.recipient_cells_for_working)
+    def need_to_fill(self) -> int:
+        return len(self.day.recipient_cells_for_working_index)
 
     @property
     def categories_btns(self):
-        return [self.day.row[i].btn for i in self.working_space]
+        return [i.btn for i in self.working_space]
 
     @property
     def active_cell(self) -> str:
@@ -113,65 +118,54 @@ class VedomostFiller:
         match self.day:
             case DayRow(is_all_filled=True):
                 self.day.STATUS = 'Y'
-            case DayRow(is_all_filled=False, is_r_cells_filled=True):
+            case DayRow(is_all_filled=False, is_all_r_cells_filled=True):
                 self.day.STATUS = self.recipient[0]
-            case DayRow(is_all_filled=False, is_r_cells_filled=False):
+            case DayRow(is_all_filled=False, is_all_r_cells_filled=False):
                 self.day.STATUS = 'at work'
         return self
 
-    @property
-    def acc_in_str(self) -> list:
-        rep = self.day.date_n_day_dict
-        rep.update(self.day.accessories.to_dict())
-        for i in self.already_filled_dict:
-            del rep[i]
-            new_i = '*'+i
-            rep[new_i] = self.already_filled_dict[i]
-        return [f'{i}: "{rep[i]}"' for i in rep]
+    def count_day_sum(self): # сложные замутки, нужно подумать здесь, походу замуть решается через геттер/сеттер
+        if self.behavior == 'coefs':
+            self.day.get_all_recipient_cells_index(self.recipient)
 
-    def count_day_sum(self):
-        print(self.day.frame_for_counting)
-        result = program2.main(
-            recipients=[self.recipient],
-            data_frame=self.day.frame_for_counting,
-            price_frame=mirror.get_cells_data(self.behavior),
-            filled_frame=False,
-            demo_mode=True,
-            show_calc=False)
+        if self.day.no_recipient_cells_filled:
+            raise ResultEmptyError
 
-        result_row = result.loc[self.day.name]
-        result_row = result_row.replace('can`t', 0)
-        print('row')
-        print(result_row)
-        #r_frame = self.day[self.day.categories_index]
-        #print(r_frame)
-#        r_frame.loc['result'] = result_row
-#        r_frame = r_frame[self.cells_ser.index].T.replace(np.nan, 0)
-        return
+        else:
+            frame_for_counting = self.day.frame_for_counting
+            result = program2.main(
+                recipients=[self.recipient],
+                data_frame=frame_for_counting,
+                price_frame=mirror.get_cells_data('filling'),
+                filled_frame=False,
+                demo_mode=True,
+                show_calc=False)
 
-    @property
-    def date_to_str(self):
-        return Converter(date_object=self.day.date).to('str')
-
-    def filled_cells_list_for_print(self, dict_=()) -> list:
-        if not dict_:
-            dict_ = self.already_filled_dict
-        return [f'{c} -> {dict_[c]}' for c in dict_]
+            result_row = result.loc[self.day.name].replace('can`t', 0)
+            frame_for_counting.loc['result'] = result_row
+            frame_for_counting.loc[self.day.name] = (frame_for_counting.loc[self.day.name].
+                                                     map(lambda i: f'"{i}"'))
+            frame_for_counting = frame_for_counting.fillna(0.0) # заполняет нулями ячейки для статистики
+            return frame_for_counting[self.day.all_filled_recipient_cells_index].T
 
 
 if __name__ == '__main__':
-    filler = VedomostFiller(recipient='Lera',
-                            behavior='filling')
+    #filler = VedomostFiller(recipient='Egr',
+    #                        behavior='coefs')
+    filler = VedomostFiller(recipient='Egr',
+                            behavior='count')
 
     filler()
     #print(mirror.date)
-    filler.change_day('28.8.24')
-    filler.filter_cells()
-    #filler.active_cell = 'l:desire'
-    #filler.fill_the_active_cell('3')
-    print(filler.working_space)
-    filler.update_day_row()
-    filler.count_day_sum()
+    filler.change_day('23.8.24')
+    print(filler.count_day_sum())
+    #filler.filter_cells()
+    #filler.active_cell = 'e:desire'
+    #filler.fill_the_active_cell('4')
+    #print(filler.day.filled_recipient_cells_for_working)
+    #print(filler.working_space)
+    #filler.update_day_row()
+    #print(filler.day.date_n_day_str)
     #filler.filter_cells()
     #filler.active_cell = 'l:velo'
     #filler.active_cell_data.current_value = None

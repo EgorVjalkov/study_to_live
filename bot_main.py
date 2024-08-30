@@ -15,7 +15,6 @@ async def main():
     stor = MemoryStorage()
     bot = Bot(TOKEN)
     dp = Dispatcher(storage=stor)
-    #dp.include_router(new_handlers.filler_router)
     dp.include_router(start_handlers.filler_router)
     dp.include_router(windows.filler_dialog)
     setup_dialogs(dp)
