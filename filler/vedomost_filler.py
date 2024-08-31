@@ -52,7 +52,8 @@ class VedomostFiller:
         if isinstance(date, str):
             date = Converter(date_in_str=date).to('date_object')
         mirror.check_date(date)
-        mirror.occupy(date)
+        if self.behavior != 'count':
+            mirror.occupy(date)
         self.day = DayRow(mirror.get_day_row(date))
         self.day.get_all_recipient_cells_index(self.recipient)
         return self.day
@@ -155,15 +156,15 @@ if __name__ == '__main__':
     #filler = VedomostFiller(recipient='Egr',
     #                        behavior='coefs')
     filler = VedomostFiller(recipient='Egr',
-                            behavior='filling')
+                            behavior='correction')
 
     filler()
     print(filler.day_btns)
-    filler.change_day('27.8.24')
+    filler.change_day('30.8.24')
     filler.filter_cells()
-    print(filler.day.STATUS)
+    filler.active_cell = 'e:sleeptime'
+    filler.fill_the_active_cell('22:45')
     filler.update_day_row()
-    print(filler.day.STATUS)
 
     #filler.update_day_row()
     #print(filler.day.STATUS)

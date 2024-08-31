@@ -18,6 +18,7 @@ day_dict = {
     '7': 'воскресенье'
 }
 
+
 class DayRow(pd.Series):
     def __init__(self, day_data: pd.Series):
         super().__init__(day_data)
