@@ -42,6 +42,7 @@ class VedomostFiller:
     @property
     def day_btns(self) -> list:
         days = mirror.get_dates_for(self.recipient, self.behavior).to_list()
+        print(days)
         days: list = [Converter(date_object=date_).to('str') for date_
                       in days]
         days = [[i] for i in days] #для геттера по item
@@ -108,19 +109,20 @@ class VedomostFiller:
     #    return filled
 
     def update_day_row(self) -> object:
-        self.day.save_values()
-        if self.behavior != 'coefs':
+        if self.behavior in ['filling', 'manually']:
             self.correct_day_status()
+        self.day.save_values()
         mirror.update_vedomost(self.day)
         return self
 
     def correct_day_status(self) -> object:
         match self.day:
-            case DayRow(is_all_filled=True):
+            #здесь тоже замутки. дни со статусом Y переделываются в имееные.
+            case DayRow(is_all_r_cells_filled=True, has_done_status_by_another_recipient=True):
                 self.day.STATUS = 'Y'
-            case DayRow(is_all_filled=False, is_all_r_cells_filled=True):
+            case DayRow(is_all_r_cells_filled=True, has_done_status_by_another_recipient=False):
                 self.day.STATUS = self.recipient[0]
-            case DayRow(is_all_filled=False, is_all_r_cells_filled=False):
+            case DayRow(is_all_r_cells_filled=False, has_done_status_by_another_recipient=False):
                 self.day.STATUS = 'at work'
         return self
 
@@ -153,18 +155,22 @@ if __name__ == '__main__':
     #filler = VedomostFiller(recipient='Egr',
     #                        behavior='coefs')
     filler = VedomostFiller(recipient='Egr',
-                            behavior='count')
+                            behavior='filling')
 
     filler()
-    #print(mirror.date)
-    filler.change_day('23.8.24')
-    print(filler.count_day_sum())
-    #filler.filter_cells()
+    print(filler.day_btns)
+    filler.change_day('27.8.24')
+    filler.filter_cells()
+    print(filler.day.STATUS)
+    filler.update_day_row()
+    print(filler.day.STATUS)
+
+    #filler.update_day_row()
+    #print(filler.day.STATUS)
     #filler.active_cell = 'e:desire'
     #filler.fill_the_active_cell('4')
     #print(filler.day.filled_recipient_cells_for_working)
     #print(filler.working_space)
-    #filler.update_day_row()
     #print(filler.day.date_n_day_str)
     #filler.filter_cells()
     #filler.active_cell = 'l:velo'

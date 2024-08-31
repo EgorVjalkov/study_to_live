@@ -53,8 +53,8 @@ if __name__ == '__main__':
     price = f'{month}_price'
     coefs = 'coefs'
 
-    ved_frame = pd.read_excel(path_to_excel, sheet_name='price', index_col=0, dtype=str)
-    print(ved_frame)
+    #ved_frame = pd.read_excel(path_to_excel, sheet_name='price', index_col=0, dtype=str)
+    #print(ved_frame)
     df = DataBase(price)
     #df.update_table(ved_frame, 'category')
 

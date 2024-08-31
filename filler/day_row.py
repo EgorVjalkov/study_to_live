@@ -18,7 +18,6 @@ day_dict = {
     '7': 'воскресенье'
 }
 
-
 class DayRow(pd.Series):
     def __init__(self, day_data: pd.Series):
         super().__init__(day_data)
@@ -26,12 +25,18 @@ class DayRow(pd.Series):
         self.all_recipient_cells_index: Optional[pd.Index] = None
 
     @property
-    def categories(self) -> pd.Series: # для внутриклассового использования
-        categories_index = self.index.map(lambda i: ':' in i)
-        return self[categories_index == True]
-    
+    def has_done_status_by_another_recipient(self):
+        return self.STATUS in cl.r_liters
+
+#    @property
+#    def categories(self) -> pd.Series: # для внутриклассового использования
+#        categories_index = self.index.map(lambda i: ':' in i)
+#        return self[categories_index == True]
+#
     @property
     def filled_recipient_cells_for_working(self) -> dict: # для репорта
+        # похоже и здесь проблема, некоторые из этих ячеек могут быть незаполнены, но быть не ноне
+        # решается через can-be-filled
         filled = self[self.recipient_cells_for_working_index].map(lambda i: i is not None)
         return self[filled[filled == True].index].to_dict()
 
@@ -90,15 +95,15 @@ class DayRow(pd.Series):
                 self[c_name] = self[c_name].current_v
         return self
 
-    @property
-    def is_all_filled(self) -> bool:
-        without_none = self.categories.map(lambda i: i is not None) # ищем пустое в субстрате
-        return not without_none.any() # преверяем нет ли хоть одной пустышки в субстрате
-
+#    @property
+#    def is_all_filled(self) -> bool:
+#        false_if_none = self.categories.map(lambda i: bool(i)) # все ли клетки имеют значение?
+#        return false_if_none[false_if_none == False].empty # пустой ли контейнер, куда сложены все клетки без значения
+#
     @property
     def is_all_r_cells_filled(self):
-        without_none = self[self.all_recipient_cells_index].map(lambda i: i is not None) # ищем пустое в субстрате
-        return not without_none.any() # преверяем нет ли хоть одной пустышки в субстрате
+        can_be_filled_ser = self[self.recipient_cells_for_working_index].map(lambda cell: cell.can_be_filled) # eсть ли не заполненные клетки?
+        return can_be_filled_ser[can_be_filled_ser == True].empty # пустой ли контейнер, куда сложены все не заполненные клетки
 
     @property
     def no_recipient_cells_filled(self):
