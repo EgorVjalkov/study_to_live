@@ -163,7 +163,7 @@ class Recipient:
     def get_r_vedomost(self, categories: pd.DataFrame, not_count_categories: list) -> pd.DataFrame:
         columns = [i for i in categories.columns if i not in not_count_categories]
         columns = [i for i in columns if i[0] in self.r_positions]
-        print(columns)
+        #print(columns)
         self.cat_data = categories[columns]
 
         for column in self.cat_data:

@@ -63,6 +63,9 @@ class Mirror:
         self.series = df.set_index('DATE')['STATUS']
         return self
 
+    def get_vedomost(self):
+        return DataBase(self.vedomost_table_name).get_table(with_dates=True).set_index('DATE')
+
     def get_day_row(self, date: datetime.date):
         return DataBase(self.vedomost_table_name).get_day_row(date)
     # здесь нужно подумать, т.к. устроено все топорно. и работает лишь там где месяц соответствует!

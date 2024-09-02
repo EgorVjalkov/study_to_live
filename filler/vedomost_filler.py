@@ -1,9 +1,8 @@
 import datetime
 import pandas as pd
-import numpy as np
 from typing import Optional
 
-from counter import program2
+import program2
 from DB_main import mirror
 
 from filler.vedomost_cell import VedomostCell
@@ -42,7 +41,6 @@ class VedomostFiller:
     @property
     def day_btns(self) -> list:
         days = mirror.get_dates_for(self.recipient, self.behavior).to_list()
-        print(days)
         days: list = [Converter(date_object=date_).to('str') for date_
                       in days]
         days = [[i] for i in days] #для геттера по item
@@ -127,7 +125,7 @@ class VedomostFiller:
                 self.day.STATUS = 'at work'
         return self
 
-    def count_day_sum(self): # сложные замутки, нужно подумать здесь, походу замуть решается через геттер/сеттер
+    def count_day_sum(self):
         if self.behavior == 'coefs':
             self.day.get_all_recipient_cells_index(self.recipient)
 
@@ -144,11 +142,12 @@ class VedomostFiller:
                 demo_mode=True,
                 show_calc=False)
 
-            result_row = result.loc[self.day.name].replace('can`t', 0)
-            frame_for_counting.loc['result'] = result_row
+            result_row = result.loc[self.day.name].map(
+                lambda i: 0.0 if i in ['can`t', 'wishn`t'] else i)
+            frame_for_counting.loc['result'] = result_row.fillna(0.0)
             frame_for_counting.loc[self.day.name] = (frame_for_counting.loc[self.day.name].
                                                      map(lambda i: f'"{i}"'))
-            frame_for_counting = frame_for_counting.fillna(0.0) # заполняет нулями ячейки для статистики
+            frame_for_counting = frame_for_counting.fillna(0.0) # заполняет нулями ячейки для статистики, которых нет в резалт фрейме
             return frame_for_counting[self.day.all_filled_recipient_cells_index].T
 
 
@@ -156,15 +155,17 @@ if __name__ == '__main__':
     #filler = VedomostFiller(recipient='Egr',
     #                        behavior='coefs')
     filler = VedomostFiller(recipient='Egr',
-                            behavior='correction')
+                            behavior='coefs')
 
     filler()
-    print(filler.day_btns)
-    filler.change_day('30.8.24')
+    filler.change_day('1.9.24')
     filler.filter_cells()
-    filler.active_cell = 'e:sleeptime'
-    filler.fill_the_active_cell('22:45')
-    filler.update_day_row()
+    filler.active_cell = 'PLACE'
+    filler.fill_the_active_cell('Lh')
+    #print('before_count', filler.day.all_recipient_cells_index)
+    filler.day.save_values()
+    print(filler.count_day_sum())
+    #filler.update_day_row()
 
     #filler.update_day_row()
     #print(filler.day.STATUS)

@@ -1,11 +1,11 @@
 import datetime
 import pandas as pd
 
-import path_maker
 import counter.classes as cl
 from testing import does_need_correction
 from counter.BonusColumn import BonusColumn
 from filler.date_funcs import last_date_of_past_month
+from temp_db.mirror_db import Mirror, get_month
 
 
 not_count_categories = ['a:sleeptime', 'z:sleeptime']
@@ -15,10 +15,10 @@ def main(recipients: list,
          data_frame: pd.DataFrame,
          price_frame: pd.DataFrame,
          filled_frame=True,
-         month=False,
-         demo_mode=False,
-         show_calc=True,
-         null_after_midnight=False) -> None | pd.DataFrame:
+         month: str = '',
+         demo_mode: bool = False,
+         show_calc: bool = True,
+         null_after_midnight: bool = False) -> None | pd.DataFrame:
 
     assert not data_frame.empty
     md = cl.MonthData(mother_frame=data_frame, prices=price_frame)
@@ -50,7 +50,7 @@ def main(recipients: list,
                 bc_with_statistic = pd.Series(dtype='object')
 
             cd.get_ready_and_save_to_excel(md.date,
-                                           f'output_files/{month}/{r_name}/{cd.name}.xlsx',
+                                           f'output_files/{month}/{r_name}/{cd.name.replace(":","_")}.xlsx',
                                            demo_mode=demo_mode)
 
             if not demo_mode:
@@ -71,15 +71,14 @@ def main(recipients: list,
 
 
 if __name__ == '__main__':
-    t = last_date_of_past_month(datetime.date.today())
-    #t = datetime.date.today()
-    #print(t)
-    path_to_mf = path_maker.path_to.mother_frame_by(t)
-    price_fr = pd.read_excel(path_to_mf, sheet_name='price', index_col=0).fillna(0)
-    if not does_need_correction(price_fr):
+    mirror2 = Mirror()
+    mirror2.date = last_date_of_past_month(datetime.date.today())
+    vedomost = mirror2.get_vedomost()
+    price = mirror2.get_cells_data('filling')
+    if not does_need_correction(price):
         main(['Egr', 'Lera'],
-             MonthDB(path_to_mf=path_to_mf).mf_from_file,
-             price_fr,
-             month=path_maker.path_to.get_month(t),
+             vedomost,
+             price,
+             month=get_month(mirror2.date),
              null_after_midnight=False,
              )
