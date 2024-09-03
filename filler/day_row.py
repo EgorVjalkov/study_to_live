@@ -81,7 +81,7 @@ class DayRow(pd.Series):
         return self
 
     @property
-    def filled_recipient_cells_for_working(self) -> dict: # для репорта
+    def filled_recipient_cells_for_working(self) -> dict: # для репорта, и здесь бы хорошо иметь алреди филлед в ячейке
         filled = self[self.recipient_cells_for_working_index].map(lambda i: i is not None)
         return self[filled[filled == True].index].to_dict()
 

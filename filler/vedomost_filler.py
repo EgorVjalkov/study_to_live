@@ -147,21 +147,29 @@ class VedomostFiller:
             frame_for_counting.loc['result'] = result_row.fillna(0.0)
             frame_for_counting.loc[self.day.name] = (frame_for_counting.loc[self.day.name].
                                                      map(lambda i: f'"{i}"'))
-            frame_for_counting = frame_for_counting.fillna(0.0) # заполняет нулями ячейки для статистики, которых нет в резалт фрейме
-            return frame_for_counting[self.day.all_filled_recipient_cells_index].T
+            frame_for_counting = frame_for_counting[self.day.all_filled_recipient_cells_index].fillna(0.0)
+
+            index_with_filled_marks = frame_for_counting.columns.map(
+                lambda i: f'*{i}' if i in self.day.filled_recipient_cells_for_working else i)
+            frame_for_counting = pd.DataFrame({'mark': frame_for_counting.loc[self.day.name].to_list(),
+                                               'result': frame_for_counting.loc['result'].to_list()},
+                                              index=index_with_filled_marks)
+            return frame_for_counting
 
 
 if __name__ == '__main__':
     #filler = VedomostFiller(recipient='Egr',
     #                        behavior='coefs')
     filler = VedomostFiller(recipient='Egr',
-                            behavior='coefs')
+                            behavior='correction')
 
+# сделай дэйроу через проперти в котором только значения будут и его сохранишь в бд, а в стоковом пусить будут ячейки
+# а значит и функционал без костылей!!!
     filler()
     filler.change_day('1.9.24')
     filler.filter_cells()
-    filler.active_cell = 'PLACE'
-    filler.fill_the_active_cell('Lh')
+    filler.active_cell = 'e:plan'
+    filler.fill_the_active_cell('1')
     #print('before_count', filler.day.all_recipient_cells_index)
     filler.day.save_values()
     print(filler.count_day_sum())

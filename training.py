@@ -19,23 +19,28 @@ from temp_db.unfilled_rows_db import DataBase
 #    print(message_day, message_time)
 #    print()
 
-day_row = DataBase('aug24_vedomost').get_day_row(datetime.date.today())
-time_in = datetime.datetime.now()
+#time_in = datetime.datetime.now()
+#
+#list_ind = [i for i in day_row.index if ':' in i]
+#pd_ind = pd.Index(list_ind)
+##cats = day_row[pd_ind]
+#
+##new_index = day_row.index.map(lambda i: ':' in i)
+##day_row = day_row.index[new_index == True]
+#
+#time_out = datetime.datetime.now()
+#print(time_out-time_in)
+#print(day_row)
+#
+#
+#fool = '000025'
+#pd_ind = '001892'
+#list_ind = '002331'
 
-list_ind = [i for i in day_row.index if ':' in i]
-pd_ind = pd.Index(list_ind)
-#cats = day_row[pd_ind]
 
-#new_index = day_row.index.map(lambda i: ':' in i)
-#day_row = day_row.index[new_index == True]
-
-time_out = datetime.datetime.now()
-print(time_out-time_in)
+day_row = DataBase('sep24_vedomost').get_day_row(datetime.date.today()).T
+new_index = day_row.index.map(lambda i: f'*{i}' if i[0] == 'a' else i)
+day_row.index = new_index
 print(day_row)
-
-
-fool = '000025'
-pd_ind = '001892'
-list_ind = '002331'
 
 
