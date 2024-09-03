@@ -55,7 +55,7 @@ async def on_chosen_date(c: CallbackQuery,
         await c.answer('Cтрока занята, выберите другую дату или завершите сеанс')
     except BaseException as error:
         await c.answer(f'ошибка {error}')
-        mirror.release(filler.day)
+        mirror.set_day_status(filler.day)
 
 
 async def on_back_to_date_menu(c: CallbackQuery,
@@ -64,7 +64,7 @@ async def on_back_to_date_menu(c: CallbackQuery,
                                ** kwargs) -> None:
 
     filler: VedomostFiller = get_filler(dm)
-    mirror.release(filler.day)
+    mirror.set_day_status(filler.day)
 
 
 async def on_chosen_category(c: CallbackQuery,

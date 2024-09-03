@@ -161,19 +161,16 @@ if __name__ == '__main__':
     #filler = VedomostFiller(recipient='Egr',
     #                        behavior='coefs')
     filler = VedomostFiller(recipient='Egr',
-                            behavior='correction')
+                            behavior='filling')
 
 # сделай дэйроу через проперти в котором только значения будут и его сохранишь в бд, а в стоковом пусить будут ячейки
 # а значит и функционал без костылей!!!
+
+# почемуто не всегда делает  отметки в мирроре, приглядись
     filler()
-    filler.change_day('1.9.24')
+    filler.change_day('2.9.24')
     filler.filter_cells()
-    filler.active_cell = 'e:plan'
-    filler.fill_the_active_cell('1')
-    #print('before_count', filler.day.all_recipient_cells_index)
-    filler.day.save_values()
-    print(filler.count_day_sum())
-    #filler.update_day_row()
+    filler.update_day_row()
 
     #filler.update_day_row()
     #print(filler.day.STATUS)

@@ -88,7 +88,7 @@ class Mirror:
             frame.loc[day_row.name] = day_row
             vedomost.update_table(frame)
             print('не равен, запись, update')
-        self.release(day_row)
+        self.set_day_status(day_row)
 
     def check_date(self, date: datetime.date) -> None:
         day_status = self.series.get(date)
@@ -99,7 +99,7 @@ class Mirror:
         self.series[date] = 'busy'
         return self
 
-    def release(self, day: DayRow) -> object:
+    def set_day_status(self, day: DayRow) -> object:
         self.series[day.name] = day.STATUS
         return self
 

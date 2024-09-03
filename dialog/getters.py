@@ -26,10 +26,8 @@ topics = {
     }
 
 
-def get_counter_report(filler: VedomostFiller, filled_cells: dict) -> list:
+def get_counter_report(filler: VedomostFiller) -> list:
     result_frame = filler.count_day_sum()
-    new_index = result_frame.index.map(lambda i: f'*{i}' if i in filled_cells else i)
-    print(new_index)
     day_sum = f'{round(result_frame["result"].sum(), 1)} p.'
     result_frame['result'] = result_frame['result'].map(lambda i: f'{str(i)} р.')
     result_dict = result_frame.T.to_dict('list')
@@ -47,7 +45,7 @@ def get_answer_if_finish(filler: VedomostFiller) -> str:
     try:
         answer_list.append('')
         answer_list.append(f'За {filler.day.date_n_day_str} насчитано:')
-        answer_list.extend(get_counter_report(filler, filled))
+        answer_list.extend(get_counter_report(filler))
     except ResultEmptyError:
         return '\n'.join(answer_list)
     except BaseException as error:
