@@ -81,8 +81,8 @@ class DayRow(pd.Series):
         return self
 
     @property
-    def filled_recipient_cells_for_working(self) -> dict: # для репорта, и здесь бы хорошо иметь алреди филлед в ячейке
-        filled = self[self.recipient_cells_for_working_index].map(lambda i: i is not None)
+    def filled_recipient_cells_for_working(self) -> dict: # для рeпорта
+        filled = self[self.recipient_cells_for_working_index].map(lambda i: i.already_filled)
         return self[filled[filled == True].index].to_dict()
 
     @property
@@ -98,7 +98,18 @@ class DayRow(pd.Series):
         return self
 
     @property
+    def day_row_for_saving(self) -> pd.Series:
+        row = self.copy()
+        for c_name in self.recipient_cells_for_working_index:
+            if row[c_name].already_filled:
+                row[c_name] = self[c_name].new_v
+            else:
+                row[c_name] = self[c_name].current_v
+        return row
+
+    @property
     def is_all_r_cells_filled(self):
+        # сделай размутку и понимание что с чем идет, не понятно нихрена где мы обходимся значением, а где нужны ячейкиведомости
         can_be_filled_ser = self[self.recipient_cells_for_working_index].map(lambda cell: cell.can_be_filled) # eсть ли не заполненные клетки?
         return can_be_filled_ser[can_be_filled_ser == True].empty # пустой ли контейнер, куда сложены все не заполненные клетки
 
@@ -109,7 +120,7 @@ class DayRow(pd.Series):
     @property
     def frame_for_counting(self) -> pd.DataFrame:
         index_for_counting = ['DAY'] + list(self.accessory_index) + list(self.all_filled_recipient_cells_index)
-        return pd.DataFrame({self.name: self[index_for_counting]}).T
+        return pd.DataFrame({self.name: self.day_row_for_saving[index_for_counting]}).T
 
     @property
     def date_n_day_str(self):

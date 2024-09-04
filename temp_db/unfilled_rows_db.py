@@ -46,7 +46,7 @@ class DataBase:
 
 if __name__ == '__main__':
 
-    month = 'aug24'
+    month = 'sep24'
     path_to_excel = f'{month}.xlsx'
 
     vedomost = f'{month}_vedomost'
@@ -55,9 +55,9 @@ if __name__ == '__main__':
 
     #ved_frame = pd.read_excel(path_to_excel, sheet_name='price', index_col=0, dtype=str)
     #print(ved_frame)
-    df = DataBase(price)
+    df = DataBase(vedomost)
     #df.update_table(ved_frame, 'category')
 
     #df = df.get_table(with_dates=True).set_index('DATE')
-    df = df.get_table(with_dates=False, index_col='category')
-    print(df)
+    df = df.get_table(with_dates=True).set_index('DATE')
+    df.to_excel('sep24_vedomost.xlsx')

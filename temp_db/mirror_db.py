@@ -78,7 +78,7 @@ class Mirror:
             return DataBase(self.prices_table_name).get_table(with_dates=False,
                                                               index_col='category')
 
-    def update_vedomost(self, day_row: DayRow):
+    def update_vedomost(self, day_row: pd.Series):
         vedomost = DataBase(self.vedomost_table_name)
         frame = vedomost.get_table(with_dates=True).set_index('DATE')
 

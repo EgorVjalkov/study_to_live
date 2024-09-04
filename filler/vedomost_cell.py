@@ -20,9 +20,9 @@ class VedomostCell:
 
     def __repr__(self):
         if self.new_v:
-            return f'Cell({self.name}, v: {self.new_v})'
+            return f'Cell({self.name}, NEW: {self.new_v})'
         else:
-            return f'Cell({self.name}, v: {self.current_v})'
+            return f'Cell({self.name}, current: {self.current_v})'
 
     @property
     def btn(self):

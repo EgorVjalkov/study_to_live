@@ -110,8 +110,7 @@ class VedomostFiller:
     def update_day_row(self) -> object:
         if self.behavior in ['filling', 'manually']:
             self.correct_day_status()
-        self.day.save_values()
-        mirror.update_vedomost(self.day)
+        mirror.update_vedomost(self.day.day_row_for_saving)
         return self
 
     def correct_day_status(self) -> object:
@@ -161,15 +160,20 @@ if __name__ == '__main__':
     #filler = VedomostFiller(recipient='Egr',
     #                        behavior='coefs')
     filler = VedomostFiller(recipient='Egr',
-                            behavior='filling')
+                            behavior='correction')
 
 # сделай дэйроу через проперти в котором только значения будут и его сохранишь в бд, а в стоковом пусить будут ячейки
 # а значит и функционал без костылей!!!
 
 # почемуто не всегда делает  отметки в мирроре, приглядись
     filler()
-    filler.change_day('2.9.24')
+    filler.change_day('3.9.24')
     filler.filter_cells()
+    filler.active_cell = 'a:stroll'
+    filler.fill_the_active_cell('1')
+    print(filler.day)
+    print(filler.day.day_row_for_saving)
+    print(filler.day.frame_for_counting)
     filler.update_day_row()
 
     #filler.update_day_row()
