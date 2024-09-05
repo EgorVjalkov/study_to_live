@@ -119,5 +119,6 @@ class Mirror:
             filter_ = recipe[col_name]
             filtered = days_df[col_name].map(filter_)
             days_df = days_df.loc[filtered == True]
+        print(days_df)
         print(f'get_dates_for_{recipient}_by_{by_behavior}_in_{self.date}')
         return days_df['DATE']

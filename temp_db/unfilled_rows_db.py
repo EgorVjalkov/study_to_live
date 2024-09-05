@@ -45,19 +45,23 @@ class DataBase:
 
 
 if __name__ == '__main__':
-
-    month = 'sep24'
-    path_to_excel = f'{month}.xlsx'
+    pd.set_option('display.max_columns', 100)
+    month = 'aug24'
 
     vedomost = f'{month}_vedomost'
     price = f'{month}_price'
     coefs = 'coefs'
 
-    #ved_frame = pd.read_excel(path_to_excel, sheet_name='price', index_col=0, dtype=str)
-    #print(ved_frame)
-    df = DataBase(vedomost)
-    #df.update_table(ved_frame, 'category')
-
+    ## for vedomost upload:
+    #ved_frame = pd.read_excel(f'{vedomost}.xlsx', index_col=0, dtype=str)
+    #df = DataBase(vedomost)
+    #df.update_table(ved_frame, 'DATE')
     #df = df.get_table(with_dates=True).set_index('DATE')
-    df = df.get_table(with_dates=True).set_index('DATE')
-    df.to_excel('sep24_vedomost.xlsx')
+    #print(df)
+
+    # for price upload:
+    #price_frame = pd.read_excel(f'{price}.xlsx', index_col=0, dtype=str)
+    #print(price_frame)
+    df = DataBase(vedomost)
+    df = df.get_table(with_dates=False).set_index('DATE')
+    df.to_excel('aug24_vedomost.xlsx')

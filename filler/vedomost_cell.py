@@ -92,13 +92,20 @@ class VedomostCell:
             keys.extend(['не мог', 'забыл'])
 
         return keys
+    
+    @property
+    def has_value(self):
+        match self.was_filled_in_past, self.is_filled_now:
+            case False, False:
+                return False
+        return True
 
     @property
-    def is_filled(self):
+    def was_filled_in_past(self):
         return bool(self.current_v)
 
     @property
-    def already_filled(self):
+    def is_filled_now(self):
         return bool(self.new_v)
 
     @property
@@ -107,7 +114,7 @@ class VedomostCell:
 
     @property
     def can_append_data(self) -> bool:
-        match self.is_filled, self.r_litera:
+        match self.was_filled_in_past, self.r_litera:
             case True, r_litera if r_litera not in self.current_v:
                 return True
         return False
@@ -115,7 +122,7 @@ class VedomostCell:
     @property
     def can_be_filled(self) -> bool:
         #print(self.is_filled, self.has_many_values, self.can_append_data)
-        match self.is_filled, self.has_many_values, self.can_append_data:
+        match self.was_filled_in_past, self.has_many_values, self.can_append_data:
             case False, _, _:
                 return True
             case True, True, True:
@@ -127,8 +134,8 @@ class VedomostCell:
         return not self.can_be_filled
 
     def fill(self, value: str) -> object:
-        print('filled?', self.is_filled)
-        match self.is_filled, self.has_many_values, self.can_append_data:
+        print('filled?', self.was_filled_in_past)
+        match self.was_filled_in_past, self.has_many_values, self.can_append_data:
             case True, True, True:
                 self.new_v = f'{self.current_v},{self.recipient[0]}{value}' # сложное в заплненную
             case True, True, False:

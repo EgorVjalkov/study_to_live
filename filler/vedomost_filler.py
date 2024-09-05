@@ -96,10 +96,8 @@ class VedomostFiller:
         return self
 
     @property
-    def something_done(self) -> None | bool:
-        for cell in self.working_space:
-            if cell.already_filled:
-                return True
+    def something_done(self) -> bool:
+        return not self.day.filled_recipient_cells_for_working.empty
 
     #@property
     #def already_filled_dict(self):
@@ -128,11 +126,13 @@ class VedomostFiller:
         if self.behavior == 'coefs':
             self.day.get_all_recipient_cells_index(self.recipient)
 
-        if self.day.no_recipient_cells_filled:
+        #if not self.day.no_recipient_cells_filled:
+        if not self.something_done:
             raise ResultEmptyError
 
         else:
             frame_for_counting = self.day.frame_for_counting
+            print(frame_for_counting)
             result = program2.main(
                 recipients=[self.recipient],
                 data_frame=frame_for_counting,
@@ -159,34 +159,20 @@ class VedomostFiller:
 if __name__ == '__main__':
     #filler = VedomostFiller(recipient='Egr',
     #                        behavior='coefs')
-    filler = VedomostFiller(recipient='Egr',
-                            behavior='correction')
+    filler = VedomostFiller(recipient='Lera',
+                            behavior='filling')
 
 # сделай дэйроу через проперти в котором только значения будут и его сохранишь в бд, а в стоковом пусить будут ячейки
 # а значит и функционал без костылей!!!
 
 # почемуто не всегда делает  отметки в мирроре, приглядись
+    #mirror.date = datetime.date(day=31, month=8, year=24)
     filler()
-    filler.change_day('3.9.24')
+    filler.change_day('1.9.24')
     filler.filter_cells()
-    filler.active_cell = 'a:stroll'
-    filler.fill_the_active_cell('1')
-    print(filler.day)
-    print(filler.day.day_row_for_saving)
-    print(filler.day.frame_for_counting)
-    filler.update_day_row()
-
-    #filler.update_day_row()
-    #print(filler.day.STATUS)
-    #filler.active_cell = 'e:desire'
-    #filler.fill_the_active_cell('4')
-    #print(filler.day.filled_recipient_cells_for_working)
-    #print(filler.working_space)
-    #print(filler.day.date_n_day_str)
-    #filler.filter_cells()
-    #filler.active_cell = 'l:velo'
-    #filler.active_cell_data.current_value = None
-    #print(filler.working_space)
-    #filler.update_day_row()
-
-
+    print(filler.day.all_filled_recipient_cells_index)
+    print(filler.day.is_all_r_cells_filled)
+    #filler.active_cell = 'a:stroll'
+    #filler.fill_the_active_cell('1')
+    #filler.count_day_sum()
+    #print(filler.day)
