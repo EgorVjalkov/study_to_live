@@ -108,6 +108,7 @@ class VedomostFiller:
     def update_day_row(self) -> object:
         if self.behavior in ['filling', 'manually']:
             self.correct_day_status()
+        print(self.day.day_row_for_saving)
         mirror.update_vedomost(self.day.day_row_for_saving)
         return self
 
@@ -123,37 +124,36 @@ class VedomostFiller:
         return self
 
     def count_day_sum(self):
-        if self.behavior == 'coefs':
-            self.day.get_all_recipient_cells_index(self.recipient)
+        match self.behavior, self.something_done:
+            case beh, False if beh != 'count':
+                raise ResultEmptyError
 
-        #if not self.day.no_recipient_cells_filled:
-        if not self.something_done:
-            raise ResultEmptyError
+            case 'coefs', _:
+                self.day.get_all_recipient_cells_index(self.recipient)
 
-        else:
-            frame_for_counting = self.day.frame_for_counting
-            print(frame_for_counting)
-            result = program2.main(
-                recipients=[self.recipient],
-                data_frame=frame_for_counting,
-                price_frame=mirror.get_cells_data('filling'),
-                filled_frame=False,
-                demo_mode=True,
-                show_calc=False)
+        frame_for_counting = self.day.frame_for_counting
+        print(frame_for_counting)
+        result = program2.main(
+            recipients=[self.recipient],
+            data_frame=frame_for_counting,
+            price_frame=mirror.get_cells_data('filling'),
+            filled_frame=False,
+            demo_mode=True,
+            show_calc=False)
 
-            result_row = result.loc[self.day.name].map(
-                lambda i: 0.0 if i in ['can`t', 'wishn`t'] else i)
-            frame_for_counting.loc['result'] = result_row.fillna(0.0)
-            frame_for_counting.loc[self.day.name] = (frame_for_counting.loc[self.day.name].
-                                                     map(lambda i: f'"{i}"'))
-            frame_for_counting = frame_for_counting[self.day.all_filled_recipient_cells_index].fillna(0.0)
+        result_row = result.loc[self.day.name].map(
+            lambda i: 0.0 if i in ['can`t', 'wishn`t'] else i)
+        frame_for_counting.loc['result'] = result_row.fillna(0.0)
+        frame_for_counting.loc[self.day.name] = (frame_for_counting.loc[self.day.name].
+                                                 map(lambda i: f'"{i}"'))
+        frame_for_counting = frame_for_counting[self.day.all_filled_recipient_cells_index].fillna(0.0)
 
-            index_with_filled_marks = frame_for_counting.columns.map(
-                lambda i: f'*{i}' if i in self.day.filled_recipient_cells_for_working else i)
-            frame_for_counting = pd.DataFrame({'mark': frame_for_counting.loc[self.day.name].to_list(),
-                                               'result': frame_for_counting.loc['result'].to_list()},
-                                              index=index_with_filled_marks)
-            return frame_for_counting
+        index_with_filled_marks = frame_for_counting.columns.map(
+            lambda i: f'*{i}' if i in self.day.filled_recipient_cells_for_working else i)
+        frame_for_counting = pd.DataFrame({'mark': frame_for_counting.loc[self.day.name].to_list(),
+                                           'result': frame_for_counting.loc['result'].to_list()},
+                                          index=index_with_filled_marks)
+        return frame_for_counting
 
 
 if __name__ == '__main__':
@@ -166,13 +166,15 @@ if __name__ == '__main__':
 # а значит и функционал без костылей!!!
 
 # почемуто не всегда делает  отметки в мирроре, приглядись
-    #mirror.date = datetime.date(day=31, month=8, year=24)
     filler()
-    filler.change_day('1.9.24')
+    print(mirror.status_series)
+    filler.change_day('4.9.24')
     filler.filter_cells()
-    print(filler.day.all_filled_recipient_cells_index)
-    print(filler.day.is_all_r_cells_filled)
+    print(filler.working_space)
     #filler.active_cell = 'a:stroll'
-    #filler.fill_the_active_cell('1')
+    #filler.fill_the_active_cell('0')
+    #filler.update_day_row()
+    #print(filler.day.all_filled_recipient_cells_index)
+    #print(filler.day.is_all_r_cells_filled)
     #filler.count_day_sum()
     #print(filler.day)

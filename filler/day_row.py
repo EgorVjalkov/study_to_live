@@ -95,11 +95,12 @@ class DayRow(pd.Series):
     @property
     def day_row_for_saving(self) -> pd.Series:
         row = self.copy()
-        for c_name in self.recipient_cells_for_working_index:
-            if row[c_name].is_filled_now:
-                row[c_name] = self[c_name].new_v
-            else:
-                row[c_name] = self[c_name].current_v
+        for c_name in row.index:
+            match row[c_name]:
+                case VedomostCell(is_filled_now=True):
+                    row[c_name] = self[c_name].new_v
+                case VedomostCell(is_filled_now=False):
+                    row[c_name] = self[c_name].current_v
         return row
 
     @property

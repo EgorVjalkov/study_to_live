@@ -38,7 +38,7 @@ def get_counter_report(filler: VedomostFiller) -> list:
 
 
 def get_answer_if_finish(filler: VedomostFiller) -> str:
-    filled: dict = filler.day.filled_recipient_cells_for_working
+    filled: dict = filler.day.filled_recipient_cells_for_working.to_dict()
     answer_list = [f'За {filler.day.date_n_day_str} заполнено:']
 
     answer_list.extend([f'{c} -> {filled[c]}' for c in filled])
@@ -96,7 +96,7 @@ async def get_topic(dialog_manager: DialogManager,
     filler: VedomostFiller = get_filler(dialog_manager)
     cat_name = filler.active_cell_name
     if filler.active_cell_data.was_filled_in_past:
-        old_value_sent = f'Предидущее значение - {filler.active_cell_data.current_value}'
+        old_value_sent = f'Предыдущее значение - {filler.active_cell_data.current_value}'
     else:
         old_value_sent = ''
     return {'cat_name': cat_name, 'old_value': old_value_sent}
@@ -115,6 +115,6 @@ async def get_report(dialog_manager: DialogManager,
 
     user = dialog_manager.event.from_user
     if user.id != ADMIN_ID:
-        await bot.send_message(ADMIN_ID, f'{user.username} завершил заполнение. {report}')
+        await bot.send_message(ADMIN_ID, f'{user.first_name} завершил заполнение. {report}')
 
     return {'report': report}

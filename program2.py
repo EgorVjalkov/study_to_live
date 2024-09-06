@@ -73,6 +73,7 @@ def main(recipients: list,
 if __name__ == '__main__':
     mirror2 = Mirror()
     mirror2.date = last_date_of_past_month(datetime.date.today())
+    mirror2.init_series()
     vedomost = mirror2.get_vedomost()
     price = mirror2.get_cells_data('filling')
     if not does_need_correction(price):
@@ -82,3 +83,4 @@ if __name__ == '__main__':
              month=get_month(mirror2.date),
              null_after_midnight=False,
              )
+

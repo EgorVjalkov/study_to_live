@@ -44,7 +44,7 @@ async def on_chosen_date(c: CallbackQuery,
     filler: VedomostFiller = get_filler(dm)
     try:
         filler.change_day(item_id)
-        # если каунтер то филтер селлс не надо
+        # если каунтер то филтер селлс не надо??????????????
         if filler.behavior == 'count':
             await dm.switch_to(FillingVedomost.report_menu)
         else:

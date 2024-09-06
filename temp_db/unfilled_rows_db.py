@@ -52,12 +52,12 @@ if __name__ == '__main__':
     price = f'{month}_price'
     coefs = 'coefs'
 
-    ## for vedomost upload:
-    #ved_frame = pd.read_excel(f'{vedomost}.xlsx', index_col=0, dtype=str)
-    #df = DataBase(vedomost)
-    #df.update_table(ved_frame, 'DATE')
-    #df = df.get_table(with_dates=True).set_index('DATE')
-    #print(df)
+    # for vedomost upload:
+    ved_frame = pd.read_excel(f'{vedomost}.xlsx', index_col=0, dtype=str)
+    df = DataBase(vedomost)
+    df.update_table(ved_frame, 'DATE')
+    df = df.get_table(with_dates=True).set_index('DATE')
+    print(df)
 
     # for price upload:
     #price_frame = pd.read_excel(f'{price}.xlsx', index_col=0, dtype=str)

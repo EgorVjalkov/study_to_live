@@ -115,6 +115,7 @@ class Mirror:
         # это прекрасно выглядит, но подумай над подгрузкой других ведомостей
         recipe = set_filter(self.date_of_last_update, recipient, by_behavior)
         days_df = self.mirror_df.copy()
+        print(self.date_of_last_update)
         for col_name in recipe:
             filter_ = recipe[col_name]
             filtered = days_df[col_name].map(filter_)
