@@ -99,7 +99,7 @@ class Mirror:
         self.series[date] = 'busy'
         return self
 
-    def set_day_status(self, day: DayRow) -> object:
+    def set_day_status(self, day: pd.Series) -> object:
         self.series[day.name] = day.STATUS
         return self
 

@@ -39,17 +39,22 @@ def get_counter_report(filler: VedomostFiller) -> list:
 
 def get_answer_if_finish(filler: VedomostFiller) -> str:
     filled: dict = filler.day.filled_recipient_cells_for_working.to_dict()
+    print(filled)
     answer_list = [f'За {filler.day.date_n_day_str} заполнено:']
 
     answer_list.extend([f'{c} -> {filled[c]}' for c in filled])
-    try:
-        answer_list.append('')
-        answer_list.append(f'За {filler.day.date_n_day_str} насчитано:')
-        answer_list.extend(get_counter_report(filler))
-    except ResultEmptyError:
-        return '\n'.join(answer_list)
-    except BaseException as error:
-        answer_list.append(f'не могу рассчитать, какая-то ошибка {error}')
+    print(answer_list)
+    answer_list.append('')
+    answer_list.append(f'За {filler.day.date_n_day_str} насчитано:')
+    answer_list.extend(get_counter_report(filler))
+    #try:
+    #    answer_list.append('')
+    #    answer_list.append(f'За {filler.day.date_n_day_str} насчитано:')
+    #    answer_list.extend(get_counter_report(filler))
+    #except ResultEmptyError:
+    #    return '\n'.join(answer_list)
+    #except BaseException as error:
+    #    answer_list.append(f'не могу рассчитать, какая-то ошибка {error}')
     return '\n'.join(answer_list)
 
 

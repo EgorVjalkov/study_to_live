@@ -9,6 +9,7 @@ from filler.vedomost_cell import VedomostCell
 from filler.day_row import DayRow
 from filler.date_funcs import today_for_filling
 from utils.converter import Converter
+from counter import classes as cl
 
 
 class ResultEmptyError(BaseException):
@@ -99,27 +100,27 @@ class VedomostFiller:
     def something_done(self) -> bool:
         return not self.day.filled_recipient_cells_for_working.empty
 
-    #@property
-    #def already_filled_dict(self):
-    #    #return {cell.name: cell.new_value for cell in self.working_space if cell.already_filled}
-    #    filled = {cell.name: cell.new_value for cell in self.working_space if cell.already_filled}
-    #    return filled
-
-    def update_day_row(self) -> object:
+    def update_day_row(self, save: bool = True) -> object:
         if self.behavior in ['filling', 'manually']:
             self.correct_day_status()
-        print(self.day.day_row_for_saving)
-        mirror.update_vedomost(self.day.day_row_for_saving)
+        #print(self.day.day_row_for_saving)
+        if save:
+            mirror.update_vedomost(self.day.day_row_for_saving)
         return self
 
+    @property
+    def done_by_another_recipient(self):
+        status = self.day.STATUS
+        return status != self.recipient[0] and status in cl.r_liters
+
     def correct_day_status(self) -> object:
-        match self.day:
-            #здесь тоже замутки. дни со статусом Y переделываются в имееные.
-            case DayRow(is_all_r_cells_filled=True, has_done_status_by_another_recipient=True):
+        # не сделано исключение по Y, т.к. такой день не может попасть в работу по заполнению
+        match self.day.is_all_r_cells_filled, self.done_by_another_recipient:
+            case True, True:
                 self.day.STATUS = 'Y'
-            case DayRow(is_all_r_cells_filled=True, has_done_status_by_another_recipient=False):
+            case True, False:
                 self.day.STATUS = self.recipient[0]
-            case DayRow(is_all_r_cells_filled=False, has_done_status_by_another_recipient=False):
+            case False, False:
                 self.day.STATUS = 'at work'
         return self
 
@@ -129,6 +130,8 @@ class VedomostFiller:
                 raise ResultEmptyError
 
             case 'coefs', _:
+                # на свежую голову подумай насчет замутить здесь геттер сеттер для дня и все головомойку, а потом перерасчет
+                self.day = DayRow(self.day.day_row_for_saving)
                 self.day.get_all_recipient_cells_index(self.recipient)
 
         frame_for_counting = self.day.frame_for_counting
@@ -162,18 +165,16 @@ if __name__ == '__main__':
     filler = VedomostFiller(recipient='Lera',
                             behavior='filling')
 
-# сделай дэйроу через проперти в котором только значения будут и его сохранишь в бд, а в стоковом пусить будут ячейки
-# а значит и функционал без костылей!!!
-
 # почемуто не всегда делает  отметки в мирроре, приглядись
     filler()
-    print(mirror.status_series)
-    filler.change_day('4.9.24')
+    #print(mirror.status_series)
+    #print(filler.day_btns)
+    filler.change_day('1.9.24')
     filler.filter_cells()
-    print(filler.working_space)
-    #filler.active_cell = 'a:stroll'
-    #filler.fill_the_active_cell('0')
-    #filler.update_day_row()
+    ##filler.active_cell = 'a:stroll'
+    ##filler.fill_the_active_cell('1')
+    filler.update_day_row(save=False)
+    print(filler.day.STATUS)
     #print(filler.day.all_filled_recipient_cells_index)
     #print(filler.day.is_all_r_cells_filled)
     #filler.count_day_sum()

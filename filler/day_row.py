@@ -1,9 +1,9 @@
 import pandas as pd
 from typing import Optional
 
-from counter import classes as cl
 from utils.converter import Converter
 from filler.vedomost_cell import VedomostCell
+from counter import classes as cl
 
 
 day_dict = {
@@ -22,10 +22,6 @@ class DayRow(pd.Series):
         super().__init__(day_data)
         self.cell_list_for_working = []
         self.list_of_all_recipient_cells = []
-
-    @property
-    def has_done_status_by_another_recipient(self):
-        return self.STATUS in cl.r_liters
 
     @property
     def recipient_cells_for_working_index(self) -> pd.Index:
