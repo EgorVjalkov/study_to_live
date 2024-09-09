@@ -37,24 +37,9 @@ def get_counter_report(filler: VedomostFiller) -> list:
     return rows_for_report
 
 
-def get_answer_if_finish(filler: VedomostFiller) -> str:
-    filled: dict = filler.day.filled_recipient_cells_for_working.to_dict()
-    print(filled)
-    answer_list = [f'За {filler.day.date_n_day_str} заполнено:']
-
-    answer_list.extend([f'{c} -> {filled[c]}' for c in filled])
-    print(answer_list)
-    answer_list.append('')
-    answer_list.append(f'За {filler.day.date_n_day_str} насчитано:')
-    answer_list.extend(get_counter_report(filler))
-    #try:
-    #    answer_list.append('')
-    #    answer_list.append(f'За {filler.day.date_n_day_str} насчитано:')
-    #    answer_list.extend(get_counter_report(filler))
-    #except ResultEmptyError:
-    #    return '\n'.join(answer_list)
-    #except BaseException as error:
-    #    answer_list.append(f'не могу рассчитать, какая-то ошибка {error}')
+def get_answer_for_filling(date_n_day: str, dict_for_rep) -> str:
+    answer_list = [f'За {date_n_day} заполнено:']
+    answer_list.extend([f'{c} -> {dict_for_rep[c]}' for c in dict_for_rep])
     return '\n'.join(answer_list)
 
 
@@ -111,12 +96,8 @@ async def get_report(dialog_manager: DialogManager,
                      **middleware_data) -> dict:
 
     filler: VedomostFiller = get_filler(dialog_manager)
-    if filler.behavior == 'count':
-        return {'report': '\n'.join(
-            get_counter_report(filler))}
-
-    filler.update_day_row()
-    report = get_answer_if_finish(filler)
+    dict_for_rep = filler.update_bd_and_get_dict_for_rep()
+    report = get_answer_for_filling(filler.day.date_n_day_str, dict_for_rep)
 
     user = dialog_manager.event.from_user
     if user.id != ADMIN_ID:

@@ -70,10 +70,15 @@ class DayRow(pd.Series):
                     self.cell_list_for_working.append(c_name)
         return self
 
+    #@property
+    #def filled_recipient_cells_for_working(self) -> pd.Series: # для рeпорта
+    #    filled = self[self.recipient_cells_for_working_index].map(lambda i: i.is_filled_now)
+    #    return self[filled[filled == True].index]
+
     @property
-    def filled_recipient_cells_for_working(self) -> pd.Series: # для рeпорта
+    def filled_recipient_cells_for_working_index(self) -> pd.Index: # для рeпорта
         filled = self[self.recipient_cells_for_working_index].map(lambda i: i.is_filled_now)
-        return self[filled[filled == True].index]
+        return filled[filled == True].index
 
     @property
     def all_filled_recipient_cells_index(self) -> pd.Index: # для подсчета всех ячееек заполненных реципиентом
@@ -102,10 +107,6 @@ class DayRow(pd.Series):
     @property
     def is_all_r_cells_filled(self):
         return len(self.all_recipient_cells_index) == len(self.all_filled_recipient_cells_index)
-
-    @property
-    def no_recipient_cells_filled(self):
-        return self.all_filled_recipient_cells_index.empty
 
     @property
     def frame_for_counting(self) -> pd.DataFrame:

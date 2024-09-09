@@ -98,15 +98,17 @@ class VedomostFiller:
 
     @property
     def something_done(self) -> bool:
-        return not self.day.filled_recipient_cells_for_working.empty
+        return not self.day.filled_recipient_cells_for_working_index.empty
 
-    def update_day_row(self, save: bool = True) -> object:
+    def update_bd_and_get_dict_for_rep(self, save: bool = True) -> dict:
         if self.behavior in ['filling', 'manually']:
             self.correct_day_status()
-        #print(self.day.day_row_for_saving)
+
+        row_for_saving = self.day.day_row_for_saving
         if save:
-            mirror.update_vedomost(self.day.day_row_for_saving)
-        return self
+            mirror.update_vedomost(row_for_saving)
+
+        return row_for_saving[self.day.filled_recipient_cells_for_working_index].to_dict()
 
     @property
     def done_by_another_recipient(self):
@@ -131,8 +133,7 @@ class VedomostFiller:
 
             case 'coefs', _:
                 # на свежую голову подумай насчет замутить здесь геттер сеттер для дня и все головомойку, а потом перерасчет
-                self.day = DayRow(self.day.day_row_for_saving)
-                self.day.get_all_recipient_cells_index(self.recipient)
+                self.day.get_all_recipient_cells_index(self.recipient, self.day.day_row_for_saving)
 
         frame_for_counting = self.day.frame_for_counting
         print(frame_for_counting)
@@ -173,7 +174,7 @@ if __name__ == '__main__':
     filler.filter_cells()
     ##filler.active_cell = 'a:stroll'
     ##filler.fill_the_active_cell('1')
-    filler.update_day_row(save=False)
+    rep = filler.update_bd_and_get_dict_for_rep(save=False)
     print(filler.day.STATUS)
     #print(filler.day.all_filled_recipient_cells_index)
     #print(filler.day.is_all_r_cells_filled)
