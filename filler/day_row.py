@@ -58,13 +58,18 @@ class DayRow(pd.Series):
     def filter_by_args_and_load_data(self, recipient: str, behavior: str, price_frame: pd.DataFrame) -> pd.Series:
         cells = self.get_working_cells_index(recipient, behavior)
         for c_name in cells:
-            vedomost_cell = VedomostCell(c_name, self[c_name], recipient, price_frame[c_name])
-            self[c_name] = vedomost_cell
+            if not isinstance(cells[c_name], VedomostCell):
+                vedomost_cell = VedomostCell(c_name, self[c_name], recipient, price_frame[c_name])
+                self[c_name] = vedomost_cell
+            else:
+                vedomost_cell = self[c_name]
 
             match behavior, vedomost_cell:
                 case 'filling', vc if vc.can_be_filled:
                     self.cell_list_for_working.append(c_name)
                 case 'correction', vc if vc.can_be_corrected:
+                    self.cell_list_for_working.append(c_name)
+                case 'count', vc if vc.has_value:
                     self.cell_list_for_working.append(c_name)
                 case 'coefs' | 'manually', _:
                     self.cell_list_for_working.append(c_name)
@@ -110,10 +115,15 @@ class DayRow(pd.Series):
 
     @property
     def frame_for_counting(self) -> pd.DataFrame:
-        index_for_counting = ['DAY'] + list(self.accessory_index) + list(self.all_filled_recipient_cells_index)
+        index_for_counting = ['DAY'] + list(self.accessory_index) + list(self.recipient_cells_for_working_index)
         print(index_for_counting)
         print(self[self.all_filled_recipient_cells_index])
         return pd.DataFrame({self.name: self.day_row_for_saving[index_for_counting]}).T
+
+    #@property
+    #def frame_for_counting(self) -> pd.DataFrame:
+    #    index_for_counting = ['DAY'] + list(self.accessory_index) + list(self.all_recipient_cells_index)
+    #    return pd.DataFrame({self.name: self[index_for_counting]}).T
 
     @property
     def date_n_day_str(self):

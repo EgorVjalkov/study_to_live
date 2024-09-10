@@ -126,17 +126,23 @@ class VedomostFiller:
                 self.day.STATUS = 'at work'
         return self
 
-    def count_day_sum(self):
-        match self.behavior, self.something_done:
-            case beh, False if beh != 'count':
-                raise ResultEmptyError
 
-            case 'coefs', _:
-                # на свежую голову подумай насчет замутить здесь геттер сеттер для дня и все головомойку, а потом перерасчет
-                self.day.get_all_recipient_cells_index(self.recipient, self.day.day_row_for_saving)
+class VedomostCounter(VedomostFiller):
+    def __init__(self, recipient):
+        super().__init__(recipient, 'count')
 
+    @property
+    def day_row(self):
+        return self.day
+
+    @day_row.setter
+    def day_row(self, day: DayRow):
+        self.day = day
+
+    def count_day_sum(self, day_row: DayRow):
+        # здесь надо разработать вопрос с импортом дэйроу
+        self.filter_cells()
         frame_for_counting = self.day.frame_for_counting
-        print(frame_for_counting)
         result = program2.main(
             recipients=[self.recipient],
             data_frame=frame_for_counting,
@@ -147,36 +153,42 @@ class VedomostFiller:
 
         result_row = result.loc[self.day.name].map(
             lambda i: 0.0 if i in ['can`t', 'wishn`t'] else i)
+        print(result_row)
         frame_for_counting.loc['result'] = result_row.fillna(0.0)
+        frame_for_counting = frame_for_counting.dropna(axis=1)
+        del frame_for_counting['DAY']
+        print(frame_for_counting)
         frame_for_counting.loc[self.day.name] = (frame_for_counting.loc[self.day.name].
                                                  map(lambda i: f'"{i}"'))
-        frame_for_counting = frame_for_counting[self.day.all_filled_recipient_cells_index].fillna(0.0)
-
-        index_with_filled_marks = frame_for_counting.columns.map(
-            lambda i: f'*{i}' if i in self.day.filled_recipient_cells_for_working else i)
-        frame_for_counting = pd.DataFrame({'mark': frame_for_counting.loc[self.day.name].to_list(),
-                                           'result': frame_for_counting.loc['result'].to_list()},
-                                          index=index_with_filled_marks)
+        frame_for_counting = frame_for_counting.dropna(axis=1)
+        #frame_for_counting = frame_for_counting[self.day.all_recipient_cells_index].fillna(0.0).T
         return frame_for_counting
 
 
 if __name__ == '__main__':
-    #filler = VedomostFiller(recipient='Egr',
-    #                        behavior='coefs')
-    filler = VedomostFiller(recipient='Lera',
-                            behavior='filling')
+    counter = VedomostCounter('Egr')
+    counter.change_day('9.9.24')
+    rep = counter.count_day_sum()
+    print(rep)
+    #counter.filter_cells()
 
-# почемуто не всегда делает  отметки в мирроре, приглядись
-    filler()
-    #print(mirror.status_series)
-    #print(filler.day_btns)
-    filler.change_day('1.9.24')
-    filler.filter_cells()
-    ##filler.active_cell = 'a:stroll'
-    ##filler.fill_the_active_cell('1')
-    rep = filler.update_bd_and_get_dict_for_rep(save=False)
-    print(filler.day.STATUS)
-    #print(filler.day.all_filled_recipient_cells_index)
-    #print(filler.day.is_all_r_cells_filled)
-    #filler.count_day_sum()
-    #print(filler.day)
+
+
+
+
+    #filler = VedomostFiller(recipient='Lera',
+    #                        behavior='filling')
+
+    #filler()
+    ##print(mirror.status_series)
+    ##print(filler.day_btns)
+    #filler.change_day('1.9.24')
+    #filler.filter_cells()
+    ###filler.active_cell = 'a:stroll'
+    ###filler.fill_the_active_cell('1')
+    #rep = filler.update_bd_and_get_dict_for_rep(save=False)
+    #print(filler.day.STATUS)
+    ##print(filler.day.all_filled_recipient_cells_index)
+    ##print(filler.day.is_all_r_cells_filled)
+    ##filler.count_day_sum()
+    ##print(filler.day)
