@@ -81,14 +81,16 @@ class Mirror:
     def update_vedomost(self, day_row: pd.Series):
         vedomost = DataBase(self.vedomost_table_name)
         frame = vedomost.get_table(with_dates=True).set_index('DATE')
+        frame.loc[day_row.name] = day_row
+        vedomost.update_table(frame)
+        print('не равен, запись, update')
 
         #matched_ser = frame.loc[day_row.name].eq(day_row)
         #print(matched_ser)
-        if frame.loc[day_row.name].ne(day_row).any(): # перевод: хоть один из эелементов не равен
-            frame.loc[day_row.name] = day_row
-            vedomost.update_table(frame)
-            print('не равен, запись, update')
-        self.set_day_status(day_row)
+        #if frame.loc[day_row.name].ne(day_row).any(): # перевод: хоть один из эелементов не равен
+        #    frame.loc[day_row.name] = day_row
+        #    vedomost.update_table(frame)
+        #    print('не равен, запись, update')
 
     def check_date(self, date: datetime.date) -> None:
         day_status = self.series.get(date)

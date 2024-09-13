@@ -95,13 +95,13 @@ class VedomostCell:
     
     @property
     def has_value(self):
-        match self.was_filled_in_past, self.is_filled_now:
+        match self.can_be_corrected, self.is_filled_now:
             case False, False:
                 return False
         return True
 
     @property
-    def was_filled_in_past(self):
+    def has_some_value(self):
         return bool(self.current_v)
 
     @property
@@ -109,12 +109,12 @@ class VedomostCell:
         return bool(self.new_v)
 
     @property
-    def has_many_values(self) -> bool:
+    def can_have_many_values(self) -> bool:
         return bool(self.category_data['private_value'])
 
     @property
-    def can_append_data(self) -> bool:
-        match self.was_filled_in_past, self.r_litera:
+    def can_append_value(self) -> bool:
+        match self.has_some_value, self.r_litera:
             case True, r_litera if r_litera not in self.current_v:
                 return True
         return False
@@ -122,7 +122,7 @@ class VedomostCell:
     @property
     def can_be_filled(self) -> bool:
         #print(self.is_filled, self.has_many_values, self.can_append_data)
-        match self.was_filled_in_past, self.has_many_values, self.can_append_data:
+        match self.has_some_value, self.can_have_many_values, self.can_append_value:
             case False, _, _:
                 return True
             case True, True, True:
@@ -134,8 +134,8 @@ class VedomostCell:
         return not self.can_be_filled
 
     def fill(self, value: str) -> object:
-        print('filled?', self.was_filled_in_past)
-        match self.was_filled_in_past, self.has_many_values, self.can_append_data:
+        print('filled?', self.has_some_value)
+        match self.has_some_value, self.can_have_many_values, self.can_append_value:
             case True, True, True:
                 self.new_v = f'{self.current_v},{self.recipient[0]}{value}' # сложное в заплненную
             case True, True, False:

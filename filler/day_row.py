@@ -57,22 +57,21 @@ class DayRow(pd.Series):
 
     def filter_by_args_and_load_data(self, recipient: str, behavior: str, price_frame: pd.DataFrame) -> pd.Series:
         cells = self.get_working_cells_index(recipient, behavior)
+        #print(cells)
         for c_name in cells:
-            if not isinstance(cells[c_name], VedomostCell):
-                vedomost_cell = VedomostCell(c_name, self[c_name], recipient, price_frame[c_name])
-                self[c_name] = vedomost_cell
-            else:
-                vedomost_cell = self[c_name]
+            vedomost_cell = VedomostCell(c_name, self[c_name], recipient, price_frame[c_name])
+            #print(c_name, vedomost_cell.can_be_filled)
 
             match behavior, vedomost_cell:
                 case 'filling', vc if vc.can_be_filled:
                     self.cell_list_for_working.append(c_name)
-                case 'correction', vc if vc.can_be_corrected:
+                    self[c_name] = vedomost_cell # подумай здесь о много ступенчатом добавлении данных
+                case 'correction' | 'count', vc if vc.can_be_corrected:
                     self.cell_list_for_working.append(c_name)
-                case 'count', vc if vc.has_value:
-                    self.cell_list_for_working.append(c_name)
+                    self[c_name] = vedomost_cell
                 case 'coefs' | 'manually', _:
                     self.cell_list_for_working.append(c_name)
+                    self[c_name] = vedomost_cell
         return self
 
     #@property
@@ -85,18 +84,19 @@ class DayRow(pd.Series):
         filled = self[self.recipient_cells_for_working_index].map(lambda i: i.is_filled_now)
         return filled[filled == True].index
 
-    @property
-    def all_filled_recipient_cells_index(self) -> pd.Index: # для подсчета всех ячееек заполненных реципиентом
-        can_be_filled_ser = self[self.all_recipient_cells_index].map(lambda cell: cell.has_value) # eсть ли не заполненные клетки?
-        return can_be_filled_ser[can_be_filled_ser==True].index
+    #@property
+    #def all_filled_recipient_cells_index(self) -> pd.Index: # для подсчета всех ячееек заполненных реципиентом
+    #    #для определения все ли ячейки реципиента заполнены
+    #    can_be_filled_ser = self[self.all_recipient_cells_index].map(lambda cell: cell.has_value)
+    #    return can_be_filled_ser[can_be_filled_ser==True].index
 
-    def save_values(self):
-        for c_name in self.recipient_cells_for_working_index:
-            if self[c_name].is_filled_now:
-                self[c_name] = self[c_name].new_v
-            else:
-                self[c_name] = self[c_name].current_v
-        return self
+    #def save_values(self):
+    #    for c_name in self.recipient_cells_for_working_index:
+    #        if self[c_name].is_filled_now:
+    #            self[c_name] = self[c_name].new_v
+    #        else:
+    #            self[c_name] = self[c_name].current_v
+    #    return self
 
     @property
     def day_row_for_saving(self) -> pd.Series:
@@ -111,13 +111,12 @@ class DayRow(pd.Series):
 
     @property
     def is_all_r_cells_filled(self):
-        return len(self.all_recipient_cells_index) == len(self.all_filled_recipient_cells_index)
+        return len(self.recipient_cells_for_working_index) == len(self.filled_recipient_cells_for_working_index)
 
     @property
     def frame_for_counting(self) -> pd.DataFrame:
         index_for_counting = ['DAY'] + list(self.accessory_index) + list(self.recipient_cells_for_working_index)
-        print(index_for_counting)
-        print(self[self.all_filled_recipient_cells_index])
+        #print(self[self.all_filled_recipient_cells_index])
         return pd.DataFrame({self.name: self.day_row_for_saving[index_for_counting]}).T
 
     #@property

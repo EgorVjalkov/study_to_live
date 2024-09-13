@@ -85,7 +85,7 @@ async def get_topic(dialog_manager: DialogManager,
 
     filler: VedomostFiller = get_filler(dialog_manager)
     cat_name = filler.active_cell_name
-    if filler.active_cell_data.was_filled_in_past:
+    if filler.active_cell_data.has_some_value:
         old_value_sent = f'Предыдущее значение - {filler.active_cell_data.current_value}'
     else:
         old_value_sent = ''
