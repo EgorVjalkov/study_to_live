@@ -37,8 +37,17 @@ def get_counter_report(filler: VedomostFiller) -> list:
     return rows_for_report
 
 
-def get_answer_for_filling(date_n_day: str, dict_for_rep) -> str:
-    answer_list = [f'За {date_n_day} заполнено:']
+def get_answer_for_filling(date_n_day: str,
+                           dict_for_rep: dict,
+                           day_status: str = '',
+                           mir_status: str = ''
+                           ) -> str:
+    answer_list = [
+        f'За {date_n_day} заполнено:',
+        f'статус дня: {day_status}',
+        f'статус зеркала {mir_status}',
+        ''
+    ]
     answer_list.extend([f'{c} -> {dict_for_rep[c]}' for c in dict_for_rep])
     return '\n'.join(answer_list)
 
@@ -97,7 +106,10 @@ async def get_report(dialog_manager: DialogManager,
 
     filler: VedomostFiller = get_filler(dialog_manager)
     dict_for_rep = filler.update_bd_and_get_dict_for_rep()
-    report = get_answer_for_filling(filler.day.date_n_day_str, dict_for_rep)
+    report = get_answer_for_filling(filler.day.date_n_day_str,
+                                    dict_for_rep,
+                                    filler.day.STATUS,
+                                    filler.mirror_status)
 
     user = dialog_manager.event.from_user
     if user.id != ADMIN_ID:

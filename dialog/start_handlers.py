@@ -8,7 +8,7 @@ from aiogram_dialog import DialogManager, StartMode
 from dialog.states import FillingVedomost
 
 from My_token import TOKEN, ADMIN_ID
-from filler.vedomost_filler import VedomostFiller
+from filler.vedomost_filler import VedomostFiller, CoefsFiller, VedomostCounter
 from filler.date_funcs import today_for_filling
 
 
@@ -40,7 +40,7 @@ async def start_dialog(m: Message, dialog_manager: DialogManager):
     recipient = username_dict[m.from_user.first_name]
     await dialog_manager.start(FillingVedomost.date_menu,
                                mode=StartMode.RESET_STACK,
-                               data={'filler': VedomostFiller(recipient, 'count').__call__()},
+                               data={'filler': VedomostCounter(recipient).__call__()},
                                )
 
 
@@ -54,7 +54,7 @@ async def start_dialog(m: Message, dialog_manager: DialogManager):
     rec_name = username_dict[rec_data.first_name]
     await dialog_manager.start(FillingVedomost.date_menu,
                                mode=StartMode.RESET_STACK,
-                               data={'filler': VedomostFiller(rec_name, 'coefs').__call__()},
+                               data={'filler': CoefsFiller(rec_name).__call__()},
                                )
 
 

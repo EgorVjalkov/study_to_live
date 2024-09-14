@@ -19,12 +19,13 @@ class ResultEmptyError(BaseException):
 class VedomostFiller:
     def __init__(self,
                  recipient: str = '',
-                 behavior: str = ''):
+                 behavior: str = '',
+                 day_data: DayRow = None):
 
         self.recipient = recipient
         self.behavior = behavior
+        self.day: Optional[DayRow] = day_data
 
-        self.day: Optional[DayRow] = None
         self.active_cell_name: Optional[str] = None
 
     def __call__(self, *args, **kwargs) -> object:
@@ -47,6 +48,14 @@ class VedomostFiller:
         days = [[i] for i in days] #для геттера по item
         return days
 
+    @property
+    def day_row(self):
+        return self.day
+
+    @day_row.setter
+    def day_row(self, day: DayRow):
+        self.day = day
+
     def change_day(self, date: str | datetime.date) -> DayRow:
         if isinstance(date, str):
             date = Converter(date_in_str=date).to('date_object')
@@ -54,20 +63,20 @@ class VedomostFiller:
         if self.behavior != 'count':
             mirror.occupy(date)
         self.day = DayRow(mirror.get_day_row(date))
-        self.day.get_all_recipient_cells_index(self.recipient)
         return self.day
 
     def filter_cells(self) -> DayRow:
+        self.day.get_all_recipient_cells_list(self.recipient)
         self.day.filter_by_args_and_load_data(self.recipient, self.behavior, mirror.get_cells_data(self.behavior))
         return self.day
 
     @property
     def working_space(self) -> pd.Series:
-        return self.day[self.day.recipient_cells_for_working_index]
+        return self.day[self.day.working_cells_index]
 
     @property
     def need_to_fill(self) -> int:
-        return len(self.day.recipient_cells_for_working_index)
+        return len(self.day.working_cells_index)
 
     @property
     def categories_btns(self):
@@ -98,14 +107,14 @@ class VedomostFiller:
 
     @property
     def something_done(self) -> bool:
-        return not self.day.filled_recipient_cells_for_working_index.empty
+        return not self.day.filled_cells_index.empty
 
     def update_bd_and_get_dict_for_rep(self, save: bool = True) -> dict:
-        if self.behavior in ['filling', 'manually']:
+        if self.behavior not in ['correction', 'count']:
             self.correct_day_status()
         mirror.set_day_status(self.day)
 
-        filled_cells_index = self.day.filled_recipient_cells_for_working_index
+        filled_cells_index = self.day.filled_cells_index
         match not filled_cells_index.empty, save:
             case True, need_save:
                 row_for_saving = self.day.day_row_for_saving
@@ -136,18 +145,33 @@ class VedomostFiller:
                 self.day.STATUS = 'at work'
         return self
 
+    @property
+    def mirror_status(self):
+        return mirror.status_series[self.day.name]
+
+
+class CoefsFiller(VedomostFiller):
+    def __init__(self, recipient):
+        super().__init__(recipient, 'coefs')
+
+    def correct_day_status(self) -> object:
+        re_filler = VedomostFiller(recipient=self.recipient,
+                                   behavior='filling',
+                                   day_data=DayRow(self.day.day_row_for_saving))
+        re_filler.filter_cells()
+        re_filler.correct_day_status()
+        print(self.day.STATUS)
+        print(re_filler.day.STATUS)
+        self.day.STATUS = re_filler.day.STATUS
+        return self
+
 
 class VedomostCounter(VedomostFiller):
-    def __init__(self, recipient):
-        super().__init__(recipient, 'count')
+    def __init__(self, recipient: str, day_data: DayRow = None):
 
-    @property
-    def day_row(self):
-        return self.day
-
-    @day_row.setter
-    def day_row(self, day: DayRow):
-        self.day = day
+        super().__init__(recipient,
+                         'count',
+                         day_data=day_data)
 
     def count_day_sum(self):
         self.filter_cells()
@@ -175,30 +199,21 @@ class VedomostCounter(VedomostFiller):
 
 
 if __name__ == '__main__':
-    filler = VedomostFiller(recipient='Lera',
+    filler = VedomostFiller(recipient='Egr',
                             behavior='filling')
 
     print(mirror.status_series)
-    #filler()
-    #filler.change_day('10.9.24')
-    #filler.filter_cells()
-    #print(filler.day.STATUS)
-    #filler.day.STATUS = 'at work'
-    #print(filler.day.STATUS)
-    #filler.update_status()
-
-    print(filler.day_btns)
-    for day in filler.day_btns:
-        filler.change_day(day[0])
-        filler.filter_cells()
-        #filler.active_cell = 'a:stroll'
-        #filler.fill_the_active_cell('F')
-        print(filler.working_space)
-
-
-    #    #filler.correct_day_status()
-    #    #print(filler.day.STATUS)
-        filler.update_status()
+    filler()
+    filler.change_day('13.9.24')
+    filler.filter_cells()
+    filler.active_cell = 'a:table'
+    filler.fill_the_active_cell('+')
+    pre = filler.update_bd_and_get_dict_for_rep(save=False)
+    print(pre)
+    counter = VedomostCounter('Lera', filler.day.day_row_for_saving)
+    rep2 = counter.count_day_sum()
+    print(rep2)
+    counter.filter_cells()
 
 
     #filler.change_day('10.9.24')
@@ -210,8 +225,3 @@ if __name__ == '__main__':
     #rep = filler.update_bd_and_get_dict_for_rep(save=True)
     #print(rep)
 
-    #counter = VedomostCounter('Lera')
-    #counter.day = DayRow(filler.day.day_row_for_saving)
-    #rep2 = counter.count_day_sum()
-    #print(rep2)
-    #counter.filter_cells()

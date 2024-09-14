@@ -24,21 +24,17 @@ class DayRow(pd.Series):
         self.list_of_all_recipient_cells = []
 
     @property
-    def recipient_cells_for_working_index(self) -> pd.Index:
+    def working_cells_index(self) -> pd.Index:
         return pd.Index(self.cell_list_for_working)
-
-    @property
-    def all_recipient_cells_index(self) -> pd.Index:
-        return pd.Index(self.list_of_all_recipient_cells)
 
     @property
     def accessory_index(self) -> pd.Index: # как источник клеток для coefs и внктриклассово
         return pd.Index([i for i in self.index if i.isupper() and i not in ['DAY', 'STATUS']])
 
-    def get_all_recipient_cells_index(self, recipient: str) -> list:
-        if self.list_of_all_recipient_cells:
-            self.list_of_all_recipient_cells.clear()
-
+    def get_all_recipient_cells_list(self, recipient: str) -> list:
+#        if self.list_of_all_recipient_cells:
+#            self.list_of_all_recipient_cells.clear()
+#
         date_ser = pd.Series({self.name: self.DAY}, name='DAY')
         r = cl.Recipient(recipient, date_ser)
         acc_frame = pd.DataFrame(self[self.accessory_index]).T
@@ -53,7 +49,7 @@ class DayRow(pd.Series):
         if behavior == 'coefs':
             return self.accessory_index
         else:
-            return self.get_all_recipient_cells_index(recipient)
+            return self.get_all_recipient_cells_list(recipient)
 
     def filter_by_args_and_load_data(self, recipient: str, behavior: str, price_frame: pd.DataFrame) -> pd.Series:
         cells = self.get_working_cells_index(recipient, behavior)
@@ -80,8 +76,8 @@ class DayRow(pd.Series):
     #    return self[filled[filled == True].index]
 
     @property
-    def filled_recipient_cells_for_working_index(self) -> pd.Index: # для рeпорта
-        filled = self[self.recipient_cells_for_working_index].map(lambda i: i.is_filled_now)
+    def filled_cells_index(self) -> pd.Index: # для рeпорта
+        filled = self[self.working_cells_index].map(lambda i: i.is_filled_now)
         return filled[filled == True].index
 
     #@property
@@ -111,11 +107,11 @@ class DayRow(pd.Series):
 
     @property
     def is_all_r_cells_filled(self):
-        return len(self.recipient_cells_for_working_index) == len(self.filled_recipient_cells_for_working_index)
+        return len(self.working_cells_index) == len(self.filled_cells_index)
 
     @property
     def frame_for_counting(self) -> pd.DataFrame:
-        index_for_counting = ['DAY'] + list(self.accessory_index) + list(self.recipient_cells_for_working_index)
+        index_for_counting = ['DAY'] + list(self.accessory_index) + list(self.working_cells_index)
         #print(self[self.all_filled_recipient_cells_index])
         return pd.DataFrame({self.name: self.day_row_for_saving[index_for_counting]}).T
 
