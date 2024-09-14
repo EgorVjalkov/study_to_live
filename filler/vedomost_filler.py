@@ -66,7 +66,6 @@ class VedomostFiller:
         return self.day
 
     def filter_cells(self) -> DayRow:
-        self.day.get_all_recipient_cells_list(self.recipient)
         self.day.filter_by_args_and_load_data(self.recipient, self.behavior, mirror.get_cells_data(self.behavior))
         return self.day
 
@@ -200,20 +199,21 @@ class VedomostCounter(VedomostFiller):
 
 if __name__ == '__main__':
     filler = VedomostFiller(recipient='Egr',
-                            behavior='filling')
+                            behavior='correction')
 
     print(mirror.status_series)
     filler()
     filler.change_day('13.9.24')
     filler.filter_cells()
-    filler.active_cell = 'a:table'
-    filler.fill_the_active_cell('+')
-    pre = filler.update_bd_and_get_dict_for_rep(save=False)
-    print(pre)
-    counter = VedomostCounter('Lera', filler.day.day_row_for_saving)
-    rep2 = counter.count_day_sum()
-    print(rep2)
-    counter.filter_cells()
+    print(filler.day)
+    #filler.active_cell = 'a:table'
+    #filler.fill_the_active_cell('+')
+    #pre = filler.update_bd_and_get_dict_for_rep(save=False)
+    #print(pre)
+    #counter = VedomostCounter('Lera', filler.day.day_row_for_saving)
+    #rep2 = counter.count_day_sum()
+    #print(rep2)
+    #counter.filter_cells()
 
 
     #filler.change_day('10.9.24')

@@ -43,6 +43,7 @@ class DayRow(pd.Series):
         r_positions = r.get_r_positions_col().at[self.name]
 
         self.list_of_all_recipient_cells.extend([i for i in self.index if i[0] in r_positions])
+        print(self.list_of_all_recipient_cells)
         return self.list_of_all_recipient_cells
 
     def get_working_cells_index(self, recipient: str, behavior: str) -> pd.Index | list:
@@ -52,10 +53,10 @@ class DayRow(pd.Series):
             return self.get_all_recipient_cells_list(recipient)
 
     def filter_by_args_and_load_data(self, recipient: str, behavior: str, price_frame: pd.DataFrame) -> pd.Series:
-        cells = self.get_working_cells_index(recipient, behavior)
-        #print(cells)
-        for c_name in cells:
+        self.get_working_cells_index(recipient, behavior)
+        for c_name in self.list_of_all_recipient_cells:
             vedomost_cell = VedomostCell(c_name, self[c_name], recipient, price_frame[c_name])
+            print('v', vedomost_cell.current_value)
             #print(c_name, vedomost_cell.can_be_filled)
 
             match behavior, vedomost_cell:

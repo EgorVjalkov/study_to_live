@@ -53,9 +53,9 @@ async def on_chosen_date(c: CallbackQuery,
             await go_to_category_menu(c, dm)
     except BusyError:
         await c.answer('Cтрока занята, выберите другую дату или завершите сеанс')
-    except BaseException as error:
-        await c.answer(f'ошибка {error}')
-        mirror.set_day_status(filler.day)
+    #except BaseException as error:
+    #    await c.answer(f'ошибка {error}')
+    #    mirror.set_day_status(filler.day)
 
 
 async def on_back_to_date_menu(c: CallbackQuery,
