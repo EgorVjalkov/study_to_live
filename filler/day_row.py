@@ -53,8 +53,8 @@ class DayRow(pd.Series):
             return self.get_all_recipient_cells_list(recipient)
 
     def filter_by_args_and_load_data(self, recipient: str, behavior: str, price_frame: pd.DataFrame) -> pd.Series:
-        self.get_working_cells_index(recipient, behavior)
-        for c_name in self.list_of_all_recipient_cells:
+        cells = self.get_working_cells_index(recipient, behavior)
+        for c_name in cells:
             vedomost_cell = VedomostCell(c_name, self[c_name], recipient, price_frame[c_name])
             print('v', vedomost_cell.current_value)
             #print(c_name, vedomost_cell.can_be_filled)
