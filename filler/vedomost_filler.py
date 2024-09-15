@@ -48,14 +48,6 @@ class VedomostFiller:
         days = [[i] for i in days] #для геттера по item
         return days
 
-    @property
-    def day_row(self):
-        return self.day
-
-    @day_row.setter
-    def day_row(self, day: DayRow):
-        self.day = day
-
     def change_day(self, date: str | datetime.date) -> DayRow:
         if isinstance(date, str):
             date = Converter(date_in_str=date).to('date_object')
@@ -111,6 +103,7 @@ class VedomostFiller:
     def update_bd_and_get_dict_for_rep(self, save: bool = True) -> dict:
         if self.behavior not in ['correction', 'count']:
             self.correct_day_status()
+        print(self.day.STATUS)
         mirror.set_day_status(self.day)
 
         filled_cells_index = self.day.filled_cells_index
@@ -203,11 +196,11 @@ if __name__ == '__main__':
 
     print(mirror.status_series)
     filler()
-    filler.change_day('13.9.24')
-    filler.filter_cells()
-    print(filler.day)
-    #filler.active_cell = 'a:table'
-    #filler.fill_the_active_cell('+')
+    filler.change_day('14.9.24')
+    #filler.filter_cells()
+    #filler.active_cell = 'e:sleeptime'
+    #filler.fill_the_active_cell(None)
+    #print(filler.active_cell_data)
     #pre = filler.update_bd_and_get_dict_for_rep(save=False)
     #print(pre)
     #counter = VedomostCounter('Lera', filler.day.day_row_for_saving)

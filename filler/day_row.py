@@ -71,29 +71,10 @@ class DayRow(pd.Series):
                     self[c_name] = vedomost_cell
         return self
 
-    #@property
-    #def filled_recipient_cells_for_working(self) -> pd.Series: # для рeпорта
-    #    filled = self[self.recipient_cells_for_working_index].map(lambda i: i.is_filled_now)
-    #    return self[filled[filled == True].index]
-
     @property
     def filled_cells_index(self) -> pd.Index: # для рeпорта
         filled = self[self.working_cells_index].map(lambda i: i.is_filled_now)
         return filled[filled == True].index
-
-    #@property
-    #def all_filled_recipient_cells_index(self) -> pd.Index: # для подсчета всех ячееек заполненных реципиентом
-    #    #для определения все ли ячейки реципиента заполнены
-    #    can_be_filled_ser = self[self.all_recipient_cells_index].map(lambda cell: cell.has_value)
-    #    return can_be_filled_ser[can_be_filled_ser==True].index
-
-    #def save_values(self):
-    #    for c_name in self.recipient_cells_for_working_index:
-    #        if self[c_name].is_filled_now:
-    #            self[c_name] = self[c_name].new_v
-    #        else:
-    #            self[c_name] = self[c_name].current_v
-    #    return self
 
     @property
     def day_row_for_saving(self) -> pd.Series:
@@ -108,6 +89,7 @@ class DayRow(pd.Series):
 
     @property
     def is_all_r_cells_filled(self):
+        print(len(self.working_cells_index), len(self.filled_cells_index))
         return len(self.working_cells_index) == len(self.filled_cells_index)
 
     @property
