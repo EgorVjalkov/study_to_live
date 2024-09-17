@@ -1,13 +1,13 @@
 from aiogram_dialog import DialogManager
+from typing import Union
 
 from DB_main import mirror
 
 from dialog.start_handlers import bot, ADMIN_ID
 from dialog.selected import get_filler
-from dialog.states import FillingVedomost, FillingSleeptime
 
-from filler.vedomost_filler import VedomostFiller, ResultEmptyError
-from filler.vedomost_cell import VedomostCell
+from filler.vedomost_filler import BaseFiller, VedomostCounter, CoefsFiller, ResultEmptyError
+from filler.day_row import DayRow
 
 
 topics = {
@@ -26,14 +26,15 @@ topics = {
     }
 
 
-def get_counter_report(filler: VedomostFiller) -> list:
-    result_frame = filler.count_day_sum()
+def get_counter_report(counter: VedomostCounter) -> list:
+    result_frame = counter.count_day_sum()
     day_sum = f'{round(result_frame["result"].sum(), 1)} p.'
     result_frame['result'] = result_frame['result'].map(lambda i: f'{str(i)} р.')
     result_dict = result_frame.T.to_dict('list')
     result_dict = {c: ' -> '.join(result_dict[c]) for c in result_dict}
     result_dict['сумма дня'] = day_sum
-    rows_for_report = [f'{c}: {result_dict[c]}' for c in result_dict]
+    rows_for_report = [f'За {counter.day.date_n_day_str} насчитано:']
+    rows_for_report.extend([f'{c}: {result_dict[c]}' for c in result_dict])
     return rows_for_report
 
 
@@ -41,7 +42,7 @@ def get_answer_for_filling(date_n_day: str,
                            dict_for_rep: dict,
                            day_status: str = '',
                            mir_status: str = ''
-                           ) -> str:
+                           ) -> list:
     answer_list = [
         f'За {date_n_day} заполнено:',
         f'статус дня: {day_status}',
@@ -49,13 +50,13 @@ def get_answer_for_filling(date_n_day: str,
         ''
     ]
     answer_list.extend([f'{c} -> {dict_for_rep[c]}' for c in dict_for_rep])
-    return '\n'.join(answer_list)
+    return answer_list
 
 
 async def get_dates(dialog_manager: DialogManager,
                     **middleware_data) -> dict:
 
-    filler: VedomostFiller = get_filler(dialog_manager)
+    filler: BaseFiller = get_filler(dialog_manager)
     topic_vars = topics.get(filler.behavior)
 
     days = filler.day_btns
@@ -72,7 +73,7 @@ async def get_dates(dialog_manager: DialogManager,
 async def get_cats(dialog_manager: DialogManager,
                    **middleware_data) -> dict:
 
-    filler: VedomostFiller = get_filler(dialog_manager)
+    filler: BaseFiller = get_filler(dialog_manager)
     data = {'categories': filler.categories_btns, 'can_save': filler.something_done}
     print(data)
     return data
@@ -81,7 +82,7 @@ async def get_cats(dialog_manager: DialogManager,
 async def get_vars(dialog_manager: DialogManager,
                    **middleware_data) -> dict:
 
-    filler: VedomostFiller = get_filler(dialog_manager)
+    filler: BaseFiller = get_filler(dialog_manager)
 
     variants = [[i] for i in filler.active_cell_data.get_keys(filler.behavior, filler.day.name)]
     print(variants)
@@ -92,7 +93,7 @@ async def get_vars(dialog_manager: DialogManager,
 async def get_topic(dialog_manager: DialogManager,
                     **middleware_data) -> dict:
 
-    filler: VedomostFiller = get_filler(dialog_manager)
+    filler: BaseFiller = get_filler(dialog_manager)
     cat_name = filler.active_cell_name
     if filler.active_cell_data.has_some_value:
         old_value_sent = f'Предыдущее значение - {filler.active_cell_data.current_value}'
@@ -104,15 +105,25 @@ async def get_topic(dialog_manager: DialogManager,
 async def get_report(dialog_manager: DialogManager,
                      **middleware_data) -> dict:
 
-    filler: VedomostFiller = get_filler(dialog_manager)
-    dict_for_rep = filler.update_bd_and_get_dict_for_rep()
-    report = get_answer_for_filling(filler.day.date_n_day_str,
-                                    dict_for_rep,
-                                    filler.day.STATUS,
-                                    filler.mirror_status)
+    program: Union[BaseFiller, CoefsFiller, VedomostCounter] = get_filler(dialog_manager)
+    match program:
+        case VedomostCounter():
+            report = get_counter_report(program)
+
+        case filler:
+            dict_for_rep = filler.update_bd_and_get_dict_for_rep()
+            report = get_answer_for_filling(filler.day.date_n_day_str,
+                                            dict_for_rep,
+                                            filler.day.STATUS,
+                                            filler.mirror_status)
+            counter = VedomostCounter(filler.recipient,
+                                      DayRow(filler.day.day_row_for_saving))
+            report.append('')
+            #сделай здесь звездочки, тыж моежшь!
+            report.extend(get_counter_report(counter))
 
     user = dialog_manager.event.from_user
     if user.id != ADMIN_ID:
         await bot.send_message(ADMIN_ID, f'{user.first_name} завершил заполнение. {report}')
 
-    return {'report': report}
+    return {'report': '\n'.join(report)}

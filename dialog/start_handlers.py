@@ -8,7 +8,7 @@ from aiogram_dialog import DialogManager, StartMode
 from dialog.states import FillingVedomost
 
 from My_token import TOKEN, ADMIN_ID
-from filler.vedomost_filler import VedomostFiller, CoefsFiller, VedomostCounter
+from filler.vedomost_filler import BaseFiller, CoefsFiller, VedomostCounter
 from filler.day_row import DayRow
 from filler.date_funcs import today_for_filling
 from DB_main import mirror
@@ -24,7 +24,7 @@ async def start_dialog(message: Message, dialog_manager: DialogManager):
     recipient = username_dict[message.from_user.first_name]
     await dialog_manager.start(FillingVedomost.date_menu,
                                mode=StartMode.RESET_STACK,
-                               data={'filler': VedomostFiller(recipient, 'filling').__call__()},
+                               data={'filler': BaseFiller(recipient, 'filling').__call__()},
                                )
 
 
@@ -33,7 +33,7 @@ async def start_dialog(m: Message, dialog_manager: DialogManager):
     recipient = username_dict[m.from_user.first_name]
     await dialog_manager.start(FillingVedomost.date_menu,
                                mode=StartMode.RESET_STACK,
-                               data={'filler': VedomostFiller(recipient, 'correction').__call__()},
+                               data={'filler': BaseFiller(recipient, 'correction').__call__()},
                                )
 
 
@@ -78,10 +78,10 @@ async def start_dialog(message: Message, dialog_manager: DialogManager):
 
     if day_row[category]:
         print(day_row[category], 'correction')
-        filler = VedomostFiller(recipient, 'correction', day_data=day_row).__call__()
+        filler = BaseFiller(recipient, 'correction', day_data=day_row).__call__()
     else:
         print(day_row[category], 'filling')
-        filler = VedomostFiller(recipient, 'filling', day_data=day_row).__call__()
+        filler = BaseFiller(recipient, 'filling', day_data=day_row).__call__()
 
     filler.filter_cells()
     filler.active_cell = category

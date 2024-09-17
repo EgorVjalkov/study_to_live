@@ -10,13 +10,13 @@ from aiogram_dialog.api.exceptions import NoContextError
 
 from DB_main import mirror
 from temp_db.mirror_db import BusyError
-from filler.vedomost_filler import VedomostFiller
+from filler.vedomost_filler import BaseFiller
 from filler.vedomost_cell import VedomostCell
 from dialog.kbs import SCROLLING_HEIGHT
 from dialog.states import FillingVedomost
 
 
-def get_filler(dm: DialogManager) -> Optional[VedomostFiller]: # подумай, может сдесь можно get
+def get_filler(dm: DialogManager) -> Optional[BaseFiller]: # подумай, может сдесь можно get
     try:
         ctx = dm.current_context()
         return ctx.start_data['filler']
@@ -28,7 +28,7 @@ async def go_to_category_menu(tgo: TelegramObject,
                               dm: DialogManager,
                               ** kwargs) -> None:
 
-    filler: VedomostFiller = get_filler(dm)
+    filler: BaseFiller = get_filler(dm)
     if filler.need_to_fill > SCROLLING_HEIGHT:
         await dm.switch_to(FillingVedomost.category_menu_if_scroll)  #############
     else:
@@ -41,7 +41,7 @@ async def on_chosen_date(c: CallbackQuery,
                          item_id: str,
                          **kwargs) -> None:
     
-    filler: VedomostFiller = get_filler(dm)
+    filler: BaseFiller = get_filler(dm)
     try:
         filler.change_day(item_id)
         # если каунтер то филтер селлс не надо??????????????
@@ -63,7 +63,7 @@ async def on_back_to_date_menu(c: CallbackQuery,
                                dm: DialogManager,
                                ** kwargs) -> None:
 
-    filler: VedomostFiller = get_filler(dm)
+    filler: BaseFiller = get_filler(dm)
     mirror.set_day_status(filler.day)
 
 
@@ -73,7 +73,7 @@ async def on_chosen_category(c: CallbackQuery,
                              item_id: str,
                              **kwargs) -> None:  # рефактор
 
-    filler: VedomostFiller = get_filler(dm)
+    filler: BaseFiller = get_filler(dm)
     filler.active_cell = item_id
     await dm.switch_to(FillingVedomost.filling_menu)
 
@@ -95,7 +95,7 @@ async def on_filling_category(c: CallbackQuery,
         await dm.switch_to(FillingVedomost.filling_by_kb)
         return
 
-    filler: VedomostFiller = get_filler(dm)
+    filler: BaseFiller = get_filler(dm)
 
     if item_id == 'сейчас!':
         message_time = datetime.now().time()
@@ -114,7 +114,7 @@ async def on_filling_by_kb(m: Message,
                            dm: DialogManager,
                            input_data: str,
                            **kwargs) -> None:
-    filler: VedomostFiller = get_filler(dm)
+    filler: BaseFiller = get_filler(dm)
     filler.fill_the_active_cell(input_data)
     await go_to_category_menu(m, dm)
 

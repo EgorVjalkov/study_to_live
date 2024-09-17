@@ -16,7 +16,7 @@ class ResultEmptyError(BaseException):
     pass
 
 
-class VedomostFiller:
+class BaseFiller:
     def __init__(self,
                  recipient: str = '',
                  behavior: str = '',
@@ -117,7 +117,9 @@ class VedomostFiller:
         return {}
 
     def update_status(self) -> None:
+        print(self.day.STATUS)
         self.correct_day_status()
+        print(self.day.STATUS)
         mirror.set_day_status(self.day)
         mirror.update_vedomost(self.day.day_row_for_saving)
 
@@ -142,14 +144,14 @@ class VedomostFiller:
         return mirror.status_series[self.day.name]
 
 
-class CoefsFiller(VedomostFiller):
+class CoefsFiller(BaseFiller):
     def __init__(self, recipient):
         super().__init__(recipient, 'coefs')
 
     def correct_day_status(self) -> object:
-        re_filler = VedomostFiller(recipient=self.recipient,
-                                   behavior='filling',
-                                   day_data=DayRow(self.day.day_row_for_saving))
+        re_filler = BaseFiller(recipient=self.recipient,
+                               behavior='filling',
+                               day_data=DayRow(self.day.day_row_for_saving))
         re_filler.filter_cells()
         re_filler.correct_day_status()
         print(self.day.STATUS)
@@ -158,7 +160,7 @@ class CoefsFiller(VedomostFiller):
         return self
 
 
-class VedomostCounter(VedomostFiller):
+class VedomostCounter(BaseFiller):
     def __init__(self, recipient: str, day_data: DayRow = None):
 
         super().__init__(recipient,
@@ -167,54 +169,36 @@ class VedomostCounter(VedomostFiller):
 
     def count_day_sum(self):
         self.filter_cells()
-        print(self.day)
         frame_for_counting = self.day.frame_for_counting
-        print(frame_for_counting)
-        #result = program2.main(
-        #    recipients=[self.recipient],
-        #    data_frame=frame_for_counting,
-        #    price_frame=mirror.get_cells_data('filling'),
-        #    filled_frame=False,
-        #    demo_mode=True,
-        #    show_calc=False)
+        result = program2.main(
+            recipients=[self.recipient],
+            data_frame=frame_for_counting,
+            price_frame=mirror.get_cells_data('filling'),
+            filled_frame=False,
+            demo_mode=True,
+            show_calc=False)
 
-        #result_row = result.loc[self.day.name].map(
-        #    lambda i: 0.0 if i in ['can`t', 'wishn`t'] else i)
-        #frame_for_counting.loc['result'] = result_row.fillna(0.0)
-        #frame_for_counting = frame_for_counting.dropna(axis=1)
-        #del frame_for_counting['DAY']
-        #frame_for_counting.loc[self.day.name] = (frame_for_counting.loc[self.day.name].
-        #                                         map(lambda i: f'"{i}"'))
-        #frame_for_counting = frame_for_counting.dropna(axis=1)
-        ##frame_for_counting = frame_for_counting[self.day.all_recipient_cells_index].fillna(0.0).T
-        return frame_for_counting
+        result_row = result.loc[self.day.name].map(
+            lambda i: 0.0 if i in ['can`t', 'wishn`t'] else i)
+        frame_for_counting.loc['result'] = result_row.fillna(0.0)
+        frame_for_counting = frame_for_counting[self.day.working_cells_index].fillna(0.0)
+        frame_for_counting.loc[self.day.name] = (frame_for_counting.loc[self.day.name].
+                                                 map(lambda i: f'"{i}"'))
+        return frame_for_counting.T
 
 
 if __name__ == '__main__':
-    filler = VedomostFiller(recipient='Egr',
-                            behavior='correction')
+    filler = BaseFiller(recipient='Lera',
+                        behavior='filling')
 
-    print(mirror.status_series)
+    #print(mirror.status_series)
     filler()
-    filler.change_day('14.9.24')
-    #filler.filter_cells()
-    #filler.active_cell = 'e:sleeptime'
-    #filler.fill_the_active_cell(None)
-    #print(filler.active_cell_data)
-    #pre = filler.update_bd_and_get_dict_for_rep(save=False)
-    #print(pre)
-    #counter = VedomostCounter('Lera', filler.day.day_row_for_saving)
-    #rep2 = counter.count_day_sum()
-    #print(rep2)
-    #counter.filter_cells()
+    filler.change_day('15.9.24')
+    filler.filter_cells()
+    d_r = DayRow(filler.day.day_row_for_saving)
+    rep = VedomostCounter('Lera', day_data=d_r).count_day_sum()
+    print(rep)
 
 
-    #filler.change_day('10.9.24')
-    #print(filler.working_space)
-    #print(filler.day.STATUS)
-    ##filler.filter_cells()
-    ##filler.active_cell = 'a:stroll'
-    ##filler.fill_the_active_cell('can`t')
-    #rep = filler.update_bd_and_get_dict_for_rep(save=True)
-    #print(rep)
+
 

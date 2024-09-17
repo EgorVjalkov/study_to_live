@@ -56,7 +56,7 @@ class DayRow(pd.Series):
         cells = self.get_working_cells_index(recipient, behavior)
         for c_name in cells:
             vedomost_cell = VedomostCell(c_name, self[c_name], recipient, price_frame[c_name])
-            print('v', vedomost_cell.current_value)
+            #print('v', vedomost_cell.current_value)
             #print(c_name, vedomost_cell.can_be_filled)
 
             match behavior, vedomost_cell:
