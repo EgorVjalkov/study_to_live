@@ -122,8 +122,10 @@ async def get_report(dialog_manager: DialogManager,
             #сделай здесь звездочки, тыж моежшь!
             report.extend(get_counter_report(counter))
 
+    report = '\n'.join(report)
+
     user = dialog_manager.event.from_user
     if user.id != ADMIN_ID:
         await bot.send_message(ADMIN_ID, f'{user.first_name} завершил заполнение. {report}')
 
-    return {'report': '\n'.join(report)}
+    return {'report': report}
