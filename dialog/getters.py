@@ -26,8 +26,14 @@ topics = {
     }
 
 
-def get_counter_report(counter: VedomostCounter) -> list:
+def get_counter_report(counter: VedomostCounter,
+                       filled_categories: dict = None,
+                       ) -> list:
     result_frame = counter.count_day_sum()
+    if filled_categories:
+        result_frame.index = result_frame.index.map(
+            lambda i: f'*{i}' if i in filled_categories else i)
+    print(result_frame)
     day_sum = f'{round(result_frame["result"].sum(), 1)} p.'
     result_frame['result'] = result_frame['result'].map(lambda i: f'{str(i)} р.')
     result_dict = result_frame.T.to_dict('list')
@@ -119,8 +125,7 @@ async def get_report(dialog_manager: DialogManager,
             counter = VedomostCounter(filler.recipient,
                                       DayRow(filler.day.day_row_for_saving))
             report.append('')
-            #сделай здесь звездочки, тыж моежшь!
-            report.extend(get_counter_report(counter))
+            report.extend(get_counter_report(counter, dict_for_rep))
 
     report = '\n'.join(report)
 
