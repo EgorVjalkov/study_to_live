@@ -1,12 +1,10 @@
 from aiogram_dialog import DialogManager
 from typing import Union
 
-from DB_main import mirror
-
 from dialog.start_handlers import bot, ADMIN_ID
 from dialog.selected import get_filler
 
-from filler.vedomost_filler import BaseFiller, VedomostCounter, CoefsFiller, ResultEmptyError
+from filler.vedomost_filler import BaseFiller, VedomostCounter, CoefsFiller
 from filler.day_row import DayRow
 
 
