@@ -5,8 +5,7 @@ import pandas as pd
 
 from temp_db.recipes import set_filter
 from temp_db.unfilled_rows_db import DataBase
-from filler.date_funcs import today_for_filling, get_month
-from filler.day_row import DayRow
+from filler.date_funcs import today_for_filling, get_month, get_dates_list
 
 
 class BusyError(BaseException):
@@ -51,6 +50,10 @@ class Mirror:
         self.date_of_last_update = date
 
     @property
+    def date_interval(self):
+        return get_dates_list(self.date_of_last_update,7,7)
+
+    @property
     def vedomost_table_name(self):
         return f'{get_month(self.date_of_last_update)}_vedomost'
 
@@ -84,13 +87,6 @@ class Mirror:
         frame.loc[day_row.name] = day_row
         vedomost.update_table(frame)
         print('не равен, запись, update')
-
-        #matched_ser = frame.loc[day_row.name].eq(day_row)
-        #print(matched_ser)
-        #if frame.loc[day_row.name].ne(day_row).any(): # перевод: хоть один из эелементов не равен
-        #    frame.loc[day_row.name] = day_row
-        #    vedomost.update_table(frame)
-        #    print('не равен, запись, update')
 
     def check_date(self, date: datetime.date) -> None:
         day_status = self.series.get(date)
