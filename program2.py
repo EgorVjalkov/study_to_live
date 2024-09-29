@@ -2,6 +2,7 @@ import datetime
 import pandas as pd
 
 import counter.classes as cl
+from DB_main import mirror
 from testing import does_need_correction
 from counter.BonusColumn import BonusColumn
 from filler.date_funcs import last_date_of_past_month
@@ -74,8 +75,8 @@ if __name__ == '__main__':
     mirror2 = Mirror()
     mirror2.date = last_date_of_past_month(datetime.date.today())
     mirror2.init_series()
-    vedomost = mirror2.get_vedomost()
-    price = mirror2.get_cells_data('filling')
+    vedomost = mirror2.get_vedomost(mirror.date)
+    price = mirror2.get_cells_data('filling', date=mirror.date)
     if not does_need_correction(price):
         main(['Egr', 'Lera'],
              vedomost,

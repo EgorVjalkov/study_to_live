@@ -5,7 +5,10 @@ import pandas as pd
 
 from temp_db.recipes import set_filter
 from temp_db.unfilled_rows_db import DataBase
-from filler.date_funcs import today_for_filling, get_month, get_dates_list
+from filler.date_funcs import today_for_filling, get_month, get_dates_list, is_same_months
+
+
+DATE_INTERVAL = 7
 
 
 class BusyError(BaseException):
@@ -14,7 +17,7 @@ class BusyError(BaseException):
 
 class Mirror:
     def __init__(self):
-        self.status_series: Optional[pd.Series] = None
+        self.status_series: pd.Series = pd.Series(dtype=object)
         self.date_of_last_update: datetime.date = today_for_filling()
 
     def __repr__(self):
@@ -27,9 +30,8 @@ class Mirror:
     @property
     def mirror_df(self) -> pd.DataFrame:
         index = range(len(self.series))
-        date_ser = pd.Series(self.status_series.index, index=index)
-        status_ser = self.status_series.copy()
-        status_ser.index = index
+        date_ser = pd.Series(self.status_series.index, index=index, name='DATE')
+        status_ser = pd.Series(self.status_series.values, index=index, name='STATUS')
         df = pd.concat([date_ser, status_ser], axis=1)
         return df
 
@@ -51,38 +53,61 @@ class Mirror:
 
     @property
     def date_interval(self):
-        return get_dates_list(self.date_of_last_update,7,7)
+        return get_dates_list(self.date_of_last_update, before=-DATE_INTERVAL, after=DATE_INTERVAL)
 
-    @property
-    def vedomost_table_name(self):
-        return f'{get_month(self.date_of_last_update)}_vedomost'
+    @staticmethod
+    def get_vedomost_table_name(date: datetime.date):
+        return f'{get_month(date)}_vedomost'
 
-    @property
-    def prices_table_name(self):
-        return f'{get_month(self.date_of_last_update)}_price'
+    @staticmethod
+    def get_prices_table_name(date: datetime.date):
+        return f'{get_month(date)}_price'
 
     def init_series(self) -> object:
-        df = DataBase(self.vedomost_table_name).get_table(with_dates=True, columns=['DATE', 'STATUS'])
-        self.series = df.set_index('DATE')['STATUS']
+        dates_list = self.date_interval
+
+        ved_names = set()
+        for date in dates_list[0],dates_list[-1]:
+            ved_names.add(self.get_vedomost_table_name(date))
+
+        for tab_name in ved_names:
+            df = DataBase(tab_name).get_table(with_dates=True, columns=['DATE', 'STATUS'])
+            self.series = pd.concat([self.series, df.set_index('DATE')['STATUS']], axis=0)
+
+        self.series = self.series[dates_list]
+
         return self
 
-    def get_vedomost(self):
-        return DataBase(self.vedomost_table_name).get_table(with_dates=True).set_index('DATE')
+    def update_by_date(self, date: datetime.date):
+        self.date_of_last_update = date
+        interval = self.date_interval
+        delta = interval[-1].day - self.series.index[-1].day
+
+        dates_for_add = get_dates_list(self.series.index[-1], after=delta)
+        dates_ser = pd.Series({i: 'empty' for i in dates_for_add})
+
+        self.series = pd.concat([self.series, dates_ser], axis=0)
+        self.series = self.series[interval]
+        print(self.series)
+
+    def get_vedomost(self, date: datetime.date):
+        ved_name = self.get_vedomost_table_name(date)
+        return DataBase(ved_name).get_table(with_dates=True).set_index('DATE')
 
     def get_day_row(self, date: datetime.date):
-        return DataBase(self.vedomost_table_name).get_day_row(date)
+        ved_name = self.get_vedomost_table_name(date)
+        return DataBase(ved_name).get_day_row(date)
     # здесь нужно подумать, т.к. устроено все топорно. и работает лишь там где месяц соответствует!
 
-    def get_cells_data(self, behavior) -> pd.DataFrame:
+    def get_cells_data(self, behavior: str, date: datetime.date) -> pd.DataFrame:
         if behavior == 'coefs':
-            return DataBase('coefs_data').get_table(with_dates=False,
-                                                    index_col='coef')
+            return DataBase('coefs_data').get_table(with_dates=False, index_col='coef')
         else:
-            return DataBase(self.prices_table_name).get_table(with_dates=False,
-                                                              index_col='category')
+            table_name = self.get_prices_table_name(date)
+            return DataBase(table_name).get_table(with_dates=False, index_col='category')
 
     def update_vedomost(self, day_row: pd.Series):
-        vedomost = DataBase(self.vedomost_table_name)
+        vedomost = DataBase(self.get_vedomost_table_name(day_row.name))
         frame = vedomost.get_table(with_dates=True).set_index('DATE')
         frame.loc[day_row.name] = day_row
         vedomost.update_table(frame)

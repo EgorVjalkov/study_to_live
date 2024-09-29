@@ -1,4 +1,6 @@
 import datetime
+from calendar import month
+
 import pandas as pd
 from typing import Optional
 
@@ -28,8 +30,13 @@ class BaseFiller:
 
         self.active_cell_name: Optional[str] = None
 
-    def __call__(self, *args, **kwargs) -> object:
-        mirror.date = today_for_filling()
+    def __call__(self,
+                 now: datetime.datetime = datetime.datetime.now(),
+                 *args, **kwargs) -> object:
+        today_ = today_for_filling(now)
+        print(now, today_)
+        if mirror.date != today_:
+            mirror.update_by_date(today_)
         return self
 
     @property
@@ -192,12 +199,14 @@ if __name__ == '__main__':
                         behavior='filling')
 
     #print(mirror.status_series)
-    filler()
-    filler.change_day('15.9.24')
+    d = datetime.datetime(day=15, month=10, year=2024)
+    filler(d)
+    filler.change_day('15.10.24')
     filler.filter_cells()
-    d_r = DayRow(filler.day.day_row_for_saving)
-    rep = VedomostCounter('Lera', day_data=d_r).count_day_sum()
-    print(rep)
+    print(filler)
+    #d_r = DayRow(filler.day.day_row_for_saving)
+    #rep = VedomostCounter('Lera', day_data=d_r).count_day_sum()
+    #print(rep)
 
 
 

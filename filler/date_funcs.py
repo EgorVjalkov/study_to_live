@@ -10,8 +10,10 @@ def today():
     return datetime.date.today()
 
 
-def today_for_filling(date: Optional[datetime.date] = None) -> datetime.date:
-    now = datetime.datetime.now()
+def today_for_filling(now: Optional[datetime.datetime] = None) -> datetime.date:
+    if not now:
+        now = datetime.datetime.now()
+
     if 0 <= now.hour < 6:
         # кароч, время заполнения расширяется. Хоть и более нуля, но все равнр прошой датой
         return now.date() - datetime.timedelta(days=1)
@@ -36,6 +38,7 @@ def get_dates_list(date: datetime.date,
                    before: int = 0,
                    after: int = 0) -> list:
     dates_range = range(before, after+1, 1)
+    print(dates_range)
     dates_list = [date+datetime.timedelta(days=i) for i in dates_range]
     return dates_list
 
@@ -43,8 +46,8 @@ def get_dates_list(date: datetime.date,
 #print(get_dates_list(datetime.date.today(), -7, 7))
 
 
-def is_same_months(day_dict: dict) -> bool:
-    return day_dict['s'].month == day_dict['f'].month
+def is_same_months(days: list) -> bool:
+    return days[0].month == days[-1].month
 
 
 #dd = get_dates_dict(today(), before=7, after=7)
