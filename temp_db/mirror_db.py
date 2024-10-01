@@ -78,17 +78,20 @@ class Mirror:
 
         return self
 
-    def update_by_date(self, date: datetime.date):
+    def update_by_date(self, date: datetime.date) -> object:
         self.date_of_last_update = date
         interval = self.date_interval
         delta = interval[-1].day - self.series.index[-1].day
 
         dates_for_add = get_dates_list(self.series.index[-1], after=delta)
+        dates_for_add = dates_for_add[1:] # потому что этот день уже учитан в серии
         dates_ser = pd.Series({i: 'empty' for i in dates_for_add})
+        print(dates_ser)
 
         self.series = pd.concat([self.series, dates_ser], axis=0)
-        self.series = self.series[interval]
         print(self.series)
+        self.series = self.series[interval]
+        return self
 
     def get_vedomost(self, date: datetime.date):
         ved_name = self.get_vedomost_table_name(date)
@@ -136,12 +139,12 @@ class Mirror:
 
     def get_dates_for(self, recipient: str, by_behavior: str) -> pd.Series:
         # это прекрасно выглядит, но подумай над подгрузкой других ведомостей
-        recipe = set_filter(self.date_of_last_update, recipient, by_behavior)
+        recipe = set_filter(self.date, recipient, by_behavior)
         days_df = self.mirror_df.copy()
-        print(self.date_of_last_update)
         for col_name in recipe:
             filter_ = recipe[col_name]
             filtered = days_df[col_name].map(filter_)
+            print(filtered)
             days_df = days_df.loc[filtered == True]
         print(days_df)
         print(f'get_dates_for_{recipient}_by_{by_behavior}_in_{self.date}')

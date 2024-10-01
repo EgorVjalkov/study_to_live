@@ -65,7 +65,9 @@ class BaseFiller:
         return self.day
 
     def filter_cells(self) -> DayRow:
-        self.day.filter_by_args_and_load_data(self.recipient, self.behavior, mirror.get_cells_data(self.behavior))
+        self.day.filter_by_args_and_load_data(self.recipient,
+                                              self.behavior,
+                                              mirror.get_cells_data(self.behavior, self.day.name))
         return self.day
 
     @property
@@ -196,14 +198,15 @@ class VedomostCounter(BaseFiller):
 
 if __name__ == '__main__':
     filler = BaseFiller(recipient='Lera',
-                        behavior='filling')
+                        behavior='coefs')
 
     #print(mirror.status_series)
-    d = datetime.datetime(day=15, month=10, year=2024)
+    d = datetime.datetime(day=10, month=10, year=2024)
     filler(d)
-    filler.change_day('15.10.24')
+    print(filler.day_btns)
+    filler.change_day('9.10.24')
     filler.filter_cells()
-    print(filler)
+    print(filler.working_space)
     #d_r = DayRow(filler.day.day_row_for_saving)
     #rep = VedomostCounter('Lera', day_data=d_r).count_day_sum()
     #print(rep)
