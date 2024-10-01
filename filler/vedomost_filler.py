@@ -182,7 +182,7 @@ class VedomostCounter(BaseFiller):
         result = program2.main(
             recipients=[self.recipient],
             data_frame=frame_for_counting,
-            price_frame=mirror.get_cells_data('filling'),
+            price_frame=mirror.get_cells_data('filling', frame_for_counting.index[0]),
             filled_frame=False,
             demo_mode=True,
             show_calc=False)
@@ -197,16 +197,18 @@ class VedomostCounter(BaseFiller):
 
 
 if __name__ == '__main__':
-    filler = BaseFiller(recipient='Lera',
-                        behavior='coefs')
+    filler = CoefsFiller(recipient='Lera')
 
     #print(mirror.status_series)
-    d = datetime.datetime(day=10, month=10, year=2024)
-    filler(d)
-    print(filler.day_btns)
-    filler.change_day('9.10.24')
-    filler.filter_cells()
-    print(filler.working_space)
+    #d = datetime.datetime(day=3, month=10, year=2024, hour=21)
+    filler()
+    filler.change_day('30.09.24')
+    filler.change_day('1.10.24')
+    print(filler.day)
+    #filler.filter_cells()
+    #filler.active_cell = 'KG'
+    #filler.fill_the_active_cell('zKG(1), aKG(0.5)')
+    #filler.update_bd_and_get_dict_for_rep()
     #d_r = DayRow(filler.day.day_row_for_saving)
     #rep = VedomostCounter('Lera', day_data=d_r).count_day_sum()
     #print(rep)

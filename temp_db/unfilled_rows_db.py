@@ -60,6 +60,7 @@ if __name__ == '__main__':
 
     # for vedomost upload:
     #ved_frame = pd.read_excel(xlsx_name, sheet_name='vedomost', index_col=0, dtype=str)
+    #ved_frame = pd.read_excel('vedomost.xlsx', index_col=0, dtype=str)
     #print(ved_frame)
     #df = DataBase(vedomost)
     #df.update_table(ved_frame, 'DATE')

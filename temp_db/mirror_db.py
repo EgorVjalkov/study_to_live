@@ -139,13 +139,13 @@ class Mirror:
 
     def get_dates_for(self, recipient: str, by_behavior: str) -> pd.Series:
         # это прекрасно выглядит, но подумай над подгрузкой других ведомостей
-        recipe = set_filter(self.date, recipient, by_behavior)
         days_df = self.mirror_df.copy()
-        for col_name in recipe:
-            filter_ = recipe[col_name]
-            filtered = days_df[col_name].map(filter_)
-            print(filtered)
-            days_df = days_df.loc[filtered == True]
+        if by_behavior != 'coefs':
+            recipe = set_filter(self.date, recipient, by_behavior)
+            for col_name in recipe:
+                filter_ = recipe[col_name]
+                filtered = days_df[col_name].map(filter_)
+                days_df = days_df.loc[filtered == True]
         print(days_df)
         print(f'get_dates_for_{recipient}_by_{by_behavior}_in_{self.date}')
         return days_df['DATE']
