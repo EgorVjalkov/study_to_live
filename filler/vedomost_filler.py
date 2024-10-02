@@ -14,10 +14,6 @@ from utils.converter import Converter
 from counter import classes as cl
 
 
-class ResultEmptyError(BaseException):
-    pass
-
-
 class BaseFiller:
     def __init__(self,
                  recipient: str = '',
@@ -35,9 +31,13 @@ class BaseFiller:
                  *args, **kwargs) -> object:
         today_ = today_for_filling(now)
         print(now, today_)
-        if mirror.date != today_:
+        if mirror.date < today_:
             mirror.update_by_date(today_)
         return self
+
+    @staticmethod
+    def date():
+        return Converter(date_object=mirror.date).to('str')
 
     @property
     def r_sleeptime(self):
@@ -197,14 +197,19 @@ class VedomostCounter(BaseFiller):
 
 
 if __name__ == '__main__':
-    filler = CoefsFiller(recipient='Lera')
+    filler = BaseFiller('Lera', 'filling')
 
     #print(mirror.status_series)
-    #d = datetime.datetime(day=3, month=10, year=2024, hour=21)
     filler()
-    filler.change_day('30.09.24')
-    filler.change_day('1.10.24')
-    print(filler.day)
+    print(filler.date())
+    print(filler.day_btns)
+    d = datetime.datetime(day=3, month=10, year=2024, hour=21)
+    filler(d)
+    print(filler.date())
+    print(filler.day_btns)
+    #filler.change_day('30.09.24')
+    #filler.change_day('1.10.24')
+    #print(filler.day)
     #filler.filter_cells()
     #filler.active_cell = 'KG'
     #filler.fill_the_active_cell('zKG(1), aKG(0.5)')
