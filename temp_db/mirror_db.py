@@ -79,7 +79,7 @@ class Mirror:
         return self
 
     def update_by_date(self, date: datetime.date) -> object:
-        self.date_of_last_update = date
+        self.date = date
         interval = self.date_interval
         delta = interval[-1].day - self.series.index[-1].day
 
