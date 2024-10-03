@@ -71,7 +71,7 @@ async def get_dates(dialog_manager: DialogManager,
         topic = topic_vars.get('none')
         cancel = 'понятно'
 
-    return {'dates': days, 'topic': f"Привет! {topic}", 'cancel': cancel}
+    return {'dates': days, 'topic': f"Привет! {topic}. На {filler.date()}", 'cancel': cancel}
 
 
 async def get_cats(dialog_manager: DialogManager,

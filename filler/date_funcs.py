@@ -20,7 +20,6 @@ def today_for_filling(now: Optional[datetime.datetime] = None) -> datetime.date:
     else:
         return now.date()
 
-
 def yesterday(today_: datetime.date):
     return today_ - datetime.timedelta(days=1)
 
