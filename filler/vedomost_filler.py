@@ -1,12 +1,10 @@
 import datetime
-from calendar import month
 
 import pandas as pd
 from typing import Optional
 
 import program2
 from DB_main import mirror
-
 from filler.vedomost_cell import VedomostCell
 from filler.day_row import DayRow
 from filler.date_funcs import today_for_filling
@@ -27,17 +25,16 @@ class BaseFiller:
         self.active_cell_name: Optional[str] = None
 
     def __call__(self,
-                 now: datetime.datetime = datetime.datetime.now(),
+                 now_: datetime.datetime = None,
                  *args, **kwargs) -> object:
-        today_ = today_for_filling(now)
-        print(now, today_)
+        today_ = today_for_filling(now_)
         if mirror.date < today_:
             mirror.update_by_date(today_)
         return self
 
     @staticmethod
     def date():
-        return Converter(date_object=mirror.date).to('str')
+        return str(mirror.date)
 
     @property
     def r_sleeptime(self):
@@ -199,11 +196,10 @@ class VedomostCounter(BaseFiller):
 if __name__ == '__main__':
     filler = BaseFiller('Lera', 'filling')
 
-    #print(mirror.status_series)
+    print(mirror.status_series)
     filler()
-    print(filler.date())
     print(filler.day_btns)
-    d = datetime.datetime(day=3, month=10, year=2024, hour=21)
+    d = datetime.datetime(day=5, month=10, year=2024, hour=21)
     filler(d)
     print(filler.date())
     print(filler.day_btns)
