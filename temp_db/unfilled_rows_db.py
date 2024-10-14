@@ -3,11 +3,11 @@ from typing import Optional
 from sqlalchemy import create_engine
 import pandas as pd
 
-from connection_config import user, password, host, db_name
+from config_reader import config
 
 
 engine = create_engine(
-    f'postgresql+psycopg2://{user}:{password}@{host}:5432/{db_name}')
+    f'postgresql+psycopg2://{config.get_connection_str()}')
 
 
 class DataBase:
@@ -52,6 +52,7 @@ if __name__ == '__main__':
     vedomost = f'{month}_vedomost'
     price = f'{month}_price'
     coefs = 'coefs'
+    print(engine)
 
     # for vedomost download
     #df = DataBase(vedomost)

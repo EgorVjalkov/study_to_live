@@ -37,7 +37,7 @@ def get_dates_list(date: datetime.date,
                    before: int = 0,
                    after: int = 0) -> list:
     dates_range = range(before, after+1, 1)
-    print(dates_range)
+    #print(dates_range)
     dates_list = [date+datetime.timedelta(days=i) for i in dates_range]
     return dates_list
 

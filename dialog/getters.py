@@ -1,7 +1,8 @@
 from aiogram_dialog import DialogManager
 from typing import Union
 
-from dialog.start_handlers import bot, ADMIN_ID
+from config_reader import config
+from my_bot import my_bot
 from dialog.selected import get_filler
 
 from filler.vedomost_filler import BaseFiller, VedomostCounter, CoefsFiller
@@ -127,8 +128,11 @@ async def get_report(dialog_manager: DialogManager,
 
     report = '\n'.join(report)
 
+    admin_id = config.get_admin_id()
     user = dialog_manager.event.from_user
-    if user.id != ADMIN_ID:
-        await bot.send_message(ADMIN_ID, f'{user.first_name} завершил заполнение. {report}')
+
+    if user.id != admin_id:
+        bot = my_bot.get_bot()
+        await bot.send_message(admin_id, f'{user.first_name} завершил заполнение. {report}')
 
     return {'report': report}

@@ -1,7 +1,5 @@
+.env
 .idea
 __pycache__/
 output_files/
 months
-temp_db/temp_db
-My_token.py
-connection_config.py

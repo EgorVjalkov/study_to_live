@@ -3,11 +3,10 @@ import datetime
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
-from aiogram import Bot
 from aiogram_dialog import DialogManager, StartMode
 from dialog.states import FillingVedomost
 
-from My_token import TOKEN, ADMIN_ID
+from config_reader import config
 from filler.vedomost_filler import BaseFiller, CoefsFiller, VedomostCounter
 from filler.day_row import DayRow
 from filler.date_funcs import today_for_filling
@@ -15,7 +14,6 @@ from DB_main import mirror
 
 
 username_dict = {'Jegor': 'Egr', 'Валерия': 'Lera'}
-bot = Bot(TOKEN)
 filler_router = Router()
 
 
@@ -49,7 +47,8 @@ async def start_dialog(m: Message, dialog_manager: DialogManager):
 @filler_router.message(Command('coefs'))
 async def start_dialog(m: Message, dialog_manager: DialogManager):
     rec_data = m.from_user
-    if rec_data.id != ADMIN_ID:
+    admin_id = config.get_admin_id()
+    if rec_data.id != admin_id:
         await m.reply('Только Егорок шарит в коеффициентах, тебе оно надо???')
         return
 
