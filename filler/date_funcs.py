@@ -6,19 +6,28 @@ def get_month(date: datetime.date) -> str:
     return date.strftime('%b%y').lower()
 
 
+def now():
+    return datetime.datetime.now()
+
+
 def today():
     return datetime.date.today()
 
+def tomorrow(date: datetime.date):
+    return date + datetime.timedelta(days=1)
 
-def today_for_filling(now: Optional[datetime.datetime] = None) -> datetime.date:
-    if not now:
-        now = datetime.datetime.now()
+print(tomorrow(datetime.date.today()))
 
-    if 0 <= now.hour < 6:
+
+def today_for_filling(now_: Optional[datetime.datetime] = None) -> datetime.date:
+    if not now_:
+        now_ = now()
+
+    if 0 <= now_.hour < 6:
         # кароч, время заполнения расширяется. Хоть и более нуля, но все равнр прошой датой
-        return now.date() - datetime.timedelta(days=1)
+        return now_.date() - datetime.timedelta(days=1)
     else:
-        return now.date()
+        return now_.date()
 
 def yesterday(today_: datetime.date):
     return today_ - datetime.timedelta(days=1)
