@@ -5,7 +5,7 @@ import counter.classes as cl
 from testing import does_need_correction
 from counter.BonusColumn import BonusColumn
 from filler.date_funcs import last_date_of_past_month
-from temp_db.mirror_db import Mirror, get_month
+from database.mirror import Mirror, get_month
 
 
 not_count_categories = ['a:sleeptime', 'z:sleeptime']

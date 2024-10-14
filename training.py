@@ -1,6 +1,6 @@
 import datetime
 import pandas as pd
-from temp_db.unfilled_rows_db import DataBase
+from database.database import DataBase
 
 #
 #for i in [1, 7, 20, 21]:

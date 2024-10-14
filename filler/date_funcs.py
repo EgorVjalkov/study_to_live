@@ -16,7 +16,7 @@ def today():
 def tomorrow(date: datetime.date):
     return date + datetime.timedelta(days=1)
 
-print(tomorrow(datetime.date.today()))
+#print(tomorrow(datetime.date.today()))
 
 
 def today_for_filling(now_: Optional[datetime.datetime] = None) -> datetime.date:

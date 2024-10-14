@@ -32,7 +32,7 @@ def get_counter_report(counter: VedomostCounter,
     if filled_categories:
         result_frame.index = result_frame.index.map(
             lambda i: f'*{i}' if i in filled_categories else i)
-    print(result_frame)
+    #print(result_frame)
     day_sum = f'{round(result_frame["result"].sum(), 1)} p.'
     result_frame['result'] = result_frame['result'].map(lambda i: f'{str(i)} р.')
     result_dict = result_frame.T.to_dict('list')
@@ -80,7 +80,7 @@ async def get_cats(dialog_manager: DialogManager,
 
     filler: BaseFiller = get_filler(dialog_manager)
     data = {'categories': filler.categories_btns, 'can_save': filler.something_done}
-    print(data)
+    #print(data)
     return data
 
 
@@ -90,7 +90,7 @@ async def get_vars(dialog_manager: DialogManager,
     filler: BaseFiller = get_filler(dialog_manager)
 
     variants = [[i] for i in filler.active_cell_data.get_keys(filler.behavior, filler.day.name)]
-    print(variants)
+    #print(variants)
     data = {'variants': variants, 'topic': filler.active_cell_data.description}
     return data
 

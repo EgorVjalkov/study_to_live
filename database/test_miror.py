@@ -2,7 +2,7 @@ import datetime
 
 import pandas as pd
 
-from temp_db.mirror_db import Mirror
+from database.mirror import Mirror
 
 
 class TestMirror(Mirror):
@@ -28,6 +28,7 @@ class TestMirror(Mirror):
         print(self.date)
         self.series = pd.concat([self.series,
                                  pd.Series({self.date: 'empty'})])
+        return self
 
 if __name__ == '__main__':
 

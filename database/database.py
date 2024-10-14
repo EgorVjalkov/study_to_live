@@ -52,7 +52,6 @@ if __name__ == '__main__':
     vedomost = f'{month}_vedomost'
     price = f'{month}_price'
     coefs = 'coefs'
-    print(engine)
 
     # for vedomost download
     #df = DataBase(vedomost)

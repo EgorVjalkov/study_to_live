@@ -9,7 +9,7 @@ from aiogram_dialog.widgets.input.text import TextInput
 from aiogram_dialog.api.exceptions import NoContextError
 
 from DB_main import mirror
-from temp_db.mirror_db import BusyError
+from database.mirror import BusyError
 from filler.vedomost_filler import BaseFiller
 from filler.vedomost_cell import VedomostCell
 from dialog.kbs import SCROLLING_HEIGHT

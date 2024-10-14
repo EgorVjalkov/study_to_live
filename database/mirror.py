@@ -2,8 +2,8 @@ import datetime
 
 import pandas as pd
 
-from temp_db.recipes import set_filter
-from temp_db.unfilled_rows_db import DataBase
+from database.filter_recipes import set_filter
+from database.database import DataBase
 from filler.date_funcs import today_for_filling, get_month, get_dates_list, tomorrow
 
 
@@ -66,7 +66,7 @@ class Mirror:
             self.series = pd.concat([self.series, df.set_index('DATE')['STATUS']], axis=0)
 
         self.series = self.series[dates_list]
-        print('after_init', self.series.index)
+        #print('after_init', self.series.index)
 
         return self
 
@@ -82,7 +82,7 @@ class Mirror:
 
         status_series = pd.concat([self.series, dates_ser], axis=0)
         self.series = status_series[interval]
-        print('after_update', self.series.index)
+        #print('after_update', self.series.index)
         return self
 
     @property

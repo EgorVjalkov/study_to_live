@@ -122,13 +122,6 @@ class BaseFiller:
                 return row_for_saving[filled_cells_index].to_dict()
         return {}
 
-    def update_status(self) -> None:
-        print(self.day.STATUS)
-        self.correct_day_status()
-        print(self.day.STATUS)
-        mirror.set_day_status(self.day)
-        mirror.update_vedomost(self.day.day_row_for_saving)
-
     @property
     def done_by_another_recipient(self):
         status = self.day.STATUS

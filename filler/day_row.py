@@ -43,7 +43,7 @@ class DayRow(pd.Series):
         r_positions = r.get_r_positions_col().at[self.name]
 
         self.list_of_all_recipient_cells.extend([i for i in self.index if i[0] in r_positions])
-        print(self.list_of_all_recipient_cells)
+        #print(self.list_of_all_recipient_cells)
         return self.list_of_all_recipient_cells
 
     def get_working_cells_index(self, recipient: str, behavior: str) -> pd.Index | list:
@@ -89,7 +89,7 @@ class DayRow(pd.Series):
 
     @property
     def is_all_r_cells_filled(self):
-        print(len(self.working_cells_index), len(self.filled_cells_index))
+        #print(len(self.working_cells_index), len(self.filled_cells_index))
         return len(self.working_cells_index) == len(self.filled_cells_index)
 
     @property
