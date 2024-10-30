@@ -191,9 +191,10 @@ if __name__ == '__main__':
 
     print(mirror.series)
     filler()
-    filler.change_day('1.10.24')
-    filler.day.STATUS = 'Y'
-    print(filler.day)
+    dayz = filler.day_btns
+    print(dayz)
+    #filler.day.STATUS = 'Y'
+    #print(filler.day)
     #filler.update_bd_and_get_dict_for_rep()
     #d_r = DayRow(filler.day.day_row_for_saving)
     #rep = VedomostCounter('Lera', day_data=d_r).count_day_sum()
