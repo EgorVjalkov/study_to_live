@@ -56,17 +56,23 @@ class Mirror:
 
     def init_series(self) -> object:
         dates_list = self.date_interval
+        start_date = dates_list[0]
+        finish_date = dates_list[-1]
 
         ved_names = set()
-        for date in dates_list[0],dates_list[-1]:
+        for date in start_date, finish_date:
             ved_names.add(self.get_vedomost_table_name(date))
 
         for tab_name in ved_names:
-            df = DataBase(tab_name).get_table(with_dates=True, columns=['DATE', 'STATUS'])
-            self.series = pd.concat([self.series, df.set_index('DATE')['STATUS']], axis=0)
+            try:
+                df = DataBase(tab_name).get_table(with_dates=True, columns=['DATE', 'STATUS'])
+                self.series = pd.concat([self.series, df.set_index('DATE')['STATUS']], axis=0)
+            except ValueError:
+                print(f'No table {tab_name}')
+                dates_list = [date for date in dates_list if date.month == start_date.month] # если нет таблицы, то обрезаем индекс
 
         self.series = self.series[dates_list]
-        #print('after_init', self.series.index)
+        print('after_init', self.series.index)
 
         return self
 

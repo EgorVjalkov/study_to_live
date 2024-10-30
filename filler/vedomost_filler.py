@@ -187,21 +187,13 @@ class VedomostCounter(BaseFiller):
 
 
 if __name__ == '__main__':
-    filler = BaseFiller('Lera', 'filling')
+    filler = BaseFiller('Egr', 'filling')
 
-    print(mirror.status_series)
+    print(mirror.series)
     filler()
-    print(filler.day_btns)
-    d = datetime.datetime(day=5, month=10, year=2024, hour=21)
-    filler(d)
-    print(filler.date())
-    print(filler.day_btns)
-    #filler.change_day('30.09.24')
-    #filler.change_day('1.10.24')
-    #print(filler.day)
-    #filler.filter_cells()
-    #filler.active_cell = 'KG'
-    #filler.fill_the_active_cell('zKG(1), aKG(0.5)')
+    filler.change_day('1.10.24')
+    filler.day.STATUS = 'Y'
+    print(filler.day)
     #filler.update_bd_and_get_dict_for_rep()
     #d_r = DayRow(filler.day.day_row_for_saving)
     #rep = VedomostCounter('Lera', day_data=d_r).count_day_sum()
