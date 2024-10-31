@@ -7,10 +7,9 @@ def does_need_correction(price_frame):
         filter_ = price_frame[cat].map(
             lambda i_: isinstance(i_, str) and '{' in i_)
         dict_cells = price_frame[cat][filter_ == True]
-        wrong_dict = {}
         for i in dict_cells:
             try:
-                check = eval(i)
+                eval(i)
             except SyntaxError:
                 need_correction = True
                 print(Fore.RED + f'{cat}, {i}' + Fore.RESET)
