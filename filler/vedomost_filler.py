@@ -91,10 +91,6 @@ class BaseFiller:
     def active_cell_data(self) -> VedomostCell:
         return self.day[self.active_cell]
 
-    @active_cell_data.setter
-    def active_cell_data(self, cell_data: VedomostCell):
-        self.day[self.active_cell] = cell_data
-
     def fill_the_active_cell(self, value_from_tg) -> object:
         translation_dict = {'не мог': 'can`t', 'забыл': '!'}
         value_from_tg = translation_dict.get(value_from_tg, value_from_tg)

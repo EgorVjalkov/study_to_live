@@ -69,7 +69,7 @@ class Mirror:
                 self.series = pd.concat([self.series, df.set_index('DATE')['STATUS']], axis=0)
             except ValueError:
                 print(f'No table {tab_name}')
-                dates_list = [date for date in dates_list if date.month == start_date.month] # если нет таблицы, то обрезаем индекс
+                dates_list = [date for date in dates_list if date.month != start_date.month] # если нет таблицы, то обрезаем индекс
 
         self.series = self.series[dates_list]
         print('after_init', self.series.index)
