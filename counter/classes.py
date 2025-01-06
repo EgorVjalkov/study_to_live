@@ -94,7 +94,12 @@ class Recipient:
             # print(child_coef_dict)
             return child_coef_dict
 
-        coefs_list = list(map(get_child_coefs, self.mod_data['children'], KG_col, weak_col, self.mod_data['d8_coef']))
+        coefs_list = list(map(get_child_coefs,
+                              self.mod_data['children'],
+                              KG_col,
+                              weak_col,
+                              self.mod_data['d8_coef']))
+
         for col_name in ['child_coef', 'KG_coef', 'weak_coef']:
             self.mod_data[col_name] = [i[col_name] for i in coefs_list]
 
@@ -153,7 +158,10 @@ class Recipient:
         self.get_full_family_col(acc_frame['COM'])
         self.get_with_children_col()
         self.get_duty_coefficients_col()
-        self.get_children_coef_cols(acc_frame['KG'], acc_frame['WEAK'])
+
+        weak_col = pd.Series('-', index=acc_frame.index)
+        self.get_children_coef_cols(acc_frame['KG'], weak_col)
+
         self.get_place_coefficients_col()
         self.get_sleepless_coef_col(categories_frame)
         self.get_r_positions_col()
